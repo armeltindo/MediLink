@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Info, CheckCircle, Loader2, X, Sparkles } from "lucide-react";
+import { AlertTriangle, Info, Loader2, X, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 

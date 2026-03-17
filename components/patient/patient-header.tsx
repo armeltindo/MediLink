@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  AlertTriangle, Calendar, MapPin, Briefcase, Heart,
+  AlertTriangle, Calendar, MapPin, Briefcase,
   Phone, Shield, QrCode, Download, User,
 } from "lucide-react";
 
