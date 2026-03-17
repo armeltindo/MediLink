@@ -88,8 +88,9 @@ Sois concis, clinique, et utilise le vocabulaire médical approprié. Maximum 30
     });
 
     return NextResponse.json({ summary });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI Summary error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

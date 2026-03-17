@@ -169,7 +169,8 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": `inline; filename="dossier-${patient.npi}.html"`,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
