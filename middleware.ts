@@ -5,14 +5,20 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicPath = pathname === "/login" || pathname === "/";
 
-  // Guard: if Supabase env vars are not configured, just redirect to login
+  // Guard: if Supabase env vars are not configured, use demo session cookie
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
-    if (!isPublicPath) {
+    const demoSession = request.cookies.get("demo_session");
+    if (!isPublicPath && !demoSession) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+    if (demoSession && pathname === "/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
     return NextResponse.next();

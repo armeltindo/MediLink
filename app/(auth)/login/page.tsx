@@ -15,14 +15,30 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isDemoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast({ variant: "destructive", title: "Erreur de connexion", description: error.message });
-        return;
+      if (isDemoMode) {
+        // No Supabase configured — use demo session
+        const res = await fetch("/api/auth/demo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) {
+          const { error } = await res.json();
+          toast({ variant: "destructive", title: "Erreur de connexion", description: error });
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          toast({ variant: "destructive", title: "Erreur de connexion", description: error.message });
+          return;
+        }
       }
       router.push("/dashboard");
       router.refresh();
@@ -107,6 +123,7 @@ export default function LoginPage() {
                 <p>🩺 Médecin : <span className="font-mono">dr.konan@medilink.ci</span> / demo123</p>
                 <p>👨‍💼 Admin : <span className="font-mono">admin@medilink.ci</span> / demo123</p>
                 <p>💊 Pharmacien : <span className="font-mono">pharma@medilink.ci</span> / demo123</p>
+                <p>⚙️ Super-admin : <span className="font-mono">armeltindo@gmail.com</span> / admin123</p>
               </div>
             </div>
           </CardContent>
