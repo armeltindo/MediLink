@@ -17,7 +17,7 @@ export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey);
 export function createServerSupabaseClient() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return createClient<any>(
-    supabaseUrl,
+    supabaseUrl as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: { autoRefreshToken: false, persistSession: false },

@@ -36,7 +36,8 @@ export async function logAudit({
 }) {
   try {
     const supabase = createServerSupabaseClient();
-    await supabase.from("audit_logs").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("audit_logs") as any).insert({
       user_id: userId,
       patient_id: patientId,
       action,
