@@ -124,8 +124,9 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
       toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage}` });
       onSuccess();
       onClose();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
@@ -201,7 +202,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
           <Input value={form.duree} onChange={(e) => setForm({ ...form, duree: e.target.value })} placeholder="Ex: 30 jours" required />
         </div>
         <div className="space-y-1">
-          <Label>Date d'expiration</Label>
+          <Label>Date d&apos;expiration</Label>
           <Input type="date" value={form.date_expiration} onChange={(e) => setForm({ ...form, date_expiration: e.target.value })} />
         </div>
       </div>

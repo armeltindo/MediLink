@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Patient, AnalysePrescrite, ResultatAnalyse } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -8,16 +8,13 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, BadgeVariant } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  FlaskConical, Plus, Loader2, ArrowUp, ArrowDown, Minus, AlertTriangle,
+  FlaskConical, Plus, Loader2, ArrowUp, ArrowDown, Minus,
 } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
 
 const COMMON_ANALYSES = [
   "Numération Formule Sanguine (NFS)",
@@ -120,8 +117,9 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
       toast({ title: "Analyse prescrite" });
       setOpen(false);
       onRefresh();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
@@ -155,14 +153,15 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
       setResultOpen(null);
       setResultats({});
       onRefresh();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
   }
 
-  const statusConfig: Record<string, { label: string; variant: any }> = {
+  const statusConfig: Record<string, { label: string; variant: BadgeVariant }> = {
     prescrit: { label: "Prescrit", variant: "info" },
     en_attente: { label: "En attente", variant: "warning" },
     en_cours: { label: "En cours", variant: "warning" },
@@ -184,11 +183,11 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Prescription d'analyse — {patient.prenom} {patient.nom}</DialogTitle>
+                <DialogTitle>Prescription d&apos;analyse — {patient.prenom} {patient.nom}</DialogTitle>
               </DialogHeader>
               <form onSubmit={createAnalyse} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Type d'analyse *</Label>
+                  <Label>Type d&apos;analyse *</Label>
                   <Input
                     value={newAnalyse.type_analyse}
                     onChange={(e) => setNewAnalyse({ ...newAnalyse, type_analyse: e.target.value })}

@@ -5,14 +5,14 @@ import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldCheck, Search, Eye, AlertTriangle, Edit, Download } from "lucide-react";
 
 export default function AuditPage() {
   const { user } = useUser();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<{ id: string; user_id: string; patient_id?: string; action: string; timestamp: string; details?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
@@ -47,7 +47,8 @@ export default function AuditPage() {
 
   const breakGlassLogs = logs.filter((l) => l.action === "break_the_glass");
 
-  const actionLabels: Record<string, { label: string; icon: any; variant: any }> = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const actionLabels: Record<string, { label: string; icon: any; variant: BadgeVariant }> = {
     view_patient: { label: "Vue dossier", icon: Eye, variant: "info" },
     create_patient: { label: "Création patient", icon: Edit, variant: "success" },
     update_patient: { label: "Modification patient", icon: Edit, variant: "warning" },
@@ -62,7 +63,7 @@ export default function AuditPage() {
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-medical-green" />
-          <h2 className="text-xl font-serif font-bold">Journal d'audit système</h2>
+          <h2 className="text-xl font-serif font-bold">Journal d&apos;audit système</h2>
         </div>
 
         {/* Break-glass alert */}
@@ -70,9 +71,9 @@ export default function AuditPage() {
           <div className="bg-red-50 border border-red-300 rounded-lg p-4">
             <p className="font-medium text-red-800 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              {breakGlassLogs.length} accès d'urgence "Break-the-Glass" enregistré{breakGlassLogs.length > 1 ? "s" : ""}
+              {breakGlassLogs.length} accès d&apos;urgence &quot;Break-the-Glass&quot; enregistré{breakGlassLogs.length > 1 ? "s" : ""}
             </p>
-            <p className="text-sm text-red-700 mt-1">Ces accès forcés ont été journalisés et notifiés à l'administration.</p>
+            <p className="text-sm text-red-700 mt-1">Ces accès forcés ont été journalisés et notifiés à l&apos;administration.</p>
           </div>
         )}
 

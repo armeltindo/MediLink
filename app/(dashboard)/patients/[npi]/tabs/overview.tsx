@@ -2,16 +2,14 @@
 import { useState } from "react";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
 import { formatDate, getSeverityColor } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
-  AlertTriangle, CheckCircle, Clock, Heart, Stethoscope,
-  Pill, Activity, Loader2, Sparkles, Plus, Cigarette,
-  Wine, TreePalm, Utensils, User2,
+  AlertTriangle, CheckCircle, Clock, Stethoscope,
+  Pill, Activity, Loader2, Sparkles, Cigarette,
+  Wine, Utensils, User2,
 } from "lucide-react";
 
 interface OverviewTabProps {
@@ -27,12 +25,11 @@ interface OverviewTabProps {
 
 export function OverviewTab({
   patient, allergies, antecedents, antecedentsFamiliaux,
-  habitudes, consultations, prescriptions, onRefresh,
+  habitudes, consultations, prescriptions,
 }: OverviewTabProps) {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const activeAntecedents = antecedents.filter((a) => a.actif);
   const activePrescriptions = prescriptions.filter((p) => p.statut === "en_cours" || p.statut === "prescrit");
   const lastConsultation = consultations[0];
 
@@ -92,7 +89,7 @@ export function OverviewTab({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Cliquez sur "Générer résumé" pour obtenir une synthèse clinique automatique basée sur les données du dossier.
+                Cliquez sur &quot;Générer résumé&quot; pour obtenir une synthèse clinique automatique basée sur les données du dossier.
               </p>
             )}
           </CardContent>

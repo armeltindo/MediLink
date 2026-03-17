@@ -3,12 +3,12 @@ import { useState, useEffect } from "react";
 import { Patient, AuditLog } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDateTime } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldCheck, Eye, Edit, Download, AlertTriangle, LogIn } from "lucide-react";
 
-const actionConfig: Record<string, { label: string; icon: any; variant: any }> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const actionConfig: Record<string, { label: string; icon: any; variant: BadgeVariant }> = {
   view_patient: { label: "Consultation dossier", icon: Eye, variant: "info" },
   create_patient: { label: "Création patient", icon: Edit, variant: "success" },
   update_patient: { label: "Modification patient", icon: Edit, variant: "warning" },
@@ -43,15 +43,15 @@ export function AuditTab({ patient }: AuditTabProps) {
 
     if (data && data.length > 0) {
       // Load user profiles for each log
-      const userIds = Array.from(new Set(data.map((l: any) => l.user_id)));
+      const userIds = Array.from(new Set(data.map((l: { user_id: string }) => l.user_id)));
       const { data: profiles } = await supabase
         .from("users_profiles")
         .select("id, nom, prenom, role")
         .in("id", userIds);
 
-      const profileMap: Record<string, any> = {};
-      (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
-      setLogs(data.map((l: any) => ({ ...l, profile: profileMap[l.user_id] })));
+      const profileMap: Record<string, { id: string; nom: string; prenom: string; role: string }> = {};
+      (profiles || []).forEach((p: { id: string; nom: string; prenom: string; role: string }) => { profileMap[p.id] = p; });
+      setLogs(data.map((l: AuditLog) => ({ ...l, profile: profileMap[l.user_id] })));
     } else {
       setLogs([]);
     }
@@ -63,13 +63,13 @@ export function AuditTab({ patient }: AuditTabProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-medical-green" />
-        <h3 className="font-semibold">Journal d'audit — {logs.length} événements</h3>
+        <h3 className="font-semibold">Journal d&apos;audit — {logs.length} événements</h3>
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-xs text-blue-700">
           Tous les accès à ce dossier sont enregistrés conformément aux exigences RGPD et de sécurité HDS.
-          Aucune suppression n'est possible — journal immuable.
+          Aucune suppression n&apos;est possible — journal immuable.
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export function AuditTab({ patient }: AuditTabProps) {
       ) : logs.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <ShieldCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>Aucun événement d'audit</p>
+          <p>Aucun événement d&apos;audit</p>
         </div>
       ) : (
         <div className="space-y-1">

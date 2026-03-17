@@ -28,7 +28,8 @@ Réponds UNIQUEMENT en JSON : [{"code": "E11", "libelle": "Diabète sucré de ty
     const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
     return NextResponse.json({ suggestions });
-  } catch (error: any) {
-    return NextResponse.json({ suggestions: [], error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return NextResponse.json({ suggestions: [], error: message });
   }
 }

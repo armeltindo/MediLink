@@ -173,7 +173,7 @@ export default function PatientPage() {
 
           <Tabs defaultValue="overview">
             <TabsList className="bg-muted mb-4 h-auto flex-wrap">
-              <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+              <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
               <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
               <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
               <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>

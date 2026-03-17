@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -53,7 +52,7 @@ export default function AdminPage() {
 
     // Compute top diagnostics
     const diagCount: Record<string, number> = {};
-    (diagRes.data || []).forEach((c: any) => {
+    (diagRes.data || []).forEach((c: { diagnostic_cim10?: string }) => {
       if (c.diagnostic_cim10) {
         diagCount[c.diagnostic_cim10] = (diagCount[c.diagnostic_cim10] || 0) + 1;
       }
@@ -65,8 +64,8 @@ export default function AdminPage() {
 
     // Sex breakdown
     const patients = patientsRes.data || [];
-    const hommes = patients.filter((p: any) => p.sexe === "M").length;
-    const femmes = patients.filter((p: any) => p.sexe === "F").length;
+    const hommes = patients.filter((p: { sexe: string }) => p.sexe === "M").length;
+    const femmes = patients.filter((p: { sexe: string }) => p.sexe === "F").length;
 
     setStats({
       totalPatients: patientsRes.count || 0,

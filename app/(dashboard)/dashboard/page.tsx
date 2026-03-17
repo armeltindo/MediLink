@@ -1,21 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Stethoscope, Pill, FlaskConical, TrendingUp,
-  Calendar, AlertTriangle, Clock, UserPlus, Activity,
+  AlertTriangle, Clock, UserPlus, Activity,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
 
 interface DashboardStats {
   patientsToday: number;
@@ -33,7 +29,7 @@ interface DashboardStats {
 function StatCard({ title, value, icon: Icon, color, href, loading }: {
   title: string;
   value: number;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   href?: string;
   loading?: boolean;
@@ -106,7 +102,7 @@ export default function DashboardPage() {
       consultationsWeek: consultationsRes.count || 0,
       prescriptionsExpiring: prescriptionsRes.count || 0,
       analysesEnAttente: analysesRes.count || 0,
-      recentActivity: (activityRes.data || []).map((a: any) => ({
+      recentActivity: (activityRes.data || []).map((a: { action: string; timestamp: string }) => ({
         action: a.action,
         patientNom: "—",
         timestamp: a.timestamp,
@@ -115,8 +111,6 @@ export default function DashboardPage() {
     });
     setLoading(false);
   }
-
-  const isAdmin = user?.role === "super_admin" || user?.role === "admin_etablissement";
 
   return (
     <div className="flex flex-col min-h-full">
@@ -267,7 +261,7 @@ export default function DashboardPage() {
                 {stats?.prescriptionsExpiring} ordonnance{(stats?.prescriptionsExpiring || 0) > 1 ? "s" : ""} expire{(stats?.prescriptionsExpiring || 0) > 1 ? "nt" : ""} dans les 7 jours
               </p>
               <p className="text-sm text-orange-700 mt-0.5">
-                Ces patients ont besoin d'un renouvellement de leur traitement chronique.
+                Ces patients ont besoin d&apos;un renouvellement de leur traitement chronique.
               </p>
               <Button variant="outline" size="sm" className="mt-2 border-orange-300 text-orange-700" asChild>
                 <Link href="/prescriptions">Voir les ordonnances</Link>

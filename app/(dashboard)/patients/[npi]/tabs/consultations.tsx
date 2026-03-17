@@ -12,10 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, Plus, ChevronDown, ChevronUp, Search, Activity } from "lucide-react";
 
 interface ConsultationsTabProps {
@@ -178,7 +176,7 @@ function NewConsultationDialog({ patient, onSuccess, onClose }: {
         diagnostic_principal: form.diagnostic_principal || null,
         diagnostic_cim10: selectedCIM10?.code || null,
         plan_prise_en_charge: form.plan_prise_en_charge || null,
-        type_consultation: form.type_consultation as any,
+        type_consultation: form.type_consultation as "externe" | "urgence" | "hospitalisation" | "teleconsultation",
         date_consultation: new Date().toISOString(),
       }).select().single();
 
@@ -208,8 +206,9 @@ function NewConsultationDialog({ patient, onSuccess, onClose }: {
       toast({ title: "Consultation enregistrée", description: `Motif : ${form.motif}` });
       onSuccess();
       onClose();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }

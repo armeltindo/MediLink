@@ -13,8 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, UserPlus, Copy, Check } from "lucide-react";
 
 const patientSchema = z.object({
@@ -95,10 +93,11 @@ export default function NouveauPatientPage() {
         timestamp: new Date().toISOString(),
       });
 
-      toast({ variant: "success" as any, title: "Patient enregistré", description: `${data.prenom} ${data.nom} — ${npi}` });
+      toast({ title: "Patient enregistré", description: `${data.prenom} ${data.nom} — ${npi}` });
       router.push(`/patients/${npi}`);
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
@@ -113,7 +112,7 @@ export default function NouveauPatientPage() {
         <div className="bg-medical-green-light border border-medical-green/20 rounded-lg p-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-medical-green font-medium uppercase tracking-wide mb-1">
-              Numéro Personnel d'Identification — généré automatiquement
+              Numéro Personnel d&apos;Identification — généré automatiquement
             </p>
             <p className="text-2xl font-mono font-bold text-medical-green">{npi}</p>
           </div>
@@ -179,7 +178,7 @@ export default function NouveauPatientPage() {
               </div>
               {sexe === "F" && (
                 <div className="space-y-2">
-                  <Label htmlFor="nombre_enfants">Nombre d'enfants</Label>
+                  <Label htmlFor="nombre_enfants">Nombre d&apos;enfants</Label>
                   <Input id="nombre_enfants" type="number" min="0" {...register("nombre_enfants")} />
                 </div>
               )}
@@ -196,7 +195,7 @@ export default function NouveauPatientPage() {
                 <Input id="profession" {...register("profession")} placeholder="Enseignant, Commerçant..." />
               </div>
               <div className="space-y-2">
-                <Label>Niveau d'études</Label>
+                <Label>Niveau d&apos;études</Label>
                 <Select onValueChange={(v) => setValue("niveau_etudes", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner..." />
@@ -269,7 +268,7 @@ export default function NouveauPatientPage() {
           {/* Contact d'urgence */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Contact d'urgence</CardTitle>
+              <CardTitle className="text-base">Contact d&apos;urgence</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">

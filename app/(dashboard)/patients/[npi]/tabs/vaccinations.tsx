@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Syringe, Plus, Loader2, CheckCircle, AlertTriangle, Clock } from "lucide-react";
@@ -87,8 +87,9 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
       toast({ title: "Vaccination enregistrée", description: form.vaccin });
       setOpen(false);
       onRefresh();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
@@ -141,7 +142,7 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
                     <Input value={form.lot} onChange={(e) => setForm({ ...form, lot: e.target.value })} placeholder="Ex: LOT-2024-001" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Voie d'administration</Label>
+                    <Label>Voie d&apos;administration</Label>
                     <Select onValueChange={(v) => setForm({ ...form, voie: v })}>
                       <SelectTrigger><SelectValue placeholder="Voie..." /></SelectTrigger>
                       <SelectContent>

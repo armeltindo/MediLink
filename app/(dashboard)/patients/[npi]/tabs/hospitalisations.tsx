@@ -2,18 +2,18 @@
 import { useState } from "react";
 import { Patient, Hospitalisation } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BedDouble, Plus, Loader2, Calendar, Building2 } from "lucide-react";
+import { BedDouble, Plus, Loader2, Calendar } from "lucide-react";
 
 const SERVICES = [
   "Médecine interne", "Chirurgie générale", "Maternité / Obstétrique",
@@ -67,14 +67,15 @@ export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: Ho
       toast({ title: "Hospitalisation enregistrée" });
       setOpen(false);
       onRefresh();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setLoading(false);
     }
   }
 
-  const modeSortieConfig: Record<string, { label: string; variant: any }> = {
+  const modeSortieConfig: Record<string, { label: string; variant: BadgeVariant }> = {
     domicile: { label: "Retour à domicile", variant: "success" },
     transfert: { label: "Transfert", variant: "info" },
     deces: { label: "Décès", variant: "danger" },
@@ -124,7 +125,7 @@ export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: Ho
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Date d'entrée *</Label>
+                    <Label>Date d&apos;entrée *</Label>
                     <Input type="date" value={form.date_entree} onChange={(e) => setForm({ ...form, date_entree: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
@@ -133,7 +134,7 @@ export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: Ho
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Motif d'hospitalisation *</Label>
+                  <Label>Motif d&apos;hospitalisation *</Label>
                   <Input value={form.motif} onChange={(e) => setForm({ ...form, motif: e.target.value })} required placeholder="Raison principale de l'hospitalisation" />
                 </div>
                 <div className="space-y-2">

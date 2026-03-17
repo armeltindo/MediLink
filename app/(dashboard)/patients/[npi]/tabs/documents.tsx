@@ -2,19 +2,20 @@
 import { useState, useEffect } from "react";
 import { Patient, Document } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Upload, Loader2, Download, Eye, Image as ImageIcon } from "lucide-react";
 
-const typeConfig: Record<string, { label: string; variant: any; icon: any }> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const typeConfig: Record<string, { label: string; variant: BadgeVariant; icon: any }> = {
   imagerie: { label: "Imagerie", variant: "info", icon: ImageIcon },
   compte_rendu: { label: "Compte-rendu", variant: "secondary", icon: FileText },
   ordonnance: { label: "Ordonnance", variant: "warning", icon: FileText },
@@ -34,7 +35,7 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
   const { user } = useUser();
 
   const [form, setForm] = useState({
-    nom: "", type: "autre" as any, description: "",
+    nom: "", type: "autre", description: "",
     etablissement_id: "",
   });
   const [file, setFile] = useState<File | null>(null);
@@ -62,7 +63,7 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
     try {
       // Upload to Supabase Storage
       const fileName = `${patient.id}/${Date.now()}_${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(fileName, file);
 
@@ -84,8 +85,9 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
       toast({ title: "Document uploadé avec succès" });
       setOpen(false);
       loadDocuments();
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
       setUploading(false);
     }
@@ -134,7 +136,7 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as any })}>
+                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="imagerie">Imagerie (Radio, Écho, Scanner...)</SelectItem>
@@ -183,7 +185,6 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
           {documents.map((doc) => {
             const config = typeConfig[doc.type] || typeConfig.autre;
             const Icon = config.icon;
-            const isImage = doc.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
 
             return (
               <Card key={doc.id}>
