@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 
 const DEMO_ACCOUNTS: Record<string, { role: string; name: string; prenom: string; nom: string; password: string }> = {

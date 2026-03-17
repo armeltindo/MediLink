@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/utils";
-import { Stethoscope, User } from "lucide-react";
+import { Stethoscope } from "lucide-react";
 
 interface ConsultationRow {
   id: string;
