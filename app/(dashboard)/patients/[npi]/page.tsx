@@ -149,102 +149,79 @@ export default function PatientPage() {
 
       {/* Tabs */}
       <div className="flex-1 p-6 pt-4">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-full justify-start h-auto flex-wrap gap-1 bg-transparent p-0 mb-4">
-            {[
-              { value: "overview", label: "Vue d'ensemble" },
-              { value: "consultations", label: `Consultations (${consultations.length})` },
-              { value: "prescriptions", label: `Prescriptions (${prescriptions.length})` },
-              { value: "analyses", label: `Analyses (${analyses.length})` },
-              { value: "vaccinations", label: `Vaccins (${vaccinations.length})` },
-              { value: "hospitalisations", label: `Hospitalisations (${hospitalisations.length})` },
-              { value: "documents", label: "Documents" },
-              { value: "audit", label: "Audit" },
-            ].map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => {
-                  // handled by Tabs
-                }}
-                className="hidden"
-              />
-            ))}
+        <Tabs defaultValue="overview">
+          <TabsList className="bg-muted mb-4 h-auto flex-wrap">
+            <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
+            <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
+            <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
+            <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
+            <TabsTrigger value="vaccinations">Vaccins ({vaccinations.length})</TabsTrigger>
+            <TabsTrigger value="hospitalisations">Hospitalisations ({hospitalisations.length})</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
 
-          <Tabs defaultValue="overview">
-            <TabsList className="bg-muted mb-4 h-auto flex-wrap">
-              <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
-              <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
-              <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
-              <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
-              <TabsTrigger value="vaccinations">Vaccins ({vaccinations.length})</TabsTrigger>
-              <TabsTrigger value="hospitalisations">Hospitalisations ({hospitalisations.length})</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="audit">Audit</TabsTrigger>
-            </TabsList>
+          <TabsContent value="overview">
+            <OverviewTab
+              patient={patient}
+              allergies={allergies}
+              antecedents={antecedents}
+              antecedentsFamiliaux={antecedentsFamiliaux}
+              habitudes={habitudes}
+              consultations={consultations}
+              prescriptions={prescriptions}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="overview">
-              <OverviewTab
-                patient={patient}
-                allergies={allergies}
-                antecedents={antecedents}
-                antecedentsFamiliaux={antecedentsFamiliaux}
-                habitudes={habitudes}
-                consultations={consultations}
-                prescriptions={prescriptions}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="consultations">
+            <ConsultationsTab
+              patient={patient}
+              consultations={consultations}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="consultations">
-              <ConsultationsTab
-                patient={patient}
-                consultations={consultations}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="prescriptions">
+            <PrescriptionsTab
+              patient={patient}
+              prescriptions={prescriptions}
+              allergies={allergies}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="prescriptions">
-              <PrescriptionsTab
-                patient={patient}
-                prescriptions={prescriptions}
-                allergies={allergies}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="analyses">
+            <AnalysesTab
+              patient={patient}
+              analyses={analyses}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="analyses">
-              <AnalysesTab
-                patient={patient}
-                analyses={analyses}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="vaccinations">
+            <VaccinationsTab
+              patient={patient}
+              vaccinations={vaccinations}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="vaccinations">
-              <VaccinationsTab
-                patient={patient}
-                vaccinations={vaccinations}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="hospitalisations">
+            <HospitalisationsTab
+              patient={patient}
+              hospitalisations={hospitalisations}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
 
-            <TabsContent value="hospitalisations">
-              <HospitalisationsTab
-                patient={patient}
-                hospitalisations={hospitalisations}
-                onRefresh={() => loadPatient(patient.npi)}
-              />
-            </TabsContent>
+          <TabsContent value="documents">
+            <DocumentsTab patient={patient} />
+          </TabsContent>
 
-            <TabsContent value="documents">
-              <DocumentsTab patient={patient} />
-            </TabsContent>
-
-            <TabsContent value="audit">
-              <AuditTab patient={patient} />
-            </TabsContent>
-          </Tabs>
+          <TabsContent value="audit">
+            <AuditTab patient={patient} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Patient, Consultation, Constante } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDateTime, calculateIMC } from "@/lib/utils";
@@ -152,9 +152,9 @@ function NewConsultationDialog({ patient, onSuccess, onClose }: {
     ta_sys: "", ta_dia: "", fc: "", fr: "", temperature: "", spo2: "", poids: "", taille: "",
   });
 
-  useState(() => {
+  useEffect(() => {
     supabase.from("etablissements").select("id, nom").then(({ data }) => setEtablissements(data || []));
-  });
+  }, []);
 
   function handleCIM10Search(q: string) {
     setCim10Query(q);
@@ -352,14 +352,14 @@ export function ConsultationsTab({ patient, consultations, onRefresh }: Consulta
   // Get all constantes for charts
   const [allConstantes, setAllConstantes] = useState<Constante[]>([]);
 
-  useState(() => {
+  useEffect(() => {
     supabase
       .from("constantes")
       .select("*")
       .eq("patient_id", patient.id)
       .order("date_mesure")
       .then(({ data }) => setAllConstantes(data || []));
-  });
+  }, [patient.id]);
 
   return (
     <div className="space-y-4">
