@@ -1,11 +1,13 @@
+import { createBrowserClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-// Client-side Supabase client (using any to avoid type inference issues)
+// Client-side Supabase client — uses createBrowserClient so the session is
+// stored in cookies (not localStorage), which the SSR middleware can read.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey);
+export const supabase = createBrowserClient<any>(supabaseUrl, supabaseAnonKey);
 
 // Server-side Supabase client (service role — NEVER expose to client)
 export function createServerSupabaseClient() {
