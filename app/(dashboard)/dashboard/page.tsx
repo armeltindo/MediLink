@@ -108,12 +108,16 @@ export default function DashboardPage() {
       recentActivity: (activityRes.data || []).map((a: {
         action: string;
         timestamp: string;
-        patients?: { prenom: string; nom: string } | null;
-      }) => ({
-        action: a.action,
-        patientNom: a.patients ? `${a.patients.prenom} ${a.patients.nom}` : "—",
-        timestamp: a.timestamp,
-      })),
+        // Supabase retourne les foreign key joins comme un tableau
+        patients?: { prenom: string; nom: string }[] | { prenom: string; nom: string } | null;
+      }) => {
+        const p = Array.isArray(a.patients) ? a.patients[0] : a.patients;
+        return {
+          action: a.action,
+          patientNom: p ? `${p.prenom} ${p.nom}` : "—",
+          timestamp: a.timestamp,
+        };
+      }),
       topDiagnostics: [],
     });
     setLoading(false);
