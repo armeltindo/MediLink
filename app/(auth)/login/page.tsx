@@ -115,17 +115,6 @@ export default function LoginPage() {
                 {loading ? "Connexion en cours..." : "Se connecter"}
               </Button>
             </form>
-
-            {/* Demo credentials */}
-            <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-              <p className="text-xs font-medium text-blue-700 mb-1">Comptes de démonstration :</p>
-              <div className="space-y-1 text-xs text-blue-600">
-                <p>🩺 Médecin : <span className="font-mono">dr.konan@medilink.ci</span> / demo123</p>
-                <p>👨‍💼 Admin : <span className="font-mono">admin@medilink.ci</span> / demo123</p>
-                <p>💊 Pharmacien : <span className="font-mono">pharma@medilink.ci</span> / demo123</p>
-                <p>⚙️ Super-admin : <span className="font-mono">armeltindo@gmail.com</span> / admin123</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
