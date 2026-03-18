@@ -176,11 +176,11 @@ function SoinsInfirmiersDialog({ hospitalisation, userId }: SoinsDialogProps) {
       });
       resetForm();
       setOpen(false);
-    } catch (err: any) {
+    } catch (err) {
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: err.message,
+        description: (err as Error).message,
       });
     } finally {
       setSubmitting(false);
@@ -252,7 +252,7 @@ function SoinsInfirmiersDialog({ hospitalisation, userId }: SoinsDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="heure_administration">Heure d'administration *</Label>
+            <Label htmlFor="heure_administration">Heure d&apos;administration *</Label>
             <Input
               id="heure_administration"
               type="datetime-local"
@@ -291,7 +291,7 @@ function SoinsInfirmiersDialog({ hospitalisation, userId }: SoinsDialogProps) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function HospitalisationsPage() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const [hospitalisations, setHospitalisations] = useState<
     HospitalisationRow[]
   >([]);
