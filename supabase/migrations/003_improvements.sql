@@ -1,6 +1,16 @@
--- MediLink — Migration 003 : Corrections et améliorations du schéma
+-- MediLink — Migration 003 : Corrections, améliorations du schéma + localisation Bénin
 -- Générée suite à l'audit de conformité — Mars 2026
 -- Applique tous les correctifs identifiés lors de l'audit des nouvelles fonctionnalités
+
+-- ============================================================
+-- 0. LOCALISATION: Bénin (remplace Côte d'Ivoire)
+-- ============================================================
+ALTER TABLE etablissements
+  ALTER COLUMN pays SET DEFAULT 'Bénin';
+
+ALTER TABLE patients
+  ALTER COLUMN nationalite SET DEFAULT 'Béninoise';
+
 
 -- ============================================================
 -- 1. FIX: habitudes_vie.alcool — contrainte CHECK incomplète

@@ -5,10 +5,10 @@
 -- ÉTABLISSEMENTS
 -- ============================================================
 INSERT INTO etablissements (id, nom, type, ville, region, pays, adresse, telephone) VALUES
-  ('e1000000-0000-0000-0000-000000000001', 'CHU de Cocody', 'CHU', 'Abidjan', 'Lagunes', 'Côte d''Ivoire', 'Rue des Jardins, Cocody', '+225 27 22 44 00 00'),
-  ('e1000000-0000-0000-0000-000000000002', 'Centre de Santé de Marcory', 'CSP', 'Abidjan', 'Lagunes', 'Côte d''Ivoire', 'Avenue 16, Marcory', '+225 27 21 35 00 00'),
-  ('e1000000-0000-0000-0000-000000000003', 'Clinique Sainte-Marie', 'clinique', 'Abidjan', 'Lagunes', 'Côte d''Ivoire', 'Boulevard de la Corniche', '+225 27 22 41 00 00'),
-  ('e1000000-0000-0000-0000-000000000004', 'Hôpital Général de Bouaké', 'hopital', 'Bouaké', 'Vallée du Bandama', 'Côte d''Ivoire', 'Avenue de la Paix', '+225 27 31 63 00 00');
+  ('e1000000-0000-0000-0000-000000000001', 'CNHU Hubert Koutoukou Maga', 'CHU', 'Cotonou', 'Littoral', 'Bénin', 'Avenue Jean-Paul II, Cotonou', '+229 21 30 01 55'),
+  ('e1000000-0000-0000-0000-000000000002', 'Centre de Santé de Cadjehoun', 'CSP', 'Cotonou', 'Littoral', 'Bénin', 'Rue 10.115, Cadjehoun', '+229 21 30 22 44'),
+  ('e1000000-0000-0000-0000-000000000003', 'Clinique Internationale de Cotonou', 'clinique', 'Cotonou', 'Littoral', 'Bénin', 'Boulevard de la Marina', '+229 21 31 40 40'),
+  ('e1000000-0000-0000-0000-000000000004', 'Hôpital de Zone de Parakou', 'hopital', 'Parakou', 'Borgou', 'Bénin', 'Avenue de l''Université', '+229 23 61 05 20');
 
 -- Note: Les utilisateurs doivent être créés via Supabase Auth
 -- Le seed ci-dessous assume que les UUIDs des utilisateurs demo sont connus
@@ -19,13 +19,13 @@ INSERT INTO etablissements (id, nom, type, ville, region, pays, adresse, telepho
 -- Les patients seront créés via l'interface avec created_by réel
 -- ============================================================
 
--- Patient 1: Konan Kouassi Yao — Diabétique type 2, HTA
+-- Patient 1: Agossou Dossou Félix — Diabétique type 2, HTA
 INSERT INTO patients (id, npi, nom, prenom, date_naissance, lieu_naissance, sexe, situation_matrimoniale, nombre_enfants, groupe_sanguin, rhesus, nationalite, profession, niveau_etudes, langue_preferee, contact_urgence_nom, contact_urgence_lien, contact_urgence_tel, assurance_organisme, assurance_numero, assurance_taux) VALUES
-  ('a1000000-0000-0000-0000-000000000001', 'NPI-2024-004821', 'KONAN', 'Kouassi Yao', '1968-03-15', 'Bouaké', 'M', 'marié', 3, 'A', '+', 'Ivoirienne', 'Comptable', 'Licence', 'Français', 'Konan Marie-Claire', 'Épouse', '+225 07 00 11 22 33', 'CNPS', 'CNPS-2024-00981', 80.00),
-  ('a1000000-0000-0000-0000-000000000002', 'NPI-2024-007340', 'BAMBA', 'Fatoumata', '1985-07-22', 'Korhogo', 'F', 'mariée', 4, 'O', '+', 'Ivoirienne', 'Infirmière libérale', 'BTS', 'Français', 'Bamba Seydou', 'Mari', '+225 05 00 22 33 44', 'MUGEF-CI', 'MUGEF-2023-05521', 75.00),
-  ('a1000000-0000-0000-0000-000000000003', 'NPI-2024-009156', 'TRAORE', 'Ibrahima', '1952-11-08', 'Man', 'M', 'marié', 6, 'B', '-', 'Ivoirienne', 'Retraité', 'Primaire', 'Français', 'Traoré Aminata', 'Fille', '+225 01 00 33 44 55', NULL, NULL, NULL),
-  ('a1000000-0000-0000-0000-000000000004', 'NPI-2025-001243', 'KOUAKOU', 'Ahou Bernadette', '1995-01-30', 'Abidjan', 'F', 'célibataire', 1, 'AB', '+', 'Ivoirienne', 'Étudiante', 'Master', 'Français', 'Kouakou Paul', 'Père', '+225 07 00 44 55 66', 'CNPS', 'CNPS-2025-01102', 60.00),
-  ('a1000000-0000-0000-0000-000000000005', 'NPI-2025-003877', 'N''GORAN', 'Koffi Emmanuel', '2019-05-12', 'Abidjan', 'M', NULL, 0, 'O', '+', 'Ivoirienne', NULL, NULL, 'Français', 'N''Goran Marie', 'Mère', '+225 07 00 55 66 77', 'AMU', 'AMU-2025-00412', 100.00);
+  ('a1000000-0000-0000-0000-000000000001', 'NPI-2024-004821', 'AGOSSOU', 'Dossou Félix', '1968-03-15', 'Parakou', 'M', 'marié', 3, 'A', '+', 'Béninoise', 'Comptable', 'Licence', 'Français', 'Agossou Cécile', 'Épouse', '+229 97 11 22 33', 'CNSS', 'CNSS-2024-00981', 80.00),
+  ('a1000000-0000-0000-0000-000000000002', 'NPI-2024-007340', 'HOUNSOU', 'Fatoumata', '1985-07-22', 'Abomey-Calavi', 'F', 'mariée', 4, 'O', '+', 'Béninoise', 'Infirmière libérale', 'BTS', 'Français', 'Hounsou Sébastien', 'Mari', '+229 96 22 33 44', 'RAMU', 'RAMU-2023-05521', 75.00),
+  ('a1000000-0000-0000-0000-000000000003', 'NPI-2024-009156', 'GARBA', 'Ibrahima', '1952-11-08', 'Kandi', 'M', 'marié', 6, 'B', '-', 'Béninoise', 'Retraité', 'Primaire', 'Français', 'Garba Aminata', 'Fille', '+229 95 33 44 55', NULL, NULL, NULL),
+  ('a1000000-0000-0000-0000-000000000004', 'NPI-2025-001243', 'DOSSOU', 'Bernadette Aïkpe', '1995-01-30', 'Cotonou', 'F', 'célibataire', 1, 'AB', '+', 'Béninoise', 'Étudiante', 'Master', 'Français', 'Dossou Paul', 'Père', '+229 97 44 55 66', 'CNSS', 'CNSS-2025-01102', 60.00),
+  ('a1000000-0000-0000-0000-000000000005', 'NPI-2025-003877', 'LOKOSSOU', 'Koffi Emmanuel', '2019-05-12', 'Porto-Novo', 'M', NULL, 0, 'O', '+', 'Béninoise', NULL, NULL, 'Français', 'Lokossou Marie', 'Mère', '+229 97 55 66 77', 'RAMU', 'RAMU-2025-00412', 100.00);
 
 -- ============================================================
 -- ANTÉCÉDENTS

@@ -18,28 +18,28 @@ const USERS = [
     etablissement_id: null,
   },
   {
-    email: "admin@medilink.ci",
+    email: "admin@medilink.bj",
     password: "demo123",
     role: "admin_etablissement",
-    nom: "Coulibaly",
-    prenom: "Mariam",
+    nom: "Dossou",
+    prenom: "Clarisse",
     specialite: null,
     etablissement_id: "e1000000-0000-0000-0000-000000000001",
   },
   {
-    email: "dr.konan@medilink.ci",
+    email: "dr.agossou@medilink.bj",
     password: "demo123",
     role: "medecin",
-    nom: "Konan",
-    prenom: "Aya",
+    nom: "Agossou",
+    prenom: "Romuald",
     specialite: "Médecine générale",
     etablissement_id: "e1000000-0000-0000-0000-000000000001",
   },
   {
-    email: "pharma@medilink.ci",
+    email: "pharma@medilink.bj",
     password: "demo123",
     role: "pharmacien",
-    nom: "Diallo",
+    nom: "Garba",
     prenom: "Moussa",
     specialite: "Pharmacie",
     etablissement_id: "e1000000-0000-0000-0000-000000000002",
@@ -121,10 +121,10 @@ export async function GET() {
   const { data: existingEtab } = await admin.from("etablissements").select("id").limit(1);
   if (!existingEtab || existingEtab.length === 0) {
     await admin.from("etablissements").insert([
-      { id: "e1000000-0000-0000-0000-000000000001", nom: "CHU de Cocody", type: "CHU", ville: "Abidjan", region: "Lagunes", pays: "Côte d'Ivoire", adresse: "Rue des Jardins, Cocody", telephone: "+225 27 22 44 00 00" },
-      { id: "e1000000-0000-0000-0000-000000000002", nom: "Centre de Santé de Marcory", type: "CSP", ville: "Abidjan", region: "Lagunes", pays: "Côte d'Ivoire", adresse: "Avenue 16, Marcory", telephone: "+225 27 21 35 00 00" },
-      { id: "e1000000-0000-0000-0000-000000000003", nom: "Clinique Sainte-Marie", type: "clinique", ville: "Abidjan", region: "Lagunes", pays: "Côte d'Ivoire", adresse: "Boulevard de la Corniche", telephone: "+225 27 22 41 00 00" },
-      { id: "e1000000-0000-0000-0000-000000000004", nom: "Hôpital Général de Bouaké", type: "hopital", ville: "Bouaké", region: "Vallée du Bandama", pays: "Côte d'Ivoire", adresse: "Avenue de la Paix", telephone: "+225 27 31 63 00 00" },
+      { id: "e1000000-0000-0000-0000-000000000001", nom: "CNHU Hubert Koutoukou Maga", type: "CHU", ville: "Cotonou", region: "Littoral", pays: "Bénin", adresse: "Avenue Jean-Paul II, Cotonou", telephone: "+229 21 30 01 55" },
+      { id: "e1000000-0000-0000-0000-000000000002", nom: "Centre de Santé de Cadjehoun", type: "CSP", ville: "Cotonou", region: "Littoral", pays: "Bénin", adresse: "Rue 10.115, Cadjehoun", telephone: "+229 21 30 22 44" },
+      { id: "e1000000-0000-0000-0000-000000000003", nom: "Clinique Internationale de Cotonou", type: "clinique", ville: "Cotonou", region: "Littoral", pays: "Bénin", adresse: "Boulevard de la Marina", telephone: "+229 21 31 40 40" },
+      { id: "e1000000-0000-0000-0000-000000000004", nom: "Hôpital de Zone de Parakou", type: "hopital", ville: "Parakou", region: "Borgou", pays: "Bénin", adresse: "Avenue de l'Université", telephone: "+229 23 61 05 20" },
     ]);
     results["etablissements"] = "seeded";
   } else {

@@ -58,7 +58,7 @@ export default function NouveauPatientPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(patientSchema) as any,
     defaultValues: {
-      nationalite: "Ivoirienne",
+      nationalite: "Béninoise",
       langue_preferee: "Français",
       nombre_enfants: 0,
     },
@@ -229,7 +229,7 @@ export default function NouveauPatientPage() {
               )}
               <div className="space-y-2">
                 <Label htmlFor="nationalite">Nationalité</Label>
-                <Input id="nationalite" {...register("nationalite")} defaultValue="Ivoirienne" />
+                <Input id="nationalite" {...register("nationalite")} defaultValue="Béninoise" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ethnie">Ethnie (optionnel)</Label>

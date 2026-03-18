@@ -92,7 +92,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="medecin@hopital.ci"
+                  placeholder="medecin@hopital.bj"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -119,7 +119,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-slate-400 text-xs">
-          © 2026 MediLink — Système DME Unifié Africain
+          © 2026 MediLink — Système DME Unifié — Bénin
         </p>
       </div>
     </div>
