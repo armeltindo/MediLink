@@ -259,6 +259,9 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
       toast({ variant: "destructive", title: "ALERTE ALLERGIE", description: `Le patient est allergique à ${allergyConflict.substance}. Prescription bloquée.` });
       return;
     }
+    // Ouvrir la fenêtre de façon SYNCHRONE (action utilisateur directe)
+    // Les navigateurs bloquent window.open() appelé après un await
+    const printWindow = window.open("", "_blank");
     setLoading(true);
     try {
       const { data: newRx, error } = await supabase.from("prescriptions").insert({
@@ -270,7 +273,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         statut: "prescrit",
         date_expiration: form.date_expiration || null,
       }).select("id").single();
-      if (error) throw error;
+      if (error) { printWindow?.close(); throw error; }
 
       await supabase.from("audit_logs").insert({
         user_id: user.id,
@@ -280,15 +283,18 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         timestamp: new Date().toISOString(),
       });
 
-      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage} — ordonnance en cours de génération…` });
+      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage} — ordonnance générée` });
       onSuccess();
       onClose();
 
-      // Ouvrir l'ordonnance automatiquement dans un nouvel onglet
-      if (newRx?.id) {
-        window.open(`/api/ordonnance-pdf?prescriptionId=${newRx.id}`, "_blank");
+      // Naviguer dans la fenêtre déjà ouverte vers l'ordonnance
+      if (printWindow && newRx?.id) {
+        printWindow.location.href = `/api/ordonnance-pdf?prescriptionId=${newRx.id}`;
+      } else {
+        printWindow?.close();
       }
     } catch (error: unknown) {
+      printWindow?.close();
       const msg = error instanceof Error ? error.message : "Erreur";
       toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {

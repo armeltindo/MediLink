@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarClock, Plus, Loader2, Calendar, Clock } from "lucide-react";
+import { CalendarClock, Plus, Loader2, Calendar, Clock, RefreshCw } from "lucide-react";
 
 const TYPE_RDV_LABELS: Record<string, string> = {
   consultation: "Consultation",
@@ -97,6 +97,10 @@ export function RendezVousTab({ patient, rendezVous, onRefresh }: RendezVousTabP
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Rendez-vous ({rendezVous.length})</h3>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onRefresh} title="Rafraîchir">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         {canCreate && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -172,6 +176,7 @@ export function RendezVousTab({ patient, rendezVous, onRefresh }: RendezVousTabP
             </DialogContent>
           </Dialog>
         )}
+          </div>
       </div>
 
       {rendezVous.length === 0 ? (

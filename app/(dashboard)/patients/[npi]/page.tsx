@@ -114,6 +114,7 @@ export default function PatientPage() {
     setVaccinations(vaccinationsRes.data || []);
     setHospitalisations(hospitalisationsRes.data || []);
     setRendezVous(rendezVousRes.data || []);
+    if (rendezVousRes.error) console.error("rendez_vous query error:", rendezVousRes.error);
     setLoading(false);
   }
 
