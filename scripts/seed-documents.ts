@@ -3,93 +3,122 @@
  * seed-documents.ts
  *
  * Upload les 5 documents de démo dans Supabase Storage
- * puis met à jour la table `documents` avec les vraies publicUrl.
+ * puis upsert les enregistrements dans la table `documents`.
  *
- * Pré-requis :
- *   - .env.local avec NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY
- *   - Migration 008 appliquée (bucket documents public = TRUE)
+ * Utilise curl (proxy-aware) pour les appels HTTP.
  *
  * Utilisation :
  *   npx tsx scripts/seed-documents.ts
  */
 
-import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
+import { execSync } from "child_process";
 
-// Charger .env.local manuellement (Next.js n'est pas disponible ici)
+// ── Charger .env.local ─────────────────────────────────────────────────────────
+
 function loadEnv() {
   const envPath = path.join(process.cwd(), ".env.local");
   if (!fs.existsSync(envPath)) {
-    console.error("❌  Fichier .env.local introuvable — copiez .env.example vers .env.local et remplissez les valeurs.");
+    console.error("❌  .env.local introuvable.");
     process.exit(1);
   }
-  const lines = fs.readFileSync(envPath, "utf-8").split("\n");
-  for (const line of lines) {
-    const match = line.match(/^([^#=]+)=(.*)$/);
-    if (match) process.env[match[1].trim()] = match[2].trim().replace(/^["']|["']$/g, "");
+  for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
+    const m = line.match(/^([^#=]+)=(.*)$/);
+    if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, "");
   }
 }
 
 loadEnv();
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  console.error("❌  NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY manquant dans .env.local");
-  process.exit(1);
+// ── Helpers curl ───────────────────────────────────────────────────────────────
+
+function curlJson(method: string, url: string, body?: object): { ok: boolean; status: number; data: unknown } {
+  const bodyArg = body ? `-d '${JSON.stringify(body).replace(/'/g, "'\\''")}'` : "";
+  const cmd = `curl -s -w "\\n%{http_code}" -X ${method} "${url}" \\
+    -H "apikey: ${SERVICE_KEY}" \\
+    -H "Authorization: Bearer ${SERVICE_KEY}" \\
+    -H "Content-Type: application/json" \\
+    ${bodyArg}`;
+  const raw = execSync(cmd, { encoding: "utf-8" });
+  const lines = raw.trim().split("\n");
+  const status = parseInt(lines.pop()!, 10);
+  const body_text = lines.join("\n");
+  let data: unknown = null;
+  try { data = JSON.parse(body_text); } catch { data = body_text; }
+  return { ok: status >= 200 && status < 300, status, data };
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+function curlUpload(url: string, filePath: string): { ok: boolean; status: number; data: unknown } {
+  const cmd = `curl -s -w "\\n%{http_code}" -X POST "${url}" \\
+    -H "apikey: ${SERVICE_KEY}" \\
+    -H "Authorization: Bearer ${SERVICE_KEY}" \\
+    -H "Content-Type: application/pdf" \\
+    -H "x-upsert: true" \\
+    --data-binary "@${filePath}"`;
+  const raw = execSync(cmd, { encoding: "utf-8" });
+  const lines = raw.trim().split("\n");
+  const status = parseInt(lines.pop()!, 10);
+  const body_text = lines.join("\n");
+  let data: unknown = null;
+  try { data = JSON.parse(body_text); } catch { data = body_text; }
+  return { ok: status >= 200 && status < 300, status, data };
+}
 
-// PDF minimal valide (~500 octets) — contient du texte lisible dans tout viewer PDF
+function dbUpsert(rows: object[]): { ok: boolean; status: number; data: unknown } {
+  const bodyArg = JSON.stringify(rows).replace(/'/g, "'\\''");
+  const cmd = `curl -s -w "\\n%{http_code}" -X POST "${SUPABASE_URL}/rest/v1/documents?on_conflict=id" \\
+    -H "apikey: ${SERVICE_KEY}" \\
+    -H "Authorization: Bearer ${SERVICE_KEY}" \\
+    -H "Content-Type: application/json" \\
+    -H "Prefer: resolution=merge-duplicates,return=minimal" \\
+    -d '${bodyArg}'`;
+  const raw = execSync(cmd, { encoding: "utf-8" });
+  const lines = raw.trim().split("\n");
+  const status = parseInt(lines.pop()!, 10);
+  const body_text = lines.join("\n");
+  let data: unknown = null;
+  try { data = JSON.parse(body_text); } catch { data = body_text; }
+  return { ok: status >= 200 && status < 300, status, data };
+}
+
+function getPublicUrl(storagePath: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/documents/${storagePath}`;
+}
+
+// ── Génération PDF minimal valide ──────────────────────────────────────────────
+
 function makePdf(titre: string, contenu: string): Buffer {
-  const body = `BT /F1 14 Tf 40 780 Td (${titre}) Tj 0 -30 Td /F1 11 Tf (${contenu}) Tj ET`;
+  const esc = (s: string) => s.replace(/[()\\]/g, "\\$&");
+  const body = `BT /F1 14 Tf 40 780 Td (${esc(titre)}) Tj 0 -30 Td /F1 11 Tf (${esc(contenu)}) Tj ET`;
   const resources = "<</Font<</F1<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>>>>>";
-  const contents = `<</Length ${body.length}>>\nstream\n${body}\nendstream`;
-  const page = `<</Type/Page/Parent 3 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources ${resources}>>`;
-  const pages = `<</Type/Pages/Kids[2 0 R]/Count 1>>`;
-  const catalog = `<</Type/Catalog/Pages 3 0 R>>`;
-
+  const streamContent = `<</Length ${body.length}>>\nstream\n${body}\nendstream`;
   const objs = [
-    `1 0 obj\n${catalog}\nendobj`,
-    `2 0 obj\n${page}\nendobj`,
-    `3 0 obj\n${pages}\nendobj`,
-    `4 0 obj\n${contents}\nendobj`,
+    `1 0 obj\n<</Type/Catalog/Pages 3 0 R>>\nendobj`,
+    `2 0 obj\n<</Type/Page/Parent 3 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources ${resources}>>\nendobj`,
+    `3 0 obj\n<</Type/Pages/Kids[2 0 R]/Count 1>>\nendobj`,
+    `4 0 obj\n${streamContent}\nendobj`,
   ];
-
   let pdf = "%PDF-1.4\n";
   const offsets: number[] = [];
   for (const obj of objs) {
-    offsets.push(pdf.length);
+    offsets.push(Buffer.byteLength(pdf));
     pdf += obj + "\n";
   }
-  const xrefPos = pdf.length;
+  const xrefPos = Buffer.byteLength(pdf);
   pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
-  for (const off of offsets) {
-    pdf += String(off).padStart(10, "0") + " 00000 n \n";
-  }
+  for (const off of offsets) pdf += String(off).padStart(10, "0") + " 00000 n \n";
   pdf += `trailer\n<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${xrefPos}\n%%EOF\n`;
   return Buffer.from(pdf, "utf-8");
 }
 
-// Définition des 5 documents de démo
-const DOCUMENTS: Array<{
-  id: string;
-  patientId: string;
-  nom: string;
-  storagePath: string;
-  titre: string;
-  contenu: string;
-  type: string;
-  taille: number;
-  description: string;
-  uploadedBy: string;
-  etablissementId: string;
-}> = [
+// ── Documents de démo ──────────────────────────────────────────────────────────
+
+const DOCUMENTS = [
   {
     id: "dc000000-0000-0000-0000-000000000001",
     patientId: "b1000000-0000-0000-0000-000000000001",
@@ -135,7 +164,7 @@ const DOCUMENTS: Array<{
     nom: "Certificat_grossesse_Akossiwa.pdf",
     storagePath: "b1000000-0000-0000-0000-000000000002/certificat_grossesse_akossiwa.pdf",
     titre: "Certificat de grossesse - MENSAH Akossiwa",
-    contenu: "Je soussigne certifie que Mme MENSAH Akossiwa est enceinte de 20 semaines d amenorrhee.",
+    contenu: "Je certifie que Mme MENSAH Akossiwa est enceinte de 20 semaines d amenorrhee.",
     type: "certificat",
     taille: 180000,
     description: "Certificat de grossesse pour employeur",
@@ -147,8 +176,8 @@ const DOCUMENTS: Array<{
     patientId: "b1000000-0000-0000-0000-000000000003",
     nom: "CR_Operatoire_Hounsou.pdf",
     storagePath: "b1000000-0000-0000-0000-000000000003/cr_operatoire_hounsou.pdf",
-    titre: "Compte-rendu opératoire - HOUNSOU Medesset",
-    contenu: "Appendicectomie par laparoscopie le 11/02/2026  Indication: appendicite aigue non perforee  Suites simples.",
+    titre: "Compte-rendu operatoire - HOUNSOU Medesset",
+    contenu: "Appendicectomie par laparoscopie le 11/02/2026. Appendicite aigue non perforee. Suites simples.",
     type: "compte_rendu",
     taille: 380000,
     description: "Compte-rendu appendicectomie laparoscopique 11/02/2026",
@@ -157,52 +186,64 @@ const DOCUMENTS: Array<{
   },
 ];
 
+// ── Main ───────────────────────────────────────────────────────────────────────
+
 async function run() {
   console.log("🏥  MediLink — Seed documents de démo\n");
 
-  // Vérifier que le bucket existe et est public
-  const { data: bucket, error: bucketErr } = await supabase.storage.getBucket("documents");
-  if (bucketErr || !bucket) {
-    console.error("❌  Bucket 'documents' introuvable:", bucketErr?.message);
-    console.error("   → Assurez-vous d'avoir appliqué les migrations Supabase.");
-    process.exit(1);
-  }
-  if (!bucket.public) {
-    console.warn("⚠️   Bucket 'documents' est privé. Appliquez la migration 008 pour le rendre public.");
-    console.warn("   → La seed continuera mais les URLs générées ne seront pas accessibles publiquement.\n");
+  // 1. Vérifier/créer le bucket
+  const checkRes = curlJson("GET", `${SUPABASE_URL}/storage/v1/bucket/documents`);
+  if (!checkRes.ok) {
+    console.log("  ℹ️  Bucket 'documents' absent — création...");
+    const createRes = curlJson("POST", `${SUPABASE_URL}/storage/v1/bucket`, {
+      id: "documents",
+      name: "documents",
+      public: true,
+      file_size_limit: 52428800,
+      allowed_mime_types: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+    });
+    if (!createRes.ok) {
+      console.error("❌  Création bucket échouée:", JSON.stringify(createRes.data));
+      process.exit(1);
+    }
+    console.log("  ✅  Bucket créé (public).\n");
+  } else {
+    const bkt = checkRes.data as { public?: boolean };
+    if (!bkt?.public) {
+      console.log("  ℹ️  Bucket existant mais privé — passage en public...");
+      curlJson("PUT", `${SUPABASE_URL}/storage/v1/bucket/documents`, { public: true });
+      console.log("  ✅  Bucket passé en public.\n");
+    } else {
+      console.log("  ✅  Bucket 'documents' OK (public).\n");
+    }
   }
 
+  const tmpDir = os.tmpdir();
   let success = 0;
   let errors = 0;
 
   for (const doc of DOCUMENTS) {
     process.stdout.write(`  📄 ${doc.nom} ... `);
 
-    // Générer le PDF minimal
+    // Écrire le PDF dans un fichier temporaire
     const pdfBuffer = makePdf(doc.titre, doc.contenu);
+    const tmpFile = path.join(tmpDir, `medilink_${doc.id}.pdf`);
+    fs.writeFileSync(tmpFile, pdfBuffer);
 
-    // Upload dans Supabase Storage (upsert pour idempotence)
-    const { error: uploadErr } = await supabase.storage
-      .from("documents")
-      .upload(doc.storagePath, pdfBuffer, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
+    try {
+      // Upload dans Supabase Storage
+      const uploadUrl = `${SUPABASE_URL}/storage/v1/object/documents/${doc.storagePath}`;
+      const uploadRes = curlUpload(uploadUrl, tmpFile);
+      if (!uploadRes.ok) {
+        console.log(`❌  Upload (${uploadRes.status}): ${JSON.stringify(uploadRes.data)}`);
+        errors++;
+        continue;
+      }
 
-    if (uploadErr) {
-      console.log(`❌  Upload échoué: ${uploadErr.message}`);
-      errors++;
-      continue;
-    }
+      const publicUrl = getPublicUrl(doc.storagePath);
 
-    // Récupérer la publicUrl
-    const { data: { publicUrl } } = supabase.storage
-      .from("documents")
-      .getPublicUrl(doc.storagePath);
-
-    // Upsert dans la table documents
-    const { error: dbErr } = await supabase.from("documents").upsert(
-      {
+      // Upsert en base
+      const dbRes = dbUpsert([{
         id: doc.id,
         patient_id: doc.patientId,
         nom: doc.nom,
@@ -212,25 +253,24 @@ async function run() {
         uploaded_by: doc.uploadedBy,
         etablissement_id: doc.etablissementId,
         description: doc.description,
-      },
-      { onConflict: "id" }
-    );
+      }]);
 
-    if (dbErr) {
-      console.log(`❌  DB insert échoué: ${dbErr.message}`);
-      errors++;
-      continue;
+      if (!dbRes.ok) {
+        console.log(`❌  DB (${dbRes.status}): ${JSON.stringify(dbRes.data)}`);
+        errors++;
+        continue;
+      }
+
+      console.log(`✅`);
+      success++;
+    } finally {
+      fs.unlinkSync(tmpFile);
     }
-
-    console.log(`✅  ${publicUrl.slice(0, 80)}...`);
-    success++;
   }
 
   console.log(`\n✨  Terminé — ${success} document(s) seedé(s), ${errors} erreur(s).`);
-
-  if (errors > 0) {
-    console.log("\n💡 En cas d'erreur d'UUID (uploaded_by / etablissement_id), vérifiez que");
-    console.log("   les utilisateurs et établissements de démo sont bien insérés en base.");
+  if (success > 0) {
+    console.log(`\n🔗  Exemple : ${getPublicUrl(DOCUMENTS[0].storagePath)}`);
   }
 }
 
