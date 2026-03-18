@@ -26,8 +26,11 @@ export async function GET(request: NextRequest) {
       supabase.from("consultations").select("*").eq("patient_id", patientId).order("date_consultation", { ascending: false }).limit(1).single(),
     ]);
 
+    type ProfileData = {
+      etablissements?: { nom?: string; adresse?: string; ville?: string; pays?: string; telephone?: string } | null;
+    };
     const patient = patientRes.data;
-    const profile = profileRes.data as any;
+    const profile = profileRes.data as ProfileData;
     const allergies = allergiesRes.data || [];
     const antecedents = antecedentsRes.data || [];
     const prescriptions = prescriptionsRes.data || [];
@@ -252,8 +255,8 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": `inline; filename="lettre-reference-${patient.npi}.html"`,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Lettre référence error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

@@ -132,7 +132,7 @@ Si aucune alerte : []`;
     } catch {
       return NextResponse.json({ alerts: quickAlerts.slice(0, 5) });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("AI Alerts error:", error);
     return NextResponse.json({ alerts: [] });
   }
