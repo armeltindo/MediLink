@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard, Users, UserPlus, Building2, FlaskConical,
-  Pill, Syringe, BedDouble, FileText, BarChart3, Settings,
+  Pill, Syringe, BedDouble, FileText, BarChart3,
   LogOut, Heart, ShieldCheck, ClipboardList,
 } from "lucide-react";
 

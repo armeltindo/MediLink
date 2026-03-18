@@ -16,7 +16,7 @@ interface BreakTheGlassProps {
 }
 
 export function BreakTheGlass({ patientId, patientNom, onAccessGranted }: BreakTheGlassProps) {
-  const { user } = useUser();
+  useUser();
   const [open, setOpen] = useState(false);
   const [justification, setJustification] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,11 +55,11 @@ export function BreakTheGlass({ patientId, patientNom, onAccessGranted }: BreakT
       setOpen(false);
       setJustification("");
       onAccessGranted();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: err.message || "Impossible d'enregistrer l'accès d'urgence.",
+        description: (err as Error).message || "Impossible d'enregistrer l'accès d'urgence.",
       });
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ export function BreakTheGlass({ patientId, patientNom, onAccessGranted }: BreakT
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <AlertTriangle className="h-5 w-5" />
-              Accès d'urgence — Break the Glass
+              Accès d&apos;urgence — Break the Glass
             </DialogTitle>
           </DialogHeader>
 
@@ -91,10 +91,10 @@ export function BreakTheGlass({ patientId, patientNom, onAccessGranted }: BreakT
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
               <p className="font-semibold mb-1">⚠️ Action traçée et irréversible</p>
               <p>
-                Vous êtes sur le point d'accéder au dossier de{" "}
-                <strong>{patientNom}</strong> en mode d'urgence. Cet accès sera{" "}
-                <strong>immédiatement notifié à l'administrateur</strong> et{" "}
-                consigné dans le journal d'audit permanent.
+                Vous êtes sur le point d&apos;accéder au dossier de{" "}
+                <strong>{patientNom}</strong> en mode d&apos;urgence. Cet accès sera{" "}
+                <strong>immédiatement notifié à l&apos;administrateur</strong> et{" "}
+                consigné dans le journal d&apos;audit permanent.
               </p>
             </div>
 
@@ -126,7 +126,7 @@ export function BreakTheGlass({ patientId, patientNom, onAccessGranted }: BreakT
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmer l'accès d'urgence
+              Confirmer l&apos;accès d&apos;urgence
             </Button>
           </DialogFooter>
         </DialogContent>
