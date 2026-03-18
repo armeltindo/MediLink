@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BreakTheGlass } from "@/components/patient/break-the-glass";
 import {
-  AlertTriangle, Calendar, MapPin, Briefcase, Heart,
+  AlertTriangle, Calendar, MapPin, Briefcase,
   Phone, Shield, QrCode, Download, User, FileText,
 } from "lucide-react";
 

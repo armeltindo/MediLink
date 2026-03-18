@@ -1,6 +1,5 @@
 "use client";
 import { AntecedentFamilial } from "@/types";
-import { cn } from "@/lib/utils";
 
 interface FamilyTreeProps {
   antecedentsFamiliaux: AntecedentFamilial[];
