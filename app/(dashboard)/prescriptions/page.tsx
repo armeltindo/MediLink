@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +113,7 @@ function PrescriptionSkeleton() {
 }
 
 export default function PrescriptionsPage() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const [prescriptions, setPrescriptions] = useState<PrescriptionRow[]>([]);
@@ -179,7 +179,7 @@ export default function PrescriptionsPage() {
     if (user) {
       fetchPrescriptions(activeTab, searchQuery);
     }
-  }, [user, fetchPrescriptions, activeTab]);
+  }, [user, fetchPrescriptions, activeTab, searchQuery]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
