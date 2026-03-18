@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Building2,
   MapPin,
   Phone,
   Mail,
@@ -222,11 +220,11 @@ function EtablissementDialog({
       }
       setOpen(false);
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: err.message,
+        description: (err as Error).message,
       });
     } finally {
       setSubmitting(false);
@@ -246,7 +244,7 @@ function EtablissementDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nom">Nom de l'établissement *</Label>
+            <Label htmlFor="nom">Nom de l&apos;établissement *</Label>
             <Input
               id="nom"
               placeholder="Ex : CHU de Cocody"
@@ -446,7 +444,7 @@ export default function EtablissementsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-serif font-bold">
-              Réseau d'établissements
+              Réseau d&apos;établissements
             </h2>
             <p className="text-sm text-muted-foreground">
               {loading
