@@ -427,7 +427,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
   );
 }
 
-export function PrescriptionsTab({ patient, allergies, onRefresh }: PrescriptionsTabProps) {
+export function PrescriptionsTab({ patient, allergies }: PrescriptionsTabProps) {
   const [open, setOpen] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
