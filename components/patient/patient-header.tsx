@@ -5,9 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { BreakTheGlass } from "@/components/patient/break-the-glass";
 import {
   AlertTriangle, Calendar, MapPin, Briefcase, Heart,
-  Phone, Shield, QrCode, Download, User,
+  Phone, Shield, QrCode, Download, User, FileText,
 } from "lucide-react";
 
 interface PatientHeaderProps {
@@ -15,9 +16,12 @@ interface PatientHeaderProps {
   allergies: Allergie[];
   onExportPDF?: () => void;
   onShowQR?: () => void;
+  onReferralLetter?: () => void;
+  showBreakGlass?: boolean;
+  onBreakGlassGranted?: () => void;
 }
 
-export function PatientHeader({ patient, allergies, onExportPDF, onShowQR }: PatientHeaderProps) {
+export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onReferralLetter, showBreakGlass, onBreakGlassGranted }: PatientHeaderProps) {
   const activeAllergies = allergies.filter((a) => a.actif);
   const anaphylacticAllergies = activeAllergies.filter((a) => a.severite === "anaphylactique");
   const bloodGroupFull = patient.groupe_sanguin && patient.rhesus
@@ -120,7 +124,20 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR }: Pat
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+          {showBreakGlass && onBreakGlassGranted && (
+            <BreakTheGlass
+              patientId={patient.id}
+              patientNom={`${patient.prenom} ${patient.nom}`}
+              onAccessGranted={onBreakGlassGranted}
+            />
+          )}
+          {onReferralLetter && (
+            <Button variant="outline" size="sm" onClick={onReferralLetter}>
+              <FileText className="h-4 w-4 mr-1.5" />
+              Lettre de référence
+            </Button>
+          )}
           {onShowQR && (
             <Button variant="outline" size="sm" onClick={onShowQR}>
               <QrCode className="h-4 w-4 mr-1.5" />

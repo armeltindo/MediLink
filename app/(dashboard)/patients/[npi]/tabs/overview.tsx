@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { FamilyTree } from "@/components/patient/family-tree";
 import {
   AlertTriangle, CheckCircle, Clock, Heart, Stethoscope,
   Pill, Activity, Loader2, Sparkles, Plus, Cigarette,
-  Wine, TreePalm, Utensils, User2,
+  Wine, TreePalm, Utensils, User2, GitBranch,
 } from "lucide-react";
 
 interface OverviewTabProps {
@@ -190,25 +191,30 @@ export function OverviewTab({
           </CardContent>
         </Card>
 
-        {/* Antécédents familiaux */}
-        {antecedentsFamiliaux.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <User2 className="h-4 w-4 text-purple-500" />
-                Antécédents familiaux
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2">
+        {/* Antécédents familiaux — arbre généalogique interactif */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <GitBranch className="h-4 w-4 text-purple-500" />
+              Arbre généalogique médical
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {antecedentsFamiliaux.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun antécédent familial enregistré</p>
+            ) : (
+              <FamilyTree antecedentsFamiliaux={antecedentsFamiliaux} />
+            )}
+            {antecedentsFamiliaux.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 {antecedentsFamiliaux.map((af) => (
-                  <div key={af.id} className="p-3 bg-muted/50 rounded-lg border">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                  <div key={af.id} className="p-2.5 bg-muted/50 rounded-lg border text-xs">
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
                       {parentLabels[af.parent] || af.parent}
                     </p>
-                    <p className="text-sm">{af.pathologie}</p>
+                    <p className="font-medium">{af.pathologie}</p>
                     {af.statut_vital === "decede" && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5">
                         Décédé{af.cause_deces ? ` — ${af.cause_deces}` : ""}
                         {af.age_deces ? ` (${af.age_deces} ans)` : ""}
                       </p>
@@ -216,9 +222,9 @@ export function OverviewTab({
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Right column: habitudes + prescriptions actives + dernière consultation */}

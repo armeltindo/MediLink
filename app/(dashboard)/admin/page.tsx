@@ -83,29 +83,64 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function exportCSV() {
-    const { data } = await supabase
-      .from("patients")
-      .select("npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+  async function exportCSV(type: "patients" | "consultations" | "prescriptions") {
+    if (type === "patients") {
+      const { data } = await supabase
+        .from("patients")
+        .select("npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, profession, assurance_organisme, created_at")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (!data) return;
+      const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Profession", "Assurance", "Créé le"];
+      const rows = data.map((p: any) => [
+        p.npi, p.nom, p.prenom, p.date_naissance, p.sexe === "M" ? "Masculin" : "Féminin",
+        `${p.groupe_sanguin || ""}${p.rhesus || ""}`, p.nationalite || "", p.profession || "", p.assurance_organisme || "",
+        new Date(p.created_at).toLocaleDateString("fr-FR"),
+      ]);
+      downloadCSV([headers, ...rows], `medilink-patients-${new Date().toISOString().split("T")[0]}.csv`);
+    } else if (type === "consultations") {
+      const { data } = await supabase
+        .from("consultations")
+        .select("date_consultation, motif, diagnostic_principal, diagnostic_cim10, type_consultation, patients!inner(npi, nom, prenom)")
+        .is("deleted_at", null)
+        .order("date_consultation", { ascending: false })
+        .limit(1000);
+      if (!data) return;
+      const headers = ["Date", "Patient NPI", "Patient Nom", "Motif", "Diagnostic principal", "Code CIM-10", "Type"];
+      const rows = (data as any[]).map((c) => [
+        new Date(c.date_consultation).toLocaleDateString("fr-FR"),
+        c.patients?.npi || "", `${c.patients?.prenom || ""} ${c.patients?.nom || ""}`,
+        c.motif || "", c.diagnostic_principal || "", c.diagnostic_cim10 || "", c.type_consultation || "",
+      ]);
+      downloadCSV([headers, ...rows], `medilink-consultations-${new Date().toISOString().split("T")[0]}.csv`);
+    } else if (type === "prescriptions") {
+      const { data } = await supabase
+        .from("prescriptions")
+        .select("date_prescription, medicament_dci, dosage, posologie, duree, statut, date_expiration, patients!inner(npi, nom, prenom)")
+        .is("deleted_at", null)
+        .order("date_prescription", { ascending: false })
+        .limit(1000);
+      if (!data) return;
+      const headers = ["Date prescription", "Patient NPI", "Patient Nom", "Médicament DCI", "Dosage", "Posologie", "Durée", "Statut", "Expiration"];
+      const rows = (data as any[]).map((p) => [
+        new Date(p.date_prescription).toLocaleDateString("fr-FR"),
+        p.patients?.npi || "", `${p.patients?.prenom || ""} ${p.patients?.nom || ""}`,
+        p.medicament_dci || "", p.dosage || "", p.posologie || "", p.duree || "", p.statut || "",
+        p.date_expiration ? new Date(p.date_expiration).toLocaleDateString("fr-FR") : "",
+      ]);
+      downloadCSV([headers, ...rows], `medilink-prescriptions-${new Date().toISOString().split("T")[0]}.csv`);
+    }
+  }
 
-    if (!data) return;
-
-    const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
-    const rows = data.map((p) => [
-      p.npi, p.nom, p.prenom, p.date_naissance, p.sexe,
-      `${p.groupe_sanguin || ""}${p.rhesus || ""}`, p.nationalite || "",
-      new Date(p.created_at).toLocaleDateString("fr-FR"),
-    ]);
-
-    const csv = [headers, ...rows].map((row) => row.join(";")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  function downloadCSV(rows: any[][], filename: string) {
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `medilink-patients-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = filename;
     a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (user?.role !== "super_admin" && user?.role !== "admin_etablissement") {
@@ -122,10 +157,20 @@ export default function AdminPage() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-serif font-bold">Statistiques établissement</h2>
-          <Button variant="outline" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Exporter CSV patients
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportCSV("patients")}>
+              <Download className="h-4 w-4 mr-2" />
+              CSV Patients
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportCSV("consultations")}>
+              <Download className="h-4 w-4 mr-2" />
+              CSV Consultations
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportCSV("prescriptions")}>
+              <Download className="h-4 w-4 mr-2" />
+              CSV Prescriptions
+            </Button>
+          </div>
         </div>
 
         {/* Summary cards */}
