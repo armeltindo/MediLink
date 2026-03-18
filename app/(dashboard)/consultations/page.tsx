@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +82,7 @@ function ConsultationSkeleton() {
 }
 
 export default function ConsultationsPage() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const [consultations, setConsultations] = useState<ConsultationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
