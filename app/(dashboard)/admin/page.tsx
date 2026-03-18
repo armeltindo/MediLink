@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,69 +105,8 @@ export default function AdminPage() {
   }, []);
 
   async function loadStats() {
-    // Promise.allSettled : une requête qui échoue n'annule pas les autres
-    const results = await Promise.allSettled([
-      supabase.from("patients").select("id, sexe", { count: "exact" }).is("deleted_at", null),
-      supabase.from("consultations").select("id", { count: "exact" }).is("deleted_at", null),
-      supabase.from("hospitalisations").select("id", { count: "exact" }).is("deleted_at", null),
-      supabase.from("hospitalisations").select("id", { count: "exact" }).is("date_sortie", null).is("deleted_at", null),
-      supabase.from("etablissements").select("id", { count: "exact" }).is("deleted_at", null),
-      supabase.from("consultations").select("diagnostic_cim10").not("diagnostic_cim10", "is", null).is("deleted_at", null).limit(500),
-      supabase.from("consultations").select("medecin_id, users_profiles(nom, prenom)").is("deleted_at", null).limit(500),
-    ]);
-
-    const getValue = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
-      result.status === "fulfilled" ? result.value : fallback;
-
-    const emptyRes = { data: [] as never[], count: 0, error: null, status: 200 as const, statusText: "OK" };
-    const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = [
-      getValue(results[0], emptyRes),
-      getValue(results[1], emptyRes),
-      getValue(results[2], emptyRes),
-      getValue(results[3], emptyRes),
-      getValue(results[4], emptyRes),
-      getValue(results[5], emptyRes),
-      getValue(results[6], emptyRes),
-    ];
-
-    const diagCount: Record<string, number> = {};
-    (diagRes.data || []).forEach((c: { diagnostic_cim10?: string }) => {
-      if (c.diagnostic_cim10) diagCount[c.diagnostic_cim10] = (diagCount[c.diagnostic_cim10] || 0) + 1;
-    });
-    const topDiagnostics = Object.entries(diagCount)
-      .sort((a, b) => b[1] - a[1]).slice(0, 10)
-      .map(([code, count]) => ({ code, libelle: code, count }));
-
-    const patients = patientsRes.data || [];
-    const hommes = patients.filter((p: { sexe: string }) => p.sexe === "M").length;
-    const femmes = patients.filter((p: { sexe: string }) => p.sexe === "F").length;
-
-    const medecinCount: Record<string, { nom: string; count: number }> = {};
-    (medecinConsultRes.data || []).forEach((c: { medecin_id: unknown; users_profiles?: unknown }) => {
-      const medecinId = c.medecin_id as string;
-      if (medecinId) {
-        if (!medecinCount[medecinId]) {
-          const profiles = c.users_profiles as { nom: string; prenom: string }[] | { nom: string; prenom: string } | null;
-          const profile = Array.isArray(profiles) ? profiles[0] : profiles;
-          medecinCount[medecinId] = { nom: profile ? `Dr. ${profile.prenom} ${profile.nom}` : medecinId.slice(0, 8), count: 0 };
-        }
-        medecinCount[medecinId].count++;
-      }
-    });
-    const activiteMedecins = Object.values(medecinCount)
-      .sort((a, b) => b.count - a.count).slice(0, 8)
-      .map((m) => ({ nom: m.nom, consultations: m.count }));
-
-    setStats({
-      totalPatients: patientsRes.count || 0,
-      totalConsultations: consultRes.count || 0,
-      totalHospitalisations: hospitRes.count || 0,
-      hospitalisationsEnCours: hospitEnCoursRes.count || 0,
-      totalEtablissements: etablRes.count || 0,
-      topDiagnostics,
-      repartitionSexe: [{ name: "Hommes", value: hommes }, { name: "Femmes", value: femmes }],
-      activiteMedecins,
-    });
+    const res = await fetch("/api/admin/stats");
+    if (res.ok) setStats(await res.json());
     setLoading(false);
   }
 
@@ -180,9 +118,12 @@ export default function AdminPage() {
   }, []);
 
   async function loadEtablissements() {
-    const { data } = await supabase.from("etablissements").select("id, nom, type, ville, region, adresse, telephone, email").is("deleted_at", null).order("nom");
-    setEtablissements((data as EtablissementRow[]) || []);
-    setEtabRows((data as EtablissementRow[]) || []);
+    const res = await fetch("/api/admin/etablissements");
+    if (res.ok) {
+      const data = await res.json();
+      setEtablissements(data);
+      setEtabRows(data);
+    }
     setEtabLoading(false);
   }
 
@@ -224,8 +165,12 @@ export default function AdminPage() {
     e.preventDefault();
     setNewEtabLoading(true);
     try {
-      const { error } = await supabase.from("etablissements").insert(newEtabForm);
-      if (error) throw error;
+      const res = await fetch("/api/admin/etablissements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEtabForm),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
       toast({ title: "Établissement créé", description: newEtabForm.nom });
       setNewEtabOpen(false);
       setNewEtabForm({ nom: "", type: "", ville: "", region: "", adresse: "", telephone: "", email: "" });
@@ -250,11 +195,9 @@ export default function AdminPage() {
   }
 
   async function exportCSV() {
-    const { data } = await supabase
-      .from("patients")
-      .select("npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+    const res = await fetch("/api/admin/export/patients");
+    if (!res.ok) return;
+    const data = await res.json();
     if (!data) return;
     const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
     const rows = data.map((p) => [

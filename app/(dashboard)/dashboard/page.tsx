@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
@@ -67,59 +66,8 @@ export default function DashboardPage() {
   }, [user]);
 
   async function loadStats() {
-    const now = new Date();
-    // Fix: use separate Date objects to avoid mutation
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    const [patientsRes, consultationsRes, prescriptionsRes, analysesRes, activityRes] = await Promise.all([
-      // Patients created today
-      supabase.from("patients").select("id", { count: "exact" })
-        .gte("created_at", startOfDay).is("deleted_at", null),
-
-      // Consultations this week
-      supabase.from("consultations").select("id", { count: "exact" })
-        .gte("date_consultation", startOfWeek)
-        .is("deleted_at", null),
-
-      // Prescriptions expiring in 7 days
-      supabase.from("prescriptions").select("id", { count: "exact" })
-        .in("statut", ["prescrit", "en_cours"])
-        .lte("date_expiration", sevenDaysLater)
-        .gte("date_expiration", now.toISOString()),
-
-      // Analyses en attente
-      supabase.from("analyses_prescrites").select("id", { count: "exact" })
-        .in("statut", ["prescrit", "en_attente"]),
-
-      // Recent audit activity — join patient name
-      supabase.from("audit_logs")
-        .select("action, timestamp, patients(prenom, nom)")
-        .order("timestamp", { ascending: false })
-        .limit(10),
-    ]);
-
-    setStats({
-      patientsToday: patientsRes.count || 0,
-      consultationsWeek: consultationsRes.count || 0,
-      prescriptionsExpiring: prescriptionsRes.count || 0,
-      analysesEnAttente: analysesRes.count || 0,
-      recentActivity: (activityRes.data || []).map((a: {
-        action: string;
-        timestamp: string;
-        // Supabase retourne les foreign key joins comme un tableau
-        patients?: { prenom: string; nom: string }[] | { prenom: string; nom: string } | null;
-      }) => {
-        const p = Array.isArray(a.patients) ? a.patients[0] : a.patients;
-        return {
-          action: a.action,
-          patientNom: p ? `${p.prenom} ${p.nom}` : "—",
-          timestamp: a.timestamp,
-        };
-      }),
-      topDiagnostics: [],
-    });
+    const res = await fetch("/api/dashboard/stats");
+    if (res.ok) setStats({ ...(await res.json()), topDiagnostics: [] });
     setLoading(false);
   }
 
