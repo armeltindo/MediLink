@@ -15,6 +15,7 @@ export type AnalysePrescrite = Database["public"]["Tables"]["analyses_prescrites
 export type ResultatAnalyse = Database["public"]["Tables"]["resultats_analyse"]["Row"];
 export type Vaccination = Database["public"]["Tables"]["vaccinations"]["Row"];
 export type Hospitalisation = Database["public"]["Tables"]["hospitalisations"]["Row"];
+export type RendezVous = Database["public"]["Tables"]["rendez_vous"]["Row"];
 export type SoinInfirmier = Database["public"]["Tables"]["soins_infirmiers"]["Row"];
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Consentement = Database["public"]["Tables"]["consentements"]["Row"];

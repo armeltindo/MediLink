@@ -339,6 +339,27 @@ export interface Database {
         Insert: Omit<Database["public"]["Tables"]["consentements"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["consentements"]["Insert"]>;
       };
+      rendez_vous: {
+        Row: {
+          id: string;
+          patient_id: string;
+          medecin_id: string;
+          etablissement_id: string | null;
+          date_rdv: string;
+          duree_minutes: number;
+          type_rdv: "consultation" | "suivi" | "urgence" | "vaccination" | "analyse" | "chirurgie" | "autre";
+          motif: string;
+          statut: "planifie" | "confirme" | "annule" | "effectue" | "absent";
+          notes: string | null;
+          rappel_envoye: boolean;
+          cree_par: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["rendez_vous"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["rendez_vous"]["Insert"]>;
+      };
       audit_logs: {
         Row: {
           id: string;
