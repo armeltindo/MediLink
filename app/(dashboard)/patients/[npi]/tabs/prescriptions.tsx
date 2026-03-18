@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Patient, Prescription, Allergie } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
@@ -214,7 +214,6 @@ const statusConfig: Record<string, { label: string; variant: "default" | "succes
 
 interface PrescriptionsTabProps {
   patient: Patient;
-  prescriptions: Prescription[];
   allergies: Allergie[];
   onRefresh: () => void;
 }
@@ -259,9 +258,12 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
       toast({ variant: "destructive", title: "ALERTE ALLERGIE", description: `Le patient est allergique à ${allergyConflict.substance}. Prescription bloquée.` });
       return;
     }
+    // Ouvrir la fenêtre de façon SYNCHRONE (action utilisateur directe)
+    // Les navigateurs bloquent window.open() appelé après un await
+    const printWindow = window.open("", "_blank");
     setLoading(true);
     try {
-      const { error } = await supabase.from("prescriptions").insert({
+      const { data: newRx, error } = await supabase.from("prescriptions").insert({
         patient_id: patient.id,
         medecin_id: user.id,
         consultation_id: null,
@@ -269,8 +271,8 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         date_prescription: new Date().toISOString(),
         statut: "prescrit",
         date_expiration: form.date_expiration || null,
-      });
-      if (error) throw error;
+      }).select("id").single();
+      if (error) { printWindow?.close(); throw error; }
 
       await supabase.from("audit_logs").insert({
         user_id: user.id,
@@ -280,10 +282,18 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         timestamp: new Date().toISOString(),
       });
 
-      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage}` });
+      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage} — ordonnance générée` });
       onSuccess();
       onClose();
+
+      // Naviguer dans la fenêtre déjà ouverte vers l'ordonnance
+      if (printWindow && newRx?.id) {
+        printWindow.location.href = `/api/ordonnance-pdf?prescriptionId=${newRx.id}`;
+      } else {
+        printWindow?.close();
+      }
     } catch (error: unknown) {
+      printWindow?.close();
       const msg = error instanceof Error ? error.message : "Erreur";
       toast({ variant: "destructive", title: "Erreur", description: msg });
     } finally {
@@ -417,11 +427,37 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
   );
 }
 
-export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh }: PrescriptionsTabProps) {
+export function PrescriptionsTab({ patient, allergies }: PrescriptionsTabProps) {
   const [open, setOpen] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
   const canDispense = user?.role === "pharmacien" || user?.role === "super_admin";
+
+  // ── Chargement autonome des prescriptions ──────────────────────────────────
+  const [rxList, setRxList] = useState<Prescription[]>([]);
+  const [rxLoading, setRxLoading] = useState(true);
+  const [rxError, setRxError] = useState<string | null>(null);
+
+  const loadRx = useCallback(async () => {
+    setRxLoading(true);
+    setRxError(null);
+    const { data, error } = await supabase
+      .from("prescriptions")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .is("deleted_at", null)
+      .order("date_prescription", { ascending: false });
+    if (error) {
+      setRxError(error.message);
+    } else {
+      setRxList(data || []);
+    }
+    setRxLoading(false);
+  }, [patient.id]);
+
+  useEffect(() => {
+    loadRx();
+  }, [loadRx]);
 
   async function handleDispense(prescriptionId: string) {
     if (!user) return;
@@ -438,12 +474,12 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
         timestamp: new Date().toISOString(),
       });
       toast({ title: "Médicament dispensé" });
-      onRefresh();
+      loadRx();
     }
   }
 
-  const activePrescriptions = prescriptions.filter((p) => ["prescrit", "dispense", "en_cours"].includes(p.statut));
-  const historique = prescriptions.filter((p) => ["termine", "annule"].includes(p.statut));
+  const activePrescriptions = rxList.filter((p) => ["prescrit", "dispense", "en_cours"].includes(p.statut));
+  const historique = rxList.filter((p) => ["termine", "annule"].includes(p.statut));
 
   const expiringPrescriptions = activePrescriptions.filter((p) => {
     if (!p.date_expiration) return false;
@@ -456,7 +492,7 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Prescriptions ({prescriptions.length})</h3>
+        <h3 className="font-semibold">Prescriptions ({rxList.length})</h3>
         {canCreate && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -471,9 +507,9 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
               </DialogHeader>
               <NewPrescriptionDialog
                 patient={patient}
-                prescriptions={prescriptions}
+                prescriptions={rxList}
                 allergies={allergies}
-                onSuccess={onRefresh}
+                onSuccess={loadRx}
                 onClose={() => setOpen(false)}
               />
             </DialogContent>
@@ -482,7 +518,7 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
       </div>
 
       {/* Expiration warnings */}
-      {expiringPrescriptions.length > 0 && (
+      {!rxLoading && !rxError && expiringPrescriptions.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
           <p className="text-sm font-medium text-orange-800 flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -497,7 +533,7 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
       )}
 
       {/* Active prescriptions */}
-      {activePrescriptions.length > 0 && (
+      {!rxLoading && !rxError && activePrescriptions.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -548,7 +584,7 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
       )}
 
       {/* Historique */}
-      {historique.length > 0 && (
+      {!rxLoading && !rxError && historique.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base text-muted-foreground">Historique ({historique.length})</CardTitle>
@@ -574,7 +610,19 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
         </Card>
       )}
 
-      {prescriptions.length === 0 && (
+      {rxLoading && (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-sm">Chargement des prescriptions…</span>
+        </div>
+      )}
+      {!rxLoading && rxError && (
+        <div className="text-center py-12 text-sm text-red-500">
+          <p>Erreur de chargement : {rxError}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={loadRx}>Réessayer</Button>
+        </div>
+      )}
+      {!rxLoading && !rxError && rxList.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           <Pill className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>Aucune prescription enregistrée</p>

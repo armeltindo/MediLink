@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription, AnalysePrescrite, Vaccination, Hospitalisation } from "@/types";
+import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription, AnalysePrescrite, Vaccination, Hospitalisation, RendezVous } from "@/types";
 import { Header } from "@/components/layout/header";
 import { PatientHeader } from "@/components/patient/patient-header";
 import { AIAlertsBanner } from "@/components/patient/ai-alerts-banner";
@@ -21,6 +21,7 @@ import { PrescriptionsTab } from "./tabs/prescriptions";
 import { AnalysesTab } from "./tabs/analyses";
 import { VaccinationsTab } from "./tabs/vaccinations";
 import { HospitalisationsTab } from "./tabs/hospitalisations";
+import { RendezVousTab } from "./tabs/rendez-vous";
 import { DocumentsTab } from "./tabs/documents";
 import { AuditTab } from "./tabs/audit";
 
@@ -42,6 +43,7 @@ export default function PatientPage() {
   const [analyses, setAnalyses] = useState<AnalysePrescrite[]>([]);
   const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
   const [hospitalisations, setHospitalisations] = useState<Hospitalisation[]>([]);
+  const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function PatientPage() {
       analysesRes,
       vaccinationsRes,
       hospitalisationsRes,
+      rendezVousRes,
     ] = await Promise.all([
       supabase.from("allergies").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("created_at", { ascending: false }),
       supabase.from("antecedents").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_debut", { ascending: false }),
@@ -98,6 +101,7 @@ export default function PatientPage() {
       supabase.from("analyses_prescrites").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_prescription", { ascending: false }),
       supabase.from("vaccinations").select("*").eq("patient_id", patientData.id).order("date_vaccination", { ascending: false }),
       supabase.from("hospitalisations").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_entree", { ascending: false }),
+      supabase.from("rendez_vous").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_rdv", { ascending: false }),
     ]);
 
     setAllergies(allergiesRes.data || []);
@@ -109,6 +113,8 @@ export default function PatientPage() {
     setAnalyses(analysesRes.data || []);
     setVaccinations(vaccinationsRes.data || []);
     setHospitalisations(hospitalisationsRes.data || []);
+    setRendezVous(rendezVousRes.data || []);
+    if (rendezVousRes.error) console.error("rendez_vous query error:", rendezVousRes.error);
     setLoading(false);
   }
 
@@ -185,6 +191,7 @@ export default function PatientPage() {
         onShowQR={handleShowQR}
         onLettreRef={handleLettreRef}
         onBreakGlass={() => setBtgOpen(true)}
+        onPatientUpdate={(updated) => setPatient(updated)}
       />
 
       {/* IA Alerts */}
@@ -240,6 +247,7 @@ export default function PatientPage() {
             <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
             <TabsTrigger value="vaccinations">Vaccins ({vaccinations.length})</TabsTrigger>
             <TabsTrigger value="hospitalisations">Hospitalisations ({hospitalisations.length})</TabsTrigger>
+            <TabsTrigger value="rendez-vous">Rendez-vous ({rendezVous.length})</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
@@ -268,7 +276,6 @@ export default function PatientPage() {
           <TabsContent value="prescriptions">
             <PrescriptionsTab
               patient={patient}
-              prescriptions={prescriptions}
               allergies={allergies}
               onRefresh={() => loadPatient(patient.npi)}
             />
@@ -294,6 +301,13 @@ export default function PatientPage() {
             <HospitalisationsTab
               patient={patient}
               hospitalisations={hospitalisations}
+              onRefresh={() => loadPatient(patient.npi)}
+            />
+          </TabsContent>
+
+          <TabsContent value="rendez-vous">
+            <RendezVousTab
+              patient={patient}
               onRefresh={() => loadPatient(patient.npi)}
             />
           </TabsContent>

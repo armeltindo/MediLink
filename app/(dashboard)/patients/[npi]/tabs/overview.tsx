@@ -37,51 +37,72 @@ function FamilyTreeSVG({ antecedentsFamiliaux }: { antecedentsFamiliaux: Anteced
   const has = (key: string) => (byParent[key]?.length ?? 0) > 0;
 
   const NW = 110, NH = 54;
+
+  // Visibility flags
+  const hasPGP1 = has("gp_paternel"), hasPGP2 = has("gm_paternelle");
+  const hasMGP1 = has("gp_maternel"), hasMGP2 = has("gm_maternelle");
+  // Père et Mère toujours affichés même sans antécédents
+  const hasPere = true, hasMere = true;
+  const hasAnyGrandparent = hasPGP1 || hasPGP2 || hasMGP1 || hasMGP2;
+
+  // Dynamic layout: if no grandparents, père/mère start at the top
+  const parentRowY = hasAnyGrandparent ? 115 : 10;
+  const parentBottomY = parentRowY + NH;
+  const patCx = 280;
+  const patCy = hasAnyGrandparent ? 215 : 115;
+  const viewBoxH = hasAnyGrandparent ? 235 : 140;
+
   // Positions: [x, y, centerX, centerBottomY]
   const POS: Record<string, [number, number, number, number]> = {
     gp_paternel:   [0,   10, 55,  64],
     gm_paternelle: [120, 10, 175, 64],
     gp_maternel:   [330, 10, 385, 64],
     gm_maternelle: [450, 10, 505, 64],
-    pere:          [60,  115, 115, 169],
-    mere:          [390, 115, 445, 169],
+    pere:          [60,  parentRowY, 115, parentBottomY],
+    mere:          [390, parentRowY, 445, parentBottomY],
   };
-  const patCx = 280, patCy = 215;
-  const nodeBottom = 169;
-
-  // Visibility flags
-  const hasPGP1 = has("gp_paternel"), hasPGP2 = has("gm_paternelle");
-  const hasMGP1 = has("gp_maternel"), hasMGP2 = has("gm_maternelle");
-  const hasPere = has("pere"), hasMere = has("mere");
 
   function renderNode(key: string) {
     const entries = byParent[key];
-    if (!entries?.length) return null; // hide nodes with no data
+    const isEmpty = !entries?.length;
+
+    // Grands-parents : masqués si aucune donnée
+    if (isEmpty && key !== "pere" && key !== "mere") return null;
+
     const [nx, ny] = POS[key];
-    const isDeceased = entries.some((e) => e.statut_vital === "decede");
-    const fill = isDeceased ? "#fff1f2" : "#f0fdf4";
-    const stroke = isDeceased ? "#fca5a5" : "#86efac";
+    const isDeceased = !isEmpty && entries.some((e) => e.statut_vital === "decede");
+    const fill   = isEmpty ? "#f8fafc" : isDeceased ? "#fff1f2" : "#f0fdf4";
+    const stroke = isEmpty ? "#cbd5e1" : isDeceased ? "#fca5a5" : "#86efac";
+
     return (
       <g key={key}>
         <rect x={nx} y={ny} width={NW} height={NH} rx={6}
-          fill={fill} stroke={stroke} strokeWidth={1.5} />
+          fill={fill} stroke={stroke} strokeWidth={1.5}
+          strokeDasharray={isEmpty ? "4 2" : undefined} />
         <text x={nx + NW / 2} y={ny + 15} textAnchor="middle"
           fontSize={9} fontWeight="600" fill="#374151">{LABELS[key] || key}</text>
-        <text x={nx + NW / 2} y={ny + 29} textAnchor="middle"
-          fontSize={8} fill={isDeceased ? "#dc2626" : "#15803d"}>
-          {entries[0].pathologie.length > 17
-            ? entries[0].pathologie.substring(0, 17) + "…"
-            : entries[0].pathologie}
-        </text>
-        {entries.length > 1 && (
-          <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#6b7280">
-            +{entries.length - 1} autre{entries.length > 2 ? "s" : ""}
-          </text>
-        )}
-        {isDeceased && entries.length === 1 && (
-          <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#dc2626">
-            † décédé{entries[0].age_deces ? ` à ${entries[0].age_deces} ans` : ""}
-          </text>
+        {isEmpty ? (
+          <text x={nx + NW / 2} y={ny + 33} textAnchor="middle"
+            fontSize={8} fill="#9ca3af" fontStyle="italic">Aucun antécédent</text>
+        ) : (
+          <>
+            <text x={nx + NW / 2} y={ny + 29} textAnchor="middle"
+              fontSize={8} fill={isDeceased ? "#dc2626" : "#15803d"}>
+              {entries[0].pathologie.length > 17
+                ? entries[0].pathologie.substring(0, 17) + "…"
+                : entries[0].pathologie}
+            </text>
+            {entries.length > 1 && (
+              <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#6b7280">
+                +{entries.length - 1} autre{entries.length > 2 ? "s" : ""}
+              </text>
+            )}
+            {isDeceased && entries.length === 1 && (
+              <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#dc2626">
+                † décédé{entries[0].age_deces ? ` à ${entries[0].age_deces} ans` : ""}
+              </text>
+            )}
+          </>
         )}
       </g>
     );
@@ -92,22 +113,22 @@ function FamilyTreeSVG({ antecedentsFamiliaux }: { antecedentsFamiliaux: Anteced
 
   return (
     <div className="space-y-3">
-      <svg viewBox="0 0 580 235" className="w-full h-auto rounded-lg border bg-slate-50/30">
+      <svg viewBox={`0 0 580 ${viewBoxH}`} className="w-full h-auto rounded-lg border bg-slate-50/30">
         {/* ── Paternal grandparents → père ── */}
         {hasPGP1 && hasPGP2 && <line x1={55} y1={64} x2={175} y2={64} stroke={L} strokeWidth={1.5} />}
-        {hasPGP1 && hasPGP2 && hasPere && <line x1={115} y1={64} x2={115} y2={115} stroke={L} strokeWidth={1.5} />}
-        {hasPGP1 && !hasPGP2 && hasPere && <line x1={55} y1={64} x2={115} y2={115} stroke={L} strokeWidth={1.5} />}
-        {!hasPGP1 && hasPGP2 && hasPere && <line x1={175} y1={64} x2={115} y2={115} stroke={L} strokeWidth={1.5} />}
+        {hasPGP1 && hasPGP2 && hasPere && <line x1={115} y1={64} x2={115} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
+        {hasPGP1 && !hasPGP2 && hasPere && <line x1={55} y1={64} x2={115} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
+        {!hasPGP1 && hasPGP2 && hasPere && <line x1={175} y1={64} x2={115} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
         {/* ── Maternal grandparents → mère ── */}
         {hasMGP1 && hasMGP2 && <line x1={385} y1={64} x2={505} y2={64} stroke={L} strokeWidth={1.5} />}
-        {hasMGP1 && hasMGP2 && hasMere && <line x1={445} y1={64} x2={445} y2={115} stroke={L} strokeWidth={1.5} />}
-        {hasMGP1 && !hasMGP2 && hasMere && <line x1={385} y1={64} x2={445} y2={115} stroke={L} strokeWidth={1.5} />}
-        {!hasMGP1 && hasMGP2 && hasMere && <line x1={505} y1={64} x2={445} y2={115} stroke={L} strokeWidth={1.5} />}
+        {hasMGP1 && hasMGP2 && hasMere && <line x1={445} y1={64} x2={445} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
+        {hasMGP1 && !hasMGP2 && hasMere && <line x1={385} y1={64} x2={445} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
+        {!hasMGP1 && hasMGP2 && hasMere && <line x1={505} y1={64} x2={445} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
         {/* ── Parents → patient ── */}
-        {hasPere && hasMere && <line x1={115} y1={nodeBottom} x2={445} y2={nodeBottom} stroke={L} strokeWidth={1.5} />}
-        {hasPere && hasMere && <line x1={patCx} y1={nodeBottom} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
-        {hasPere && !hasMere && <line x1={115} y1={nodeBottom} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
-        {!hasPere && hasMere && <line x1={445} y1={nodeBottom} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
+        {hasPere && hasMere && <line x1={115} y1={parentBottomY} x2={445} y2={parentBottomY} stroke={L} strokeWidth={1.5} />}
+        {hasPere && hasMere && <line x1={patCx} y1={parentBottomY} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
+        {hasPere && !hasMere && <line x1={115} y1={parentBottomY} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
+        {!hasPere && hasMere && <line x1={445} y1={parentBottomY} x2={patCx} y2={patCy - 16} stroke={L} strokeWidth={1.5} />}
         {/* ── Nodes (only rendered if data exists) ── */}
         {Object.keys(POS).map((key) => renderNode(key))}
         {/* ── Patient ── */}
@@ -115,11 +136,13 @@ function FamilyTreeSVG({ antecedentsFamiliaux }: { antecedentsFamiliaux: Anteced
         <text x={patCx} y={patCy - 2} textAnchor="middle" fontSize={8} fontWeight="700" fill="#1d4ed8">Patient</text>
         <text x={patCx} y={patCy + 10} textAnchor="middle" fontSize={7} fill="#3b82f6">(index)</text>
         {/* ── Legend ── */}
-        <g transform="translate(446,200)">
+        <g transform={`translate(446,${viewBoxH - 49})`}>
           <rect x={0} y={0} width={8} height={8} rx={2} fill="#f0fdf4" stroke="#86efac" strokeWidth={1} />
           <text x={11} y={8} fontSize={7} fill="#6b7280">Vivant</text>
           <rect x={0} y={14} width={8} height={8} rx={2} fill="#fff1f2" stroke="#fca5a5" strokeWidth={1} />
           <text x={11} y={22} fontSize={7} fill="#6b7280">Décédé</text>
+          <rect x={0} y={28} width={8} height={8} rx={2} fill="#f8fafc" stroke="#cbd5e1" strokeWidth={1} strokeDasharray="2 1" />
+          <text x={11} y={36} fontSize={7} fill="#6b7280">Non renseigné</text>
         </g>
       </svg>
       {siblings.length > 0 && (

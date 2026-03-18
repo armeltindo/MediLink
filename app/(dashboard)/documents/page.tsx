@@ -6,24 +6,23 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
-import { FileText, ExternalLink } from "lucide-react";
+import { FileText, ExternalLink, Image as ImageIcon } from "lucide-react";
 
 interface DocumentRow {
   id: string;
   nom: string;
-  type_document: string;
-  date_upload: string;
+  type: string;
+  uploaded_at: string;
   url: string | null;
   patients: { npi: string; nom: string; prenom: string } | null;
 }
 
-const typeLabels: Record<string, string> = {
-  ordonnance: "Ordonnance",
-  radio: "Radiologie",
-  echographie: "Échographie",
-  biologie: "Biologie",
-  compte_rendu: "Compte rendu",
-  autre: "Autre",
+const typeConfig: Record<string, { label: string; icon: React.ElementType }> = {
+  imagerie:     { label: "Imagerie",      icon: ImageIcon },
+  compte_rendu: { label: "Compte-rendu",  icon: FileText },
+  ordonnance:   { label: "Ordonnance",    icon: FileText },
+  certificat:   { label: "Certificat",    icon: FileText },
+  autre:        { label: "Autre",         icon: FileText },
 };
 
 export default function DocumentsPage() {
@@ -33,9 +32,9 @@ export default function DocumentsPage() {
   useEffect(() => {
     supabase
       .from("documents")
-      .select("id, nom, type_document, date_upload, url, patients(npi, nom, prenom)")
+      .select("id, nom, type, uploaded_at, url, patients(npi, nom, prenom)")
       .is("deleted_at", null)
-      .order("date_upload", { ascending: false })
+      .order("uploaded_at", { ascending: false })
       .limit(100)
       .then(({ data }) => {
         setRows((data as unknown as DocumentRow[]) || []);
@@ -64,48 +63,52 @@ export default function DocumentsPage() {
                   </div>
                 </div>
               ))
-            : rows.map((d) => (
-                <Card key={d.id} className="hover:bg-accent transition-colors">
-                  <CardContent className="p-4 flex items-start gap-4">
-                    <div className="h-9 w-9 rounded-full bg-medical-green/10 flex items-center justify-center shrink-0">
-                      <FileText className="h-4 w-4 text-medical-green" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{d.nom}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                          {typeLabels[d.type_document] || d.type_document}
-                        </span>
+            : rows.map((d) => {
+                const config = typeConfig[d.type] ?? typeConfig.autre;
+                const Icon = config.icon;
+                return (
+                  <Card key={d.id} className="hover:bg-accent transition-colors">
+                    <CardContent className="p-4 flex items-start gap-4">
+                      <div className="h-9 w-9 rounded-full bg-medical-green/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4 w-4 text-medical-green" />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Patient :{" "}
-                        <Link
-                          href={d.patients ? `/patients/${d.patients.npi}` : "#"}
-                          className="underline hover:text-foreground"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {d.patients ? `${d.patients.prenom} ${d.patients.nom}` : "—"}
-                        </Link>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs text-muted-foreground">{formatDate(d.date_upload)}</span>
-                      {d.url && (
-                        <a
-                          href={d.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-medical-green hover:text-medical-green/80"
-                          title="Ouvrir le document"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{d.nom}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                            {config.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Patient :{" "}
+                          <Link
+                            href={d.patients ? `/patients/${d.patients.npi}` : "#"}
+                            className="underline hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {d.patients ? `${d.patients.prenom} ${d.patients.nom}` : "—"}
+                          </Link>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs text-muted-foreground">{formatDate(d.uploaded_at)}</span>
+                        {d.url && (
+                          <a
+                            href={d.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-medical-green hover:text-medical-green/80"
+                            title="Ouvrir le document"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
 
           {!loading && rows.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
