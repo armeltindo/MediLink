@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard, Users, Building2, FlaskConical,
@@ -58,7 +57,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <nav className="space-y-1">
           {visibleItems.map((item) => {
             const Icon = item.icon;
@@ -84,7 +83,7 @@ export function Sidebar() {
             );
           })}
         </nav>
-      </ScrollArea>
+      </div>
 
       {/* User section */}
       <div className="p-4 border-t border-slate-700">
