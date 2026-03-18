@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -33,9 +32,6 @@ import {
   FlaskConical,
   Search,
   AlertTriangle,
-  ArrowUp,
-  ArrowDown,
-  Minus,
   Loader2,
   ClipboardList,
 } from "lucide-react";
@@ -94,43 +90,6 @@ const STATUS_CONFIG: Record<
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function ResultatDisplay({
-  valeur,
-  valeurMin,
-  valeurMax,
-  unite,
-}: {
-  valeur: number | null;
-  valeurMin: number | null;
-  valeurMax: number | null;
-  unite: string | null;
-}) {
-  if (valeur === null) return <span className="text-muted-foreground">—</span>;
-
-  const isLow = valeurMin !== null && valeur < valeurMin;
-  const isHigh = valeurMax !== null && valeur > valeurMax;
-  const isAbnormal = isLow || isHigh;
-
-  return (
-    <div
-      className={`flex items-center gap-1 font-medium ${
-        isAbnormal ? "text-red-600" : "text-green-700"
-      }`}
-    >
-      {isHigh && <ArrowUp className="h-3.5 w-3.5" />}
-      {isLow && <ArrowDown className="h-3.5 w-3.5" />}
-      {!isAbnormal && <Minus className="h-3.5 w-3.5" />}
-      <span>{valeur}</span>
-      {unite && <span className="text-xs font-normal ml-0.5">{unite}</span>}
-      {isAbnormal && valeurMin !== null && valeurMax !== null && (
-        <span className="text-xs text-muted-foreground ml-1">
-          ({valeurMin}–{valeurMax})
-        </span>
-      )}
-    </div>
-  );
-}
 
 function RowSkeleton() {
   return (
@@ -222,11 +181,11 @@ function SaisirResultatDialog({ analyse, onSuccess }: SaisirResultatDialogProps)
         interpretation: "",
       });
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         variant: "destructive",
         title: "Erreur lors de l'enregistrement",
-        description: err.message,
+        description: (err as Error).message,
       });
     } finally {
       setLoading(false);
@@ -404,7 +363,7 @@ function ResultsSummary({ resultats }: { resultats: ResultatRow[] }) {
 // ---------------------------------------------------------------------------
 
 export default function AnalysesPage() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const [analyses, setAnalyses] = useState<AnalyseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -575,7 +534,7 @@ export default function AnalysesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Patient</TableHead>
-                <TableHead>Type d'analyse</TableHead>
+                <TableHead>Type d&apos;analyse</TableHead>
                 <TableHead>Date prescription</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Résultats</TableHead>
