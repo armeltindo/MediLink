@@ -13,7 +13,146 @@ import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BedDouble, Plus, Loader2, Calendar, ClipboardList, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { BedDouble, Plus, Loader2, Calendar, ClipboardList, ChevronDown, ChevronUp, FileText, Stethoscope } from "lucide-react";
+
+// ─── Compte Rendu Opératoire Dialog ───────────────────────────────────────
+function CROperatoireDialog({
+  hospitalisation, patient, user, onSuccess,
+}: {
+  hospitalisation: { id: string; etablissement_id: string };
+  patient: { id: string; nom: string; prenom: string };
+  user: { id: string; role: string } | null;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    type_intervention: "",
+    chirurgien: "",
+    anesthesiste: "",
+    duree_minutes: "",
+    complications: "",
+    notes: "",
+  });
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setLoading(true);
+    try {
+      const metadata = JSON.stringify({
+        hospitalisation_id: hospitalisation.id,
+        type_intervention: form.type_intervention,
+        chirurgien: form.chirurgien,
+        anesthesiste: form.anesthesiste,
+        duree_minutes: form.duree_minutes ? parseInt(form.duree_minutes) : null,
+        complications: form.complications || null,
+        notes: form.notes || null,
+      });
+
+      const { error } = await supabase.from("documents").insert({
+        patient_id: patient.id,
+        nom: `CR Opératoire — ${form.type_intervention}`,
+        url: "",
+        type: "compte_rendu",
+        description: metadata,
+        uploaded_by: user.id,
+        etablissement_id: hospitalisation.etablissement_id,
+      });
+
+      if (error) throw error;
+      toast({ title: "Compte rendu opératoire enregistré" });
+      setOpen(false);
+      setForm({ type_intervention: "", chirurgien: "", anesthesiste: "", duree_minutes: "", complications: "", notes: "" });
+      onSuccess();
+    } catch (err: unknown) {
+      toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50">
+          <Stethoscope className="h-3 w-3 mr-1" />
+          CR Opératoire
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Compte rendu opératoire — {patient.prenom} {patient.nom}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <Label>Type d&apos;intervention *</Label>
+            <Input
+              value={form.type_intervention}
+              onChange={(e) => setForm({ ...form, type_intervention: e.target.value })}
+              placeholder="Ex: Appendicectomie, Césarienne, Laparotomie..."
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Chirurgien *</Label>
+              <Input
+                value={form.chirurgien}
+                onChange={(e) => setForm({ ...form, chirurgien: e.target.value })}
+                placeholder="Dr. Nom Prénom"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Anesthésiste</Label>
+              <Input
+                value={form.anesthesiste}
+                onChange={(e) => setForm({ ...form, anesthesiste: e.target.value })}
+                placeholder="Dr. Nom Prénom"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Durée (minutes)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.duree_minutes}
+              onChange={(e) => setForm({ ...form, duree_minutes: e.target.value })}
+              placeholder="Ex: 90"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Complications per-opératoires</Label>
+            <Textarea
+              value={form.complications}
+              onChange={(e) => setForm({ ...form, complications: e.target.value })}
+              rows={2}
+              placeholder="Aucune / Saignement / Plaie organe..."
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Notes et observations</Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={3}
+              placeholder="Technique utilisée, constatations peropératoires, suites prévues..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button type="submit" variant="medical" disabled={loading || !form.type_intervention || !form.chirurgien}>
+              {loading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Enregistrer
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const SERVICES = [
   "Médecine interne", "Chirurgie générale", "Maternité / Obstétrique",
@@ -271,6 +410,17 @@ function HospitalisationCard({
               <p className="text-xs text-muted-foreground mt-2 border-t pt-2">{h.resume_sejour}</p>
             )}
 
+            {/* CR Opératoire + Lettre de sortie buttons */}
+            {(user?.role === "medecin" || user?.role === "super_admin") && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <CROperatoireDialog
+                  hospitalisation={{ id: h.id, etablissement_id: h.etablissement_id }}
+                  patient={patient}
+                  user={user as { id: string; role: string } | null}
+                  onSuccess={() => {}}
+                />
+              </div>
+            )}
             {/* Lettre de sortie button */}
             {!isOngoing && (user?.role === "medecin" || user?.role === "super_admin" || user?.role === "admin_etablissement") && (
               <div className="mt-2">

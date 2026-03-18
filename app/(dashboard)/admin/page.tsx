@@ -19,9 +19,10 @@ import {
 import {
   Users, Stethoscope, BedDouble, Building2,
   Download, TrendingUp, Activity, UserPlus, Shield,
-  MapPin, Phone, Mail, Loader2, UserCheck, UserX,
+  MapPin, Phone, Mail, Loader2, UserCheck, UserX, Syringe, Settings2, ExternalLink,
 } from "lucide-react";
 import { getRoleBadge } from "@/lib/utils";
+import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 
 const COLORS = ["#0D7A5F", "#0EA5E9", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
@@ -256,6 +257,7 @@ export default function AdminPage() {
               Utilisateurs
             </TabsTrigger>
             <TabsTrigger value="etablissements">Établissements</TabsTrigger>
+            <TabsTrigger value="configuration">Configuration</TabsTrigger>
           </TabsList>
 
           {/* ── STATS TAB ── */}
@@ -632,6 +634,53 @@ export default function AdminPage() {
                 )}
               </div>
             )}
+          </TabsContent>
+
+          {/* ── CONFIGURATION TAB ── */}
+          <TabsContent value="configuration" className="space-y-4 mt-4">
+            <h3 className="text-base font-semibold">Configuration système</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* PEV Configuration */}
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2.5 rounded-lg bg-medical-green-light">
+                      <Syringe className="h-5 w-5 text-medical-green" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-sm">Calendrier vaccinal PEV</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configurer le Programme Élargi de Vaccination — ajouter, modifier ou désactiver des vaccins selon le programme national.
+                      </p>
+                      <Button variant="outline" size="sm" className="mt-3 h-7 text-xs" asChild>
+                        <Link href="/admin/configuration/pev">
+                          <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                          Gérer le calendrier
+                          <ExternalLink className="h-3 w-3 ml-1.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              {/* Seuils d'alerte */}
+              <Card className="hover:shadow-md transition-shadow opacity-60">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2.5 rounded-lg bg-orange-100">
+                      <Activity className="h-5 w-5 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-sm">Seuils d&apos;alerte constantes</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configurer les valeurs limites pour TA, FC, SpO₂ et température déclenchant les alertes cliniques.
+                      </p>
+                      <Badge variant="outline" className="mt-3 text-xs">Bientôt disponible</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

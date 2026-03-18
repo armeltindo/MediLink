@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Patient, AnalysePrescrite, ResultatAnalyse } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -9,12 +9,158 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge, BadgeVariant } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FlaskConical, Plus, Loader2, ArrowUp, ArrowDown, Minus,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine, ReferenceArea,
+} from "recharts";
+import {
+  FlaskConical, Plus, Loader2, ArrowUp, ArrowDown, Minus, TrendingUp,
 } from "lucide-react";
+
+// ─── Paramètres biologiques suivis ────────────────────────────────────────
+const BIO_PARAMS = [
+  { key: "Glycémie à jeun",    unit: "mmol/L", min: 3.9, max: 5.5, color: "#f59e0b" },
+  { key: "HbA1c",              unit: "%",      min: 4.0, max: 5.7, color: "#8b5cf6" },
+  { key: "Créatinine sérique", unit: "µmol/L", min: 53,  max: 106, color: "#3b82f6" },
+  { key: "Hémoglobine",        unit: "g/dL",   min: 12,  max: 17,  color: "#ef4444" },
+  { key: "CD4 / Charge virale VIH", unit: "cell/mm³", min: 500, max: 1500, color: "#10b981" },
+  { key: "Cholestérol total",  unit: "mmol/L", min: 0,   max: 5.2, color: "#f97316" },
+  { key: "Plaquettes",         unit: "×10⁹/L", min: 150, max: 400, color: "#06b6d4" },
+  { key: "ALAT / ASAT",        unit: "UI/L",   min: 0,   max: 40,  color: "#84cc16" },
+  { key: "INR / TP",           unit: "%",      min: 70,  max: 100, color: "#ec4899" },
+];
+
+// ─── BiologieEvolutionSection ──────────────────────────────────────────────
+interface ChartPoint { date: string; value: number; label: string; }
+
+function BiologieEvolutionSection({ patientId }: { patientId: string }) {
+  const [selectedParam, setSelectedParam] = useState(BIO_PARAMS[0].key);
+  const [period, setPeriod] = useState<"3m" | "6m" | "1y" | "all">("6m");
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [loadingChart, setLoadingChart] = useState(false);
+
+  const paramConfig = BIO_PARAMS.find((p) => p.key === selectedParam) || BIO_PARAMS[0];
+
+  useEffect(() => {
+    async function loadChartData() {
+      setLoadingChart(true);
+      const now = new Date();
+      let from: Date | null = null;
+      if (period === "3m") from = new Date(now.setMonth(now.getMonth() - 3));
+      else if (period === "6m") from = new Date(now.setMonth(now.getMonth() - 6));
+      else if (period === "1y") from = new Date(now.setFullYear(now.getFullYear() - 1));
+
+      // Load all analyses for this patient, then find matching results
+      let q = supabase
+        .from("resultats_analyse")
+        .select("valeur, date_resultat, parametre, analyses_prescrites!inner(patient_id, type_analyse)")
+        .eq("analyses_prescrites.patient_id", patientId)
+        .ilike("parametre", `%${selectedParam.split(" ")[0]}%`)
+        .not("valeur", "is", null)
+        .order("date_resultat", { ascending: true });
+
+      if (from) q = q.gte("date_resultat", from.toISOString());
+
+      const { data } = await q.limit(50);
+      const points: ChartPoint[] = (data || [])
+        .filter((r: { valeur: number | null }) => r.valeur !== null)
+        .map((r: { valeur: number; date_resultat: string; parametre: string }) => ({
+          date: new Date(r.date_resultat).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" }),
+          value: r.valeur,
+          label: r.parametre,
+        }));
+      setChartData(points);
+      setLoadingChart(false);
+    }
+    loadChartData();
+  }, [patientId, selectedParam, period]);
+
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
+    if (!active || !payload?.length) return null;
+    const v = payload[0].value;
+    const isAbnormal = v < paramConfig.min || v > paramConfig.max;
+    return (
+      <div className="bg-white border rounded-lg p-2 shadow text-xs">
+        <p className="font-semibold">{label}</p>
+        <p className={isAbnormal ? "text-red-600 font-bold" : "text-green-700"}>
+          {v} {paramConfig.unit}
+          {isAbnormal && (v > paramConfig.max ? " ↑" : " ↓")}
+        </p>
+        <p className="text-muted-foreground">Normal : {paramConfig.min}–{paramConfig.max}</p>
+      </div>
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-medical-blue" />
+            Évolution graphique
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={selectedParam} onValueChange={setSelectedParam}>
+              <SelectTrigger className="h-7 text-xs w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BIO_PARAMS.map((p) => (
+                  <SelectItem key={p.key} value={p.key} className="text-xs">{p.key}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
+              <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3m" className="text-xs">3 mois</SelectItem>
+                <SelectItem value="6m" className="text-xs">6 mois</SelectItem>
+                <SelectItem value="1y" className="text-xs">1 an</SelectItem>
+                <SelectItem value="all" className="text-xs">Tout</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loadingChart ? (
+          <div className="h-40 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="h-40 flex flex-col items-center justify-center text-muted-foreground gap-1">
+            <TrendingUp className="h-8 w-8 opacity-20" />
+            <p className="text-xs">Aucun résultat enregistré pour ce paramètre</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} width={42}
+                label={{ value: paramConfig.unit, position: "insideLeft", angle: -90, fontSize: 9, fill: "#94a3b8", dy: 40 }} />
+              <Tooltip content={<CustomTooltip />} />
+              {/* Normal range band */}
+              <ReferenceArea y1={paramConfig.min} y2={paramConfig.max}
+                fill="#dcfce7" fillOpacity={0.4} />
+              <ReferenceLine y={paramConfig.max} stroke="#16a34a" strokeDasharray="4 2"
+                label={{ value: `Max ${paramConfig.max}`, fontSize: 8, fill: "#16a34a" }} />
+              <ReferenceLine y={paramConfig.min} stroke="#16a34a" strokeDasharray="4 2"
+                label={{ value: `Min ${paramConfig.min}`, fontSize: 8, fill: "#16a34a" }} />
+              <Line
+                type="monotone" dataKey="value" stroke={paramConfig.color}
+                strokeWidth={2} dot={{ r: 4, fill: paramConfig.color }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 const COMMON_ANALYSES = [
   "Numération Formule Sanguine (NFS)",
@@ -74,6 +220,38 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
   const canSaisirResultat = user?.role === "laborantin" || user?.role === "super_admin";
+
+  // ── Supabase Realtime — notify médecin when a laborantin saves a result ──
+  useEffect(() => {
+    const analysesIds = analyses.map((a) => a.id);
+    if (analysesIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`resultats-patient-${patient.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "resultats_analyse",
+          filter: `patient_id=eq.${patient.id}`,
+        },
+        (payload) => {
+          // Only notify if current user is a médecin (not the laborantin who just saved)
+          if (user?.role === "medecin" || user?.role === "super_admin") {
+            toast({
+              title: "Résultats disponibles",
+              description: `Nouveaux résultats enregistrés : ${(payload.new as ResultatAnalyse).parametre || "analyse"}`,
+            });
+            onRefresh();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient.id, analyses.length]);
 
   const [newAnalyse, setNewAnalyse] = useState({ type_analyse: "", urgence: false });
   const [newResultat, setNewResultat] = useState({
@@ -171,6 +349,9 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
 
   return (
     <div className="space-y-4">
+      {/* Graphiques d'évolution biologique */}
+      <BiologieEvolutionSection patientId={patient.id} />
+
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Analyses biologiques ({analyses.length})</h3>
         {canCreate && (

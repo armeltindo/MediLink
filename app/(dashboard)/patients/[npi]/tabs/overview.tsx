@@ -16,9 +16,138 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import {
   AlertTriangle, CheckCircle, Clock, Stethoscope,
   Pill, Activity, Loader2, Sparkles, Cigarette,
-  Wine, Utensils, User2, Plus, Shield,
+  Wine, Utensils, User2, Plus, Shield, Network, List,
 } from "lucide-react";
 import { searchCIM10, CIM10Code } from "@/lib/cim10";
+
+// ─── Arbre Généalogique SVG ────────────────────────────────────────────────
+function FamilyTreeSVG({ antecedentsFamiliaux }: { antecedentsFamiliaux: AntecedentFamilial[] }) {
+  const byParent: Record<string, AntecedentFamilial[]> = {};
+  antecedentsFamiliaux.forEach((af) => {
+    if (!byParent[af.parent]) byParent[af.parent] = [];
+    byParent[af.parent].push(af);
+  });
+
+  const LABELS: Record<string, string> = {
+    gp_paternel: "GP Paternel", gm_paternelle: "GM Paternelle",
+    gp_maternel: "GP Maternel", gm_maternelle: "GM Maternelle",
+    pere: "Père", mere: "Mère",
+  };
+
+  function nodeFill(key: string) {
+    const e = byParent[key];
+    if (!e?.length) return "#f9fafb";
+    return e.some((x) => x.statut_vital === "decede") ? "#fff1f2" : "#f0fdf4";
+  }
+  function nodeStroke(key: string) {
+    const e = byParent[key];
+    if (!e?.length) return "#e5e7eb";
+    return e.some((x) => x.statut_vital === "decede") ? "#fca5a5" : "#86efac";
+  }
+
+  const NW = 110, NH = 54;
+  // Positions: [x, y, centerX]
+  const POS: Record<string, [number, number, number]> = {
+    gp_paternel:   [0,   10, 55],
+    gm_paternelle: [120, 10, 175],
+    gp_maternel:   [330, 10, 385],
+    gm_maternelle: [450, 10, 505],
+    pere:          [60,  115, 115],
+    mere:          [390, 115, 445],
+  };
+  const patCx = 280, patCy = 215;
+  const nodeBottom = 115 + NH; // 169
+
+  function renderNode(key: string) {
+    const [nx, ny] = POS[key];
+    const entries = byParent[key] || [];
+    const hasData = entries.length > 0;
+    const isDeceased = entries.some((e) => e.statut_vital === "decede");
+    const label = LABELS[key] || key;
+    return (
+      <g key={key}>
+        <rect x={nx} y={ny} width={NW} height={NH} rx={6}
+          fill={nodeFill(key)} stroke={nodeStroke(key)} strokeWidth={1.5} />
+        <text x={nx + NW / 2} y={ny + 15} textAnchor="middle"
+          fontSize={9} fontWeight="600" fill="#374151">{label}</text>
+        {hasData ? (
+          <>
+            <text x={nx + NW / 2} y={ny + 29} textAnchor="middle"
+              fontSize={8} fill={isDeceased ? "#dc2626" : "#15803d"}>
+              {entries[0].pathologie.length > 17
+                ? entries[0].pathologie.substring(0, 17) + "…"
+                : entries[0].pathologie}
+            </text>
+            {entries.length > 1 && (
+              <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#6b7280">
+                +{entries.length - 1} autre{entries.length > 2 ? "s" : ""}
+              </text>
+            )}
+            {isDeceased && entries.length === 1 && (
+              <text x={nx + NW / 2} y={ny + 42} textAnchor="middle" fontSize={7} fill="#dc2626">
+                † décédé{entries[0].age_deces ? ` à ${entries[0].age_deces} ans` : ""}
+              </text>
+            )}
+          </>
+        ) : (
+          <text x={nx + NW / 2} y={ny + 36} textAnchor="middle"
+            fontSize={8} fill="#9ca3af" fontStyle="italic">non renseigné</text>
+        )}
+      </g>
+    );
+  }
+
+  const siblings = [...(byParent["frere"] || []), ...(byParent["soeur"] || [])];
+
+  return (
+    <div className="space-y-3">
+      <svg viewBox="0 0 580 235" className="w-full h-auto rounded-lg border bg-slate-50/30">
+        {/* ── Lines: grandparents → parents ── */}
+        {/* GPP + GMP horizontal bar → PÈRE */}
+        <line x1={55} y1={64} x2={175} y2={64} stroke="#cbd5e1" strokeWidth={1.5} />
+        <line x1={115} y1={64} x2={115} y2={115} stroke="#cbd5e1" strokeWidth={1.5} />
+        {/* GPM + GMM horizontal bar → MÈRE */}
+        <line x1={385} y1={64} x2={505} y2={64} stroke="#cbd5e1" strokeWidth={1.5} />
+        <line x1={445} y1={64} x2={445} y2={115} stroke="#cbd5e1" strokeWidth={1.5} />
+        {/* ── Lines: parents → patient ── */}
+        <line x1={115} y1={nodeBottom} x2={445} y2={nodeBottom} stroke="#cbd5e1" strokeWidth={1.5} />
+        <line x1={patCx} y1={nodeBottom} x2={patCx} y2={patCy - 16} stroke="#cbd5e1" strokeWidth={1.5} />
+        {/* ── Nodes ── */}
+        {Object.keys(POS).map((key) => renderNode(key))}
+        {/* ── Patient ── */}
+        <circle cx={patCx} cy={patCy} r={16} fill="#dbeafe" stroke="#3b82f6" strokeWidth={2} />
+        <text x={patCx} y={patCy - 2} textAnchor="middle" fontSize={8} fontWeight="700" fill="#1d4ed8">Patient</text>
+        <text x={patCx} y={patCy + 10} textAnchor="middle" fontSize={7} fill="#3b82f6">(index)</text>
+        {/* ── Legend ── */}
+        <g transform="translate(446,188)">
+          <rect x={0} y={0} width={8} height={8} rx={2} fill="#f0fdf4" stroke="#86efac" strokeWidth={1} />
+          <text x={11} y={8} fontSize={7} fill="#6b7280">Vivant</text>
+          <rect x={0} y={14} width={8} height={8} rx={2} fill="#fff1f2" stroke="#fca5a5" strokeWidth={1} />
+          <text x={11} y={22} fontSize={7} fill="#6b7280">Décédé</text>
+          <rect x={0} y={28} width={8} height={8} rx={2} fill="#f9fafb" stroke="#e5e7eb" strokeWidth={1} />
+          <text x={11} y={36} fontSize={7} fill="#6b7280">Aucune donnée</text>
+        </g>
+      </svg>
+      {siblings.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1.5">Fratrie</p>
+          <div className="flex flex-wrap gap-1.5">
+            {siblings.map((s, i) => (
+              <span key={i} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border ${
+                s.statut_vital === "decede"
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-green-50 border-green-200 text-green-700"
+              }`}>
+                {s.parent === "frere" ? "♂" : "♀"} {s.pathologie}
+                {s.statut_vital === "decede" && " †"}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface OverviewTabProps {
   patient: Patient;
@@ -606,6 +735,7 @@ export function OverviewTab({
   const { user } = useUser();
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [familyView, setFamilyView] = useState<"tree" | "list">("tree");
 
   const canWrite = user?.role === "medecin" || user?.role === "super_admin" || user?.role === "infirmier";
   const activePrescriptions = prescriptions.filter((p) => p.statut === "en_cours" || p.statut === "prescrit");
@@ -763,12 +893,36 @@ export function OverviewTab({
                 <User2 className="h-4 w-4 text-purple-500" />
                 Antécédents familiaux
               </CardTitle>
-              {canWrite && <AddAntecedentFamilialDialog patient={patient} onSuccess={onRefresh} />}
+              <div className="flex items-center gap-1">
+                {antecedentsFamiliaux.length > 0 && (
+                  <>
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 px-2 ${familyView === "tree" ? "bg-muted" : ""}`}
+                      onClick={() => setFamilyView("tree")}
+                      title="Vue arbre généalogique"
+                    >
+                      <Network className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 px-2 ${familyView === "list" ? "bg-muted" : ""}`}
+                      onClick={() => setFamilyView("list")}
+                      title="Vue liste"
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
+                {canWrite && <AddAntecedentFamilialDialog patient={patient} onSuccess={onRefresh} />}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {antecedentsFamiliaux.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucun antécédent familial enregistré</p>
+            ) : familyView === "tree" ? (
+              <FamilyTreeSVG antecedentsFamiliaux={antecedentsFamiliaux} />
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {antecedentsFamiliaux.map((af) => (
