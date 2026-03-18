@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -17,6 +16,10 @@ import {
 } from "lucide-react";
 
 const COLORS = ["#0D7A5F", "#0EA5E9", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
+
+type PatientInfo = { npi?: string | null; nom?: string | null; prenom?: string | null };
+type ConsultationExport = { date_consultation: string; motif?: string | null; diagnostic_principal?: string | null; diagnostic_cim10?: string | null; type_consultation?: string | null; patients?: PatientInfo | null };
+type PrescriptionExport = { date_prescription: string; medicament_dci?: string | null; dosage?: string | null; posologie?: string | null; duree?: string | null; statut?: string | null; date_expiration?: string | null; patients?: PatientInfo | null };
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -53,7 +56,7 @@ export default function AdminPage() {
 
     // Compute top diagnostics
     const diagCount: Record<string, number> = {};
-    (diagRes.data || []).forEach((c: any) => {
+    (diagRes.data || []).forEach((c) => {
       if (c.diagnostic_cim10) {
         diagCount[c.diagnostic_cim10] = (diagCount[c.diagnostic_cim10] || 0) + 1;
       }
@@ -65,8 +68,8 @@ export default function AdminPage() {
 
     // Sex breakdown
     const patients = patientsRes.data || [];
-    const hommes = patients.filter((p: any) => p.sexe === "M").length;
-    const femmes = patients.filter((p: any) => p.sexe === "F").length;
+    const hommes = patients.filter((p) => p.sexe === "M").length;
+    const femmes = patients.filter((p) => p.sexe === "F").length;
 
     setStats({
       totalPatients: patientsRes.count || 0,
@@ -92,7 +95,7 @@ export default function AdminPage() {
         .order("created_at", { ascending: false });
       if (!data) return;
       const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Profession", "Assurance", "Créé le"];
-      const rows = data.map((p: any) => [
+      const rows = data.map((p) => [
         p.npi, p.nom, p.prenom, p.date_naissance, p.sexe === "M" ? "Masculin" : "Féminin",
         `${p.groupe_sanguin || ""}${p.rhesus || ""}`, p.nationalite || "", p.profession || "", p.assurance_organisme || "",
         new Date(p.created_at).toLocaleDateString("fr-FR"),
@@ -107,7 +110,7 @@ export default function AdminPage() {
         .limit(1000);
       if (!data) return;
       const headers = ["Date", "Patient NPI", "Patient Nom", "Motif", "Diagnostic principal", "Code CIM-10", "Type"];
-      const rows = (data as any[]).map((c) => [
+      const rows = (data as ConsultationExport[]).map((c) => [
         new Date(c.date_consultation).toLocaleDateString("fr-FR"),
         c.patients?.npi || "", `${c.patients?.prenom || ""} ${c.patients?.nom || ""}`,
         c.motif || "", c.diagnostic_principal || "", c.diagnostic_cim10 || "", c.type_consultation || "",
@@ -122,7 +125,7 @@ export default function AdminPage() {
         .limit(1000);
       if (!data) return;
       const headers = ["Date prescription", "Patient NPI", "Patient Nom", "Médicament DCI", "Dosage", "Posologie", "Durée", "Statut", "Expiration"];
-      const rows = (data as any[]).map((p) => [
+      const rows = (data as PrescriptionExport[]).map((p) => [
         new Date(p.date_prescription).toLocaleDateString("fr-FR"),
         p.patients?.npi || "", `${p.patients?.prenom || ""} ${p.patients?.nom || ""}`,
         p.medicament_dci || "", p.dosage || "", p.posologie || "", p.duree || "", p.statut || "",
@@ -132,7 +135,7 @@ export default function AdminPage() {
     }
   }
 
-  function downloadCSV(rows: any[][], filename: string) {
+  function downloadCSV(rows: string[][], filename: string) {
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
