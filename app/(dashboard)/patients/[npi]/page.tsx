@@ -309,7 +309,6 @@ export default function PatientPage() {
           <TabsContent value="rendez-vous">
             <RendezVousTab
               patient={patient}
-              rendezVous={rendezVous}
               onRefresh={() => loadPatient(patient.npi)}
             />
           </TabsContent>

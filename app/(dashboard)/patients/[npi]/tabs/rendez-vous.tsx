@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Patient, RendezVous } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDateTime } from "@/lib/utils";
@@ -34,16 +34,42 @@ const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
 
 interface RendezVousTabProps {
   patient: Patient;
-  rendezVous: RendezVous[];
   onRefresh: () => void;
 }
 
-export function RendezVousTab({ patient, rendezVous, onRefresh }: RendezVousTabProps) {
+export function RendezVousTab({ patient, onRefresh }: RendezVousTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin" || user?.role === "admin_etablissement" || user?.role === "infirmier";
 
+  // ── Chargement autonome des RDV ────────────────────────────────────────────
+  const [rdvList, setRdvList] = useState<RendezVous[]>([]);
+  const [rdvLoading, setRdvLoading] = useState(true);
+  const [rdvError, setRdvError] = useState<string | null>(null);
+
+  const loadRdv = useCallback(async () => {
+    setRdvLoading(true);
+    setRdvError(null);
+    const { data, error } = await supabase
+      .from("rendez_vous")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .is("deleted_at", null)
+      .order("date_rdv", { ascending: false });
+    if (error) {
+      setRdvError(error.message);
+    } else {
+      setRdvList(data || []);
+    }
+    setRdvLoading(false);
+  }, [patient.id]);
+
+  useEffect(() => {
+    loadRdv();
+  }, [loadRdv]);
+
+  // ── Établissements pour le formulaire ──────────────────────────────────────
   const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
   const [form, setForm] = useState({
     type_rdv: "consultation",
@@ -80,7 +106,8 @@ export function RendezVousTab({ patient, rendezVous, onRefresh }: RendezVousTabP
       toast({ title: "Rendez-vous enregistré" });
       setOpen(false);
       setForm({ type_rdv: "consultation", motif: "", date_rdv: new Date().toISOString().slice(0, 16), duree_minutes: "30", statut: "planifie", notes: "", etablissement_id: "" });
-      onRefresh();
+      loadRdv();    // recharge la liste du tab
+      onRefresh();  // met à jour le compteur dans le parent
     } catch (err: unknown) {
       toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
     } finally {
@@ -88,98 +115,108 @@ export function RendezVousTab({ patient, rendezVous, onRefresh }: RendezVousTabP
     }
   }
 
-  // Upcoming first, then past
+  // ── Tri À venir / Passés ───────────────────────────────────────────────────
   const now = new Date();
-  const upcoming = rendezVous.filter((r) => new Date(r.date_rdv) >= now && r.statut !== "annule");
-  const past = rendezVous.filter((r) => new Date(r.date_rdv) < now || r.statut === "annule" || r.statut === "effectue" || r.statut === "absent");
+  const upcoming = rdvList.filter((r) => new Date(r.date_rdv) >= now && r.statut !== "annule");
+  const past = rdvList.filter((r) => new Date(r.date_rdv) < now || r.statut === "annule" || r.statut === "effectue" || r.statut === "absent");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Rendez-vous ({rendezVous.length})</h3>
+        <h3 className="font-semibold">Rendez-vous ({rdvList.length})</h3>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onRefresh} title="Rafraîchir">
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="ghost" size="sm" onClick={loadRdv} title="Rafraîchir" disabled={rdvLoading}>
+            <RefreshCw className={`h-4 w-4 ${rdvLoading ? "animate-spin" : ""}`} />
           </Button>
-        {canCreate && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button variant="medical" size="sm">
-                <Plus className="h-4 w-4 mr-1.5" />
-                Planifier un RDV
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Rendez-vous — {patient.prenom} {patient.nom}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+          {canCreate && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button variant="medical" size="sm">
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Planifier un RDV
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Rendez-vous — {patient.prenom} {patient.nom}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Type *</Label>
+                      <Select value={form.type_rdv} onValueChange={(v) => setForm({ ...form, type_rdv: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(TYPE_RDV_LABELS).map(([v, l]) => (
+                            <SelectItem key={v} value={v}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Statut</Label>
+                      <Select value={form.statut} onValueChange={(v) => setForm({ ...form, statut: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="planifie">Planifié</SelectItem>
+                          <SelectItem value="confirme">Confirmé</SelectItem>
+                          <SelectItem value="annule">Annulé</SelectItem>
+                          <SelectItem value="effectue">Effectué</SelectItem>
+                          <SelectItem value="absent">Absent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date et heure *</Label>
+                      <Input type="datetime-local" value={form.date_rdv} onChange={(e) => setForm({ ...form, date_rdv: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Durée (minutes)</Label>
+                      <Input type="number" min={5} max={480} value={form.duree_minutes} onChange={(e) => setForm({ ...form, duree_minutes: e.target.value })} />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label>Type *</Label>
-                    <Select value={form.type_rdv} onValueChange={(v) => setForm({ ...form, type_rdv: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Label>Motif *</Label>
+                    <Input value={form.motif} onChange={(e) => setForm({ ...form, motif: e.target.value })} required placeholder="Raison du rendez-vous" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Établissement</Label>
+                    <Select onValueChange={(v) => setForm({ ...form, etablissement_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                       <SelectContent>
-                        {Object.entries(TYPE_RDV_LABELS).map(([v, l]) => (
-                          <SelectItem key={v} value={v}>{l}</SelectItem>
-                        ))}
+                        {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Statut</Label>
-                    <Select value={form.statut} onValueChange={(v) => setForm({ ...form, statut: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="planifie">Planifié</SelectItem>
-                        <SelectItem value="confirme">Confirmé</SelectItem>
-                        <SelectItem value="annule">Annulé</SelectItem>
-                        <SelectItem value="effectue">Effectué</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>Notes</Label>
+                    <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Instructions particulières, préparation requise..." />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Date et heure *</Label>
-                    <Input type="datetime-local" value={form.date_rdv} onChange={(e) => setForm({ ...form, date_rdv: e.target.value })} required />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+                    <Button type="submit" variant="medical" disabled={loading || !form.motif}>
+                      {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Enregistrer
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Durée (minutes)</Label>
-                    <Input type="number" min={5} max={480} value={form.duree_minutes} onChange={(e) => setForm({ ...form, duree_minutes: e.target.value })} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Motif *</Label>
-                  <Input value={form.motif} onChange={(e) => setForm({ ...form, motif: e.target.value })} required placeholder="Raison du rendez-vous" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Établissement</Label>
-                  <Select onValueChange={(v) => setForm({ ...form, etablissement_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                    <SelectContent>
-                      {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Instructions particulières, préparation requise..." />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                  <Button type="submit" variant="medical" disabled={loading || !form.motif}>
-                    {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Enregistrer
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
-          </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
-      {rendezVous.length === 0 ? (
+      {rdvLoading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-sm">Chargement des rendez-vous…</span>
+        </div>
+      ) : rdvError ? (
+        <div className="text-center py-12 text-sm text-red-500">
+          <p>Erreur de chargement : {rdvError}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={loadRdv}>Réessayer</Button>
+        </div>
+      ) : rdvList.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <CalendarClock className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>Aucun rendez-vous enregistré</p>
