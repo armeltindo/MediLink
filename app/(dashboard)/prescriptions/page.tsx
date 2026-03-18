@@ -41,6 +41,10 @@ export default function PrescriptionsPage() {
   const [filter, setFilter] = useState<"actif" | "tout">("actif");
 
   useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let query = supabase
       .from("prescriptions")
@@ -53,8 +57,8 @@ export default function PrescriptionsPage() {
       query = query.in("statut", ["prescrit", "en_cours"]);
     }
 
-    query.then(({ data }) => {
-      setRows((data as unknown as PrescriptionRow[]) || []);
+    query.then(({ data, error }) => {
+      if (!error) setRows((data as unknown as PrescriptionRow[]) || []);
       setLoading(false);
     });
   }, [filter]);
