@@ -120,14 +120,15 @@ export default function AdminPage() {
     const getValue = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
       result.status === "fulfilled" ? result.value : fallback;
 
+    const emptyRes = { data: [], count: 0, error: null, status: 200, statusText: "OK" } as const;
     const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = [
-      getValue(results[0], { data: [], count: 0, error: null }),
-      getValue(results[1], { data: [], count: 0, error: null }),
-      getValue(results[2], { data: [], count: 0, error: null }),
-      getValue(results[3], { data: [], count: 0, error: null }),
-      getValue(results[4], { data: [], count: 0, error: null }),
-      getValue(results[5], { data: [], count: 0, error: null }),
-      getValue(results[6], { data: [], count: 0, error: null }),
+      getValue(results[0], emptyRes),
+      getValue(results[1], emptyRes),
+      getValue(results[2], emptyRes),
+      getValue(results[3], emptyRes),
+      getValue(results[4], emptyRes),
+      getValue(results[5], emptyRes),
+      getValue(results[6], emptyRes),
     ];
 
     const diagCount: Record<string, number> = {};
