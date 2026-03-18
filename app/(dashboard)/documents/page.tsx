@@ -3,15 +3,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  FileText, Image, FilePlus, Download, Search,
+  LucideIcon, FileText, Image, FilePlus, Search,
   FileCheck, File, FolderOpen, ExternalLink,
 } from "lucide-react";
 
@@ -27,7 +27,7 @@ interface DocumentRow {
   patients: { npi: string; nom: string; prenom: string } | null;
 }
 
-const TYPE_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
+const TYPE_CONFIG: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   imagerie:      { label: "Imagerie", color: "bg-blue-100 text-blue-700", icon: Image },
   compte_rendu:  { label: "Compte rendu", color: "bg-green-100 text-green-700", icon: FileCheck },
   ordonnance:    { label: "Ordonnance", color: "bg-orange-100 text-orange-700", icon: FileText },
