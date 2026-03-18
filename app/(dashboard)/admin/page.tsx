@@ -120,7 +120,7 @@ export default function AdminPage() {
     const getValue = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
       result.status === "fulfilled" ? result.value : fallback;
 
-    const emptyRes = { data: [], count: 0, error: null, status: 200, statusText: "OK" } as const;
+    const emptyRes = { data: [] as never[], count: 0, error: null, status: 200 as const, statusText: "OK" };
     const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = [
       getValue(results[0], emptyRes),
       getValue(results[1], emptyRes),
