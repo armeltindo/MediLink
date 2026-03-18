@@ -261,7 +261,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from("prescriptions").insert({
+      const { data: newRx, error } = await supabase.from("prescriptions").insert({
         patient_id: patient.id,
         medecin_id: user.id,
         consultation_id: null,
@@ -269,7 +269,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         date_prescription: new Date().toISOString(),
         statut: "prescrit",
         date_expiration: form.date_expiration || null,
-      });
+      }).select("id").single();
       if (error) throw error;
 
       await supabase.from("audit_logs").insert({
@@ -280,9 +280,14 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         timestamp: new Date().toISOString(),
       });
 
-      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage}` });
+      toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage} — ordonnance en cours de génération…` });
       onSuccess();
       onClose();
+
+      // Ouvrir l'ordonnance automatiquement dans un nouvel onglet
+      if (newRx?.id) {
+        window.open(`/api/ordonnance-pdf?prescriptionId=${newRx.id}`, "_blank");
+      }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Erreur";
       toast({ variant: "destructive", title: "Erreur", description: msg });
