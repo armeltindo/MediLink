@@ -86,7 +86,7 @@ export default function RendezVousPage() {
     const rows = (data as RDV[]) || [];
 
     // Fetch doctor profiles separately (rendez_vous.medecin_id → auth.users, not users_profiles)
-    const medecinIds = [...new Set(rows.map((r) => r.medecin_id).filter(Boolean))];
+    const medecinIds = Array.from(new Set(rows.map((r) => r.medecin_id).filter(Boolean)));
     let profileMap: Record<string, { nom: string; prenom: string }> = {};
     if (medecinIds.length > 0) {
       const { data: profiles } = await supabase
