@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, UserPlus, Copy, Check } from "lucide-react";
+import { Loader2, UserPlus, Copy, Check, Camera } from "lucide-react";
 
 const patientSchema = z.object({
   nom: z.string().min(2, "Nom requis"),
@@ -45,6 +45,8 @@ export default function NouveauPatientPage() {
   const [loading, setLoading] = useState(false);
   const [npi] = useState(() => generateNPI());
   const [npiCopied, setNpiCopied] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const {
     register,
@@ -70,16 +72,36 @@ export default function NouveauPatientPage() {
     setTimeout(() => setNpiCopied(false), 2000);
   }
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function onSubmit(data: PatientFormData) {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Non authentifié");
 
+      let photoUrl: string | undefined = undefined;
+      if (photoFile) {
+        const photoPath = `patients/${npi}/photo_${Date.now()}.${photoFile.name.split(".").pop()}`;
+        const { error: uploadErr } = await supabase.storage.from("documents").upload(photoPath, photoFile);
+        if (!uploadErr) {
+          const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(photoPath);
+          photoUrl = publicUrl;
+        }
+      }
+
       const { data: patient, error } = await supabase.from("patients").insert({
         ...data,
         npi,
         created_by: user.id,
+        ...(photoUrl ? { photo_url: photoUrl } : {}),
       }).select().single();
 
       if (error) throw error;
@@ -129,6 +151,29 @@ export default function NouveauPatientPage() {
               <CardTitle className="text-base">Identité civile</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Photo upload */}
+              <div className="md:col-span-2 flex items-center gap-4">
+                <div className="relative">
+                  <div className="h-20 w-20 rounded-full border-2 border-dashed border-border overflow-hidden bg-muted flex items-center justify-center">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Aperçu" className="h-full w-full object-cover" />
+                    ) : (
+                      <Camera className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="photo">Photo du patient</Label>
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="text-sm w-fit"
+                  />
+                  <p className="text-xs text-muted-foreground">JPG, PNG — max 5 Mo (optionnel)</p>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="nom">Nom de famille *</Label>
                 <Input id="nom" {...register("nom")} placeholder="KONAN" className="uppercase" />

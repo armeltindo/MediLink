@@ -8,6 +8,13 @@ import { PatientHeader } from "@/components/patient/patient-header";
 import { AIAlertsBanner } from "@/components/patient/ai-alerts-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ShieldAlert, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useUser } from "@/hooks/use-user";
 import { OverviewTab } from "./tabs/overview";
 import { ConsultationsTab } from "./tabs/consultations";
 import { PrescriptionsTab } from "./tabs/prescriptions";
@@ -20,8 +27,12 @@ import { AuditTab } from "./tabs/audit";
 export default function PatientPage() {
   const { npi } = useParams<{ npi: string }>();
   const router = useRouter();
+  const { user } = useUser();
 
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [btgOpen, setBtgOpen] = useState(false);
+  const [btgReason, setBtgReason] = useState("");
+  const [btgLoading, setBtgLoading] = useState(false);
   const [allergies, setAllergies] = useState<Allergie[]>([]);
   const [antecedents, setAntecedents] = useState<Antecedent[]>([]);
   const [antecedentsFamiliaux, setAntecedentsFamiliaux] = useState<AntecedentFamilial[]>([]);
@@ -112,6 +123,36 @@ export default function PatientPage() {
     window.open(`/api/qr?npi=${patient.npi}`, "_blank");
   }
 
+  async function handleLettreRef() {
+    if (!patient) return;
+    window.open(`/api/lettre-reference?patientId=${patient.id}`, "_blank");
+  }
+
+  async function handleBreakGlass() {
+    if (!patient || !btgReason.trim() || !user) return;
+    setBtgLoading(true);
+    try {
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        patient_id: patient.id,
+        action: "break_the_glass",
+        details: JSON.stringify({ reason: btgReason, accessed_at: new Date().toISOString() }),
+        timestamp: new Date().toISOString(),
+      });
+      toast({
+        title: "Accès d'urgence enregistré",
+        description: "Cet accès a été loggé et sera notifié à l'administrateur.",
+        variant: "default",
+      });
+      setBtgOpen(false);
+      setBtgReason("");
+    } catch {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible d'enregistrer l'accès d'urgence." });
+    } finally {
+      setBtgLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-full">
@@ -142,10 +183,52 @@ export default function PatientPage() {
         allergies={allergies}
         onExportPDF={handleExportPDF}
         onShowQR={handleShowQR}
+        onLettreRef={handleLettreRef}
+        onBreakGlass={() => setBtgOpen(true)}
       />
 
       {/* IA Alerts */}
       <AIAlertsBanner patientId={patient.id} />
+
+      {/* Break-the-glass — Emergency Access */}
+      <Dialog open={btgOpen} onOpenChange={setBtgOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <ShieldAlert className="h-5 w-5" />
+              Accès d&apos;urgence — Break the Glass
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-700">
+                Vous êtes sur le point d&apos;accéder à ce dossier en mode d&apos;urgence. Cet accès sera <strong>enregistré, horodaté</strong> et notifié à l&apos;administrateur de l&apos;établissement.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label>Justification obligatoire *</Label>
+              <Textarea
+                value={btgReason}
+                onChange={(e) => setBtgReason(e.target.value)}
+                rows={3}
+                placeholder="Expliquez la raison de cet accès d'urgence (patient critique, urgence vitale, etc.)..."
+                className="resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBtgOpen(false)}>Annuler</Button>
+              <Button
+                variant="destructive"
+                onClick={handleBreakGlass}
+                disabled={btgLoading || !btgReason.trim()}
+              >
+                {btgLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Confirmer l&apos;accès d&apos;urgence
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Tabs */}
       <div className="flex-1 p-6 pt-4">

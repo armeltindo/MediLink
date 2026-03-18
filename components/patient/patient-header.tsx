@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertTriangle, Calendar, MapPin, Briefcase,
-  Phone, Shield, QrCode, Download, User,
+  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText,
 } from "lucide-react";
 
 interface PatientHeaderProps {
@@ -15,9 +15,11 @@ interface PatientHeaderProps {
   allergies: Allergie[];
   onExportPDF?: () => void;
   onShowQR?: () => void;
+  onBreakGlass?: () => void;
+  onLettreRef?: () => void;
 }
 
-export function PatientHeader({ patient, allergies, onExportPDF, onShowQR }: PatientHeaderProps) {
+export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBreakGlass, onLettreRef }: PatientHeaderProps) {
   const activeAllergies = allergies.filter((a) => a.actif);
   const anaphylacticAllergies = activeAllergies.filter((a) => a.severite === "anaphylactique");
   const bloodGroupFull = patient.groupe_sanguin && patient.rhesus
@@ -120,7 +122,7 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR }: Pat
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
           {onShowQR && (
             <Button variant="outline" size="sm" onClick={onShowQR}>
               <QrCode className="h-4 w-4 mr-1.5" />
@@ -131,6 +133,18 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR }: Pat
             <Button variant="outline" size="sm" onClick={onExportPDF}>
               <Download className="h-4 w-4 mr-1.5" />
               Exporter PDF
+            </Button>
+          )}
+          {onLettreRef && (
+            <Button variant="outline" size="sm" onClick={onLettreRef}>
+              <FileText className="h-4 w-4 mr-1.5" />
+              Lettre de réf.
+            </Button>
+          )}
+          {onBreakGlass && (
+            <Button variant="outline" size="sm" onClick={onBreakGlass} className="border-red-300 text-red-600 hover:bg-red-50">
+              <ShieldAlert className="h-4 w-4 mr-1.5" />
+              Urgence
             </Button>
           )}
         </div>

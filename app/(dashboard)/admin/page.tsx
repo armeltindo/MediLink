@@ -24,6 +24,7 @@ export default function AdminPage() {
     totalPatients: 0,
     totalConsultations: 0,
     totalHospitalisations: 0,
+    hospitalisationsEnCours: 0,
     totalEtablissements: 0,
     consultationsParMois: [] as { mois: string; count: number }[],
     topDiagnostics: [] as { code: string; libelle: string; count: number }[],
@@ -31,6 +32,7 @@ export default function AdminPage() {
       { name: "Hommes", value: 0 },
       { name: "Femmes", value: 0 },
     ],
+    activiteMedecins: [] as { nom: string; consultations: number }[],
   });
 
   useEffect(() => {
@@ -38,14 +40,19 @@ export default function AdminPage() {
   }, []);
 
   async function loadStats() {
-    const [patientsRes, consultRes, hospitRes, etablRes, diagRes] = await Promise.all([
+    const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = await Promise.all([
       supabase.from("patients").select("id, sexe", { count: "exact" }).is("deleted_at", null),
       supabase.from("consultations").select("id", { count: "exact" }).is("deleted_at", null),
       supabase.from("hospitalisations").select("id", { count: "exact" }).is("deleted_at", null),
+      supabase.from("hospitalisations").select("id", { count: "exact" }).is("date_sortie", null).is("deleted_at", null),
       supabase.from("etablissements").select("id", { count: "exact" }).is("deleted_at", null),
       supabase.from("consultations")
         .select("diagnostic_cim10")
         .not("diagnostic_cim10", "is", null)
+        .is("deleted_at", null)
+        .limit(500),
+      supabase.from("consultations")
+        .select("medecin_id, users_profiles(nom, prenom)")
         .is("deleted_at", null)
         .limit(500),
     ]);
@@ -67,10 +74,30 @@ export default function AdminPage() {
     const hommes = patients.filter((p: { sexe: string }) => p.sexe === "M").length;
     const femmes = patients.filter((p: { sexe: string }) => p.sexe === "F").length;
 
+    // Activity by doctor
+    const medecinCount: Record<string, { nom: string; count: number }> = {};
+    (medecinConsultRes.data || []).forEach((c: { medecin_id: string; users_profiles?: { nom: string; prenom: string } | null }) => {
+      if (c.medecin_id) {
+        if (!medecinCount[c.medecin_id]) {
+          const profile = c.users_profiles;
+          medecinCount[c.medecin_id] = {
+            nom: profile ? `Dr. ${profile.prenom} ${profile.nom}` : c.medecin_id.slice(0, 8),
+            count: 0,
+          };
+        }
+        medecinCount[c.medecin_id].count++;
+      }
+    });
+    const activiteMedecins = Object.values(medecinCount)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+      .map((m) => ({ nom: m.nom, consultations: m.count }));
+
     setStats({
       totalPatients: patientsRes.count || 0,
       totalConsultations: consultRes.count || 0,
       totalHospitalisations: hospitRes.count || 0,
+      hospitalisationsEnCours: hospitEnCoursRes.count || 0,
       totalEtablissements: etablRes.count || 0,
       consultationsParMois: [],
       topDiagnostics,
@@ -78,6 +105,7 @@ export default function AdminPage() {
         { name: "Hommes", value: hommes },
         { name: "Femmes", value: femmes },
       ],
+      activiteMedecins,
     });
     setLoading(false);
   }
@@ -128,11 +156,12 @@ export default function AdminPage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { title: "Patients enregistrés", value: stats.totalPatients, icon: Users, color: "text-medical-green" },
             { title: "Consultations totales", value: stats.totalConsultations, icon: Stethoscope, color: "text-medical-blue" },
-            { title: "Hospitalisations", value: stats.totalHospitalisations, icon: BedDouble, color: "text-purple-600" },
+            { title: "Hospitalisations totales", value: stats.totalHospitalisations, icon: BedDouble, color: "text-purple-600" },
+            { title: "Hospitalisations en cours", value: stats.hospitalisationsEnCours, icon: BedDouble, color: "text-red-500" },
             { title: "Établissements", value: stats.totalEtablissements, icon: Building2, color: "text-orange-600" },
           ].map(({ title, value, icon: Icon, color }) => (
             <Card key={title}>
@@ -210,6 +239,33 @@ export default function AdminPage() {
                     <Legend />
                     <Tooltip />
                   </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Activité par médecin */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-600" />
+                Activité par médecin (consultations)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
+              ) : stats.activiteMedecins.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucune donnée disponible</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={stats.activiteMedecins} layout="vertical" margin={{ left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="nom" width={120} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="consultations" fill="#0EA5E9" name="Consultations" />
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>

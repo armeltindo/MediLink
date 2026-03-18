@@ -349,6 +349,10 @@ export function ConsultationsTab({ patient, consultations, onRefresh }: Consulta
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
 
+  // Filters
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>("all");
+
   // Get all constantes for charts
   const [allConstantes, setAllConstantes] = useState<Constante[]>([]);
 
@@ -361,13 +365,48 @@ export function ConsultationsTab({ patient, consultations, onRefresh }: Consulta
       .then(({ data }) => setAllConstantes(data || []));
   }, [patient.id]);
 
+  // Compute available years from consultations
+  const availableYears = Array.from(
+    new Set(consultations.map((c) => new Date(c.date_consultation).getFullYear()))
+  ).sort((a, b) => b - a);
+
+  // Apply filters
+  const filteredConsultations = consultations.filter((c) => {
+    if (filterType !== "all" && c.type_consultation !== filterType) return false;
+    if (filterYear !== "all" && new Date(c.date_consultation).getFullYear().toString() !== filterYear) return false;
+    return true;
+  });
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold">
-          {consultations.length} consultation{consultations.length > 1 ? "s" : ""} enregistrée{consultations.length > 1 ? "s" : ""}
+          {filteredConsultations.length} / {consultations.length} consultation{consultations.length > 1 ? "s" : ""}
         </h3>
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* Filter by type */}
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="Type..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="externe">Externe</SelectItem>
+              <SelectItem value="urgence">Urgence</SelectItem>
+              <SelectItem value="hospitalisation">Hospitalisation</SelectItem>
+              <SelectItem value="teleconsultation">Téléconsultation</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* Filter by year */}
+          <Select value={filterYear} onValueChange={setFilterYear}>
+            <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Année..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {canCreate && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -394,25 +433,27 @@ export function ConsultationsTab({ patient, consultations, onRefresh }: Consulta
       {allConstantes.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Évolution des constantes</CardTitle>
+            <CardTitle className="text-base">Évolution des constantes vitales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ConstantesChart constantes={allConstantes} type="tension" />
               <ConstantesChart constantes={allConstantes} type="poids" />
+              <ConstantesChart constantes={allConstantes} type="temperature" />
+              <ConstantesChart constantes={allConstantes} type="spo2" />
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Timeline */}
-      {consultations.length === 0 ? (
+      {filteredConsultations.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Aucune consultation enregistrée</p>
+          <p>{consultations.length === 0 ? "Aucune consultation enregistrée" : "Aucune consultation pour ces filtres"}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {consultations.map((c) => (
+          {filteredConsultations.map((c) => (
             <ConsultationCard key={c.id} consultation={c} />
           ))}
         </div>

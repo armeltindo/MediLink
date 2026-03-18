@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Patient, Vaccination } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
@@ -59,9 +59,9 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
     prochain_rappel: "", etablissement_id: "", notes: "",
   });
 
-  useState(() => {
+  useEffect(() => {
     supabase.from("etablissements").select("id, nom").then(({ data }) => setEtablissements(data || []));
-  });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
