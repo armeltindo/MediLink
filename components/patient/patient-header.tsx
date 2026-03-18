@@ -1,4 +1,5 @@
 "use client";
+import { useState, useRef } from "react";
 import { Patient, Allergie } from "@/types";
 import { formatDate, formatAge, getBloodGroupColor } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertTriangle, Calendar, MapPin, Briefcase,
-  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText,
+  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText, Camera, Loader2,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import { toast } from "@/hooks/use-toast";
 
 interface PatientHeaderProps {
   patient: Patient;
@@ -17,9 +21,44 @@ interface PatientHeaderProps {
   onShowQR?: () => void;
   onBreakGlass?: () => void;
   onLettreRef?: () => void;
+  onPhotoUpdate?: (newUrl: string) => void;
 }
 
-export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBreakGlass, onLettreRef }: PatientHeaderProps) {
+export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBreakGlass, onLettreRef, onPhotoUpdate }: PatientHeaderProps) {
+  const { user } = useUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoUrl, setPhotoUrl] = useState(patient.photo_url || "");
+  const [uploading, setUploading] = useState(false);
+
+  const canEditPhoto = user?.role === "super_admin" || user?.role === "admin_etablissement" || user?.role === "medecin";
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "Fichier trop volumineux", description: "La photo ne doit pas dépasser 5 Mo." });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `patients/${patient.npi}/photo_${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("documents").upload(path, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
+      const { error: updateErr } = await supabase.from("patients").update({ photo_url: publicUrl }).eq("id", patient.id);
+      if (updateErr) throw updateErr;
+      setPhotoUrl(publicUrl);
+      onPhotoUpdate?.(publicUrl);
+      toast({ title: "Photo mise à jour" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur lors de l'upload" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   const activeAllergies = allergies.filter((a) => a.actif);
   const anaphylacticAllergies = activeAllergies.filter((a) => a.severite === "anaphylactique");
   const bloodGroupFull = patient.groupe_sanguin && patient.rhesus
@@ -37,13 +76,37 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
       )}
 
       <div className="px-6 py-4 flex items-start gap-5">
-        {/* Avatar */}
-        <Avatar className="h-16 w-16 shrink-0 border-2 border-border">
-          <AvatarImage src={patient.photo_url || ""} alt={patient.nom} />
-          <AvatarFallback className="text-xl font-bold bg-medical-green-light text-medical-green">
-            {patient.prenom?.[0]}{patient.nom?.[0]}
-          </AvatarFallback>
-        </Avatar>
+        {/* Avatar with optional photo upload */}
+        <div className="relative shrink-0 group">
+          <Avatar className="h-16 w-16 border-2 border-border">
+            <AvatarImage src={photoUrl} alt={patient.nom} />
+            <AvatarFallback className="text-xl font-bold bg-medical-green-light text-medical-green">
+              {patient.prenom?.[0]}{patient.nom?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          {canEditPhoto && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                title="Modifier la photo"
+              >
+                {uploading
+                  ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  : <Camera className="h-5 w-5 text-white" />}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </>
+          )}
+        </div>
 
         {/* Identity */}
         <div className="flex-1 min-w-0">
