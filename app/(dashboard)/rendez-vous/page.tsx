@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/layout/header";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { CalendarDays, Plus, Loader2, Clock, User, AlertTriangle, CheckCircle, X } from "lucide-react";
 import Link from "next/link";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface RDV {
   id: string;
@@ -60,6 +61,8 @@ export default function RendezVousPage() {
   const [medecins, setMedecins] = useState<{ id: string; nom: string; prenom: string }[]>([]);
   const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
   const [patientSearch, setPatientSearch] = useState("");
+  const searchSeqRef = useRef(0);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; statut: string; label: string } | null>(null);
   const [form, setForm] = useState({
     patient_id: "", medecin_id: "", etablissement_id: "",
     date_rdv: new Date().toISOString().slice(0, 16),
@@ -93,6 +96,8 @@ export default function RendezVousPage() {
 
   useEffect(() => {
     if (patientSearch.length < 2) { setPatients([]); return; }
+    // Increment sequence number — only the latest response will update state
+    const seq = ++searchSeqRef.current;
     const timer = setTimeout(async () => {
       const { data } = await supabase
         .from("patients")
@@ -100,7 +105,10 @@ export default function RendezVousPage() {
         .or(`nom.ilike.%${patientSearch}%,prenom.ilike.%${patientSearch}%,npi.ilike.%${patientSearch}%`)
         .is("deleted_at", null)
         .limit(10);
-      setPatients(data || []);
+      // Discard stale responses from previous keystrokes
+      if (seq === searchSeqRef.current) {
+        setPatients(data || []);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [patientSearch]);
@@ -140,6 +148,7 @@ export default function RendezVousPage() {
       toast({ title: "Statut mis à jour" });
       loadRDVs();
     }
+    setConfirmAction(null);
   }
 
   const canCreate = user && ["super_admin", "admin_etablissement", "medecin", "infirmier"].includes(user.role);
@@ -352,7 +361,7 @@ export default function RendezVousPage() {
                           <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "confirme")}>
                             Confirmer
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500" onClick={() => handleUpdateStatut(rdv.id, "annule")}>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500" onClick={() => setConfirmAction({ id: rdv.id, statut: "annule", label: "annuler ce rendez-vous" })}>
                             Annuler
                           </Button>
                         </div>
@@ -362,7 +371,7 @@ export default function RendezVousPage() {
                           <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "effectue")}>
                             Effectué
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs text-yellow-600" onClick={() => handleUpdateStatut(rdv.id, "absent")}>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs text-yellow-600" onClick={() => setConfirmAction({ id: rdv.id, statut: "absent", label: "marquer le patient comme absent" })}>
                             Absent
                           </Button>
                         </div>
@@ -375,6 +384,27 @@ export default function RendezVousPage() {
           </div>
         )}
       </div>
+
+      {/* Confirmation dialog for destructive status changes */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer l&apos;action</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voulez-vous vraiment {confirmAction?.label} ? Cette action ne peut pas être annulée facilement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmAction && handleUpdateStatut(confirmAction.id, confirmAction.statut)}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

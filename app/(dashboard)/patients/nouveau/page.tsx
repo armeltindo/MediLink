@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,6 +65,16 @@ export default function NouveauPatientPage() {
       nombre_enfants: 0,
     },
   });
+
+  const scrollToFirstError = useCallback((errs: Record<string, unknown>) => {
+    const firstKey = Object.keys(errs)[0];
+    if (!firstKey) return;
+    const el = document.getElementById(firstKey);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement).focus?.();
+    }
+  }, []);
 
   const sexe = watch("sexe");
   const watchedNom = watch("nom");
@@ -170,7 +180,7 @@ export default function NouveauPatientPage() {
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, scrollToFirstError)} className="space-y-6">
           {/* Identité */}
           <Card>
             <CardHeader>
@@ -219,7 +229,7 @@ export default function NouveauPatientPage() {
                 <Label htmlFor="lieu_naissance">Lieu de naissance</Label>
                 <Input id="lieu_naissance" {...register("lieu_naissance")} placeholder="Abidjan" />
               </div>
-              <div className="space-y-2">
+              <div id="sexe" className="space-y-2">
                 <Label>Sexe *</Label>
                 <Select onValueChange={(v) => setValue("sexe", v as "M" | "F")}>
                   <SelectTrigger>

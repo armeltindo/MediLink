@@ -106,7 +106,8 @@ export default function AdminPage() {
   }, []);
 
   async function loadStats() {
-    const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = await Promise.all([
+    // Promise.allSettled : une requête qui échoue n'annule pas les autres
+    const results = await Promise.allSettled([
       supabase.from("patients").select("id, sexe", { count: "exact" }).is("deleted_at", null),
       supabase.from("consultations").select("id", { count: "exact" }).is("deleted_at", null),
       supabase.from("hospitalisations").select("id", { count: "exact" }).is("deleted_at", null),
@@ -115,6 +116,19 @@ export default function AdminPage() {
       supabase.from("consultations").select("diagnostic_cim10").not("diagnostic_cim10", "is", null).is("deleted_at", null).limit(500),
       supabase.from("consultations").select("medecin_id, users_profiles(nom, prenom)").is("deleted_at", null).limit(500),
     ]);
+
+    const getValue = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
+      result.status === "fulfilled" ? result.value : fallback;
+
+    const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = [
+      getValue(results[0], { data: [], count: 0, error: null }),
+      getValue(results[1], { data: [], count: 0, error: null }),
+      getValue(results[2], { data: [], count: 0, error: null }),
+      getValue(results[3], { data: [], count: 0, error: null }),
+      getValue(results[4], { data: [], count: 0, error: null }),
+      getValue(results[5], { data: [], count: 0, error: null }),
+      getValue(results[6], { data: [], count: 0, error: null }),
+    ];
 
     const diagCount: Record<string, number> = {};
     (diagRes.data || []).forEach((c: { diagnostic_cim10?: string }) => {
@@ -222,16 +236,42 @@ export default function AdminPage() {
     }
   }
 
+  // Escape a CSV field: prevent formula injection and handle special characters
+  function escapeCSVField(value: unknown): string {
+    const str = String(value ?? "");
+    // Neutralise Excel/LibreOffice formula injection (=, +, -, @, TAB, CR)
+    const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+    // Wrap in double-quotes if field contains delimiter, quotes or newlines
+    if (safe.includes(";") || safe.includes('"') || safe.includes("\n") || safe.includes("\r")) {
+      return `"${safe.replace(/"/g, '""')}"`;
+    }
+    return safe;
+  }
+
   async function exportCSV() {
-    const { data } = await supabase.from("patients").select("npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at").is("deleted_at", null).order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("patients")
+      .select("npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
     if (!data) return;
     const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
-    const rows = data.map((p) => [p.npi, p.nom, p.prenom, p.date_naissance, p.sexe, `${p.groupe_sanguin || ""}${p.rhesus || ""}`, p.nationalite || "", new Date(p.created_at).toLocaleDateString("fr-FR")]);
-    const csv = [headers, ...rows].map((row) => row.join(";")).join("\n");
+    const rows = data.map((p) => [
+      p.npi, p.nom, p.prenom, p.date_naissance, p.sexe,
+      `${p.groupe_sanguin || ""}${p.rhesus || ""}`,
+      p.nationalite || "",
+      new Date(p.created_at).toLocaleDateString("fr-FR"),
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCSVField).join(";"))
+      .join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `medilink-patients-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+    a.href = url;
+    a.download = `medilink-patients-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (user?.role !== "super_admin" && user?.role !== "admin_etablissement") {

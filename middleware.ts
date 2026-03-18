@@ -1,6 +1,28 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const DEMO_SECRET = process.env.NEXTAUTH_SECRET ?? process.env.NEXT_PUBLIC_APP_URL ?? "medilink-demo-2026";
+
+async function verifyDemoSession(cookieValue: string): Promise<boolean> {
+  try {
+    const parsed = JSON.parse(cookieValue);
+    const { _sig, ...rest } = parsed;
+    if (!_sig || typeof _sig !== "string") return false;
+    const payload = JSON.stringify({ email: rest.email, role: rest.role, prenom: rest.prenom, nom: rest.nom });
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(DEMO_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+    const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return _sig === expected;
+  } catch {
+    return false;
+  }
+}
+
 // Routes accessibles uniquement aux admins
 const ADMIN_ONLY_PATHS = ["/admin", "/audit"];
 // Routes accessibles à tous les rôles authentifiés
@@ -18,11 +40,26 @@ export async function middleware(request: NextRequest) {
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
     const demoSession = request.cookies.get("demo_session");
-    if (!isPublicPath && !demoSession) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+
+    // Verify demo session signature to prevent cookie forgery
+    if (!isPublicPath) {
+      if (!demoSession) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        return NextResponse.redirect(url);
+      }
+
+      // Validate the HMAC signature embedded in the cookie
+      const validSession = await verifyDemoSession(demoSession.value);
+      if (!validSession) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        const response = NextResponse.redirect(url);
+        response.cookies.delete("demo_session");
+        return response;
+      }
     }
+
     if (demoSession && pathname === "/login") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";

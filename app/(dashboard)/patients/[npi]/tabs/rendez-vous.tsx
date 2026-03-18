@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarClock, Plus, Loader2, Calendar, Clock, RefreshCw } from "lucide-react";
 
@@ -40,8 +41,10 @@ interface RendezVousTabProps {
 export function RendezVousTab({ patient, onRefresh }: RendezVousTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; statut: string; label: string } | null>(null);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin" || user?.role === "admin_etablissement" || user?.role === "infirmier";
+  const canUpdateStatut = canCreate;
 
   // ── Chargement autonome des RDV ────────────────────────────────────────────
   const [rdvList, setRdvList] = useState<RendezVous[]>([]);
@@ -115,10 +118,33 @@ export function RendezVousTab({ patient, onRefresh }: RendezVousTabProps) {
     }
   }
 
+  async function handleUpdateStatut(id: string, statut: string) {
+    const { error } = await supabase.from("rendez_vous").update({ statut }).eq("id", id);
+    if (!error) {
+      toast({ title: "Statut mis à jour" });
+      loadRdv();
+      onRefresh();
+    } else {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    }
+    setConfirmAction(null);
+  }
+
   // ── Tri À venir / Passés ───────────────────────────────────────────────────
+  // Règle : "À venir" = statut actif (planifié/confirmé) ET date future
+  // "Passés" = tout le reste (date passée quel que soit le statut, ou statut terminal)
+  // Pas d'overlap : un RDV est dans l'un OU l'autre, jamais les deux.
   const now = new Date();
-  const upcoming = rdvList.filter((r) => new Date(r.date_rdv) >= now && r.statut !== "annule");
-  const past = rdvList.filter((r) => new Date(r.date_rdv) < now || r.statut === "annule" || r.statut === "effectue" || r.statut === "absent");
+  const upcoming = rdvList.filter((r) =>
+    (r.statut === "planifie" || r.statut === "confirme") &&
+    new Date(r.date_rdv) >= now
+  );
+  const past = rdvList.filter((r) =>
+    new Date(r.date_rdv) < now ||
+    r.statut === "annule" ||
+    r.statut === "effectue" ||
+    r.statut === "absent"
+  );
 
   return (
     <div className="space-y-4">
@@ -226,22 +252,47 @@ export function RendezVousTab({ patient, onRefresh }: RendezVousTabProps) {
           {upcoming.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">À venir</p>
-              {upcoming.map((r) => <RDVCard key={r.id} rdv={r} />)}
+              {upcoming.map((r) => <RDVCard key={r.id} rdv={r} canUpdate={canUpdateStatut} onConfirmAction={setConfirmAction} />)}
             </div>
           )}
           {past.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Passés</p>
-              {past.map((r) => <RDVCard key={r.id} rdv={r} />)}
+              {past.map((r) => <RDVCard key={r.id} rdv={r} canUpdate={canUpdateStatut} onConfirmAction={setConfirmAction} />)}
             </div>
           )}
         </div>
       )}
+
+      {/* Confirmation dialog for destructive status changes */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer l&apos;action</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voulez-vous vraiment {confirmAction?.label} ? Cette action ne peut pas être annulée facilement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmAction && handleUpdateStatut(confirmAction.id, confirmAction.statut)}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function RDVCard({ rdv }: { rdv: RendezVous }) {
+function RDVCard({ rdv, canUpdate, onConfirmAction }: {
+  rdv: RendezVous;
+  canUpdate: boolean;
+  onConfirmAction: (action: { id: string; statut: string; label: string }) => void;
+}) {
   const statut = STATUT_CONFIG[rdv.statut] ?? { label: rdv.statut, className: "bg-slate-50 text-slate-600 border-slate-200" };
   const isPast = new Date(rdv.date_rdv) < new Date();
 
@@ -272,6 +323,40 @@ function RDVCard({ rdv }: { rdv: RendezVous }) {
               <p className="text-xs text-muted-foreground mt-2 border-t pt-2">{rdv.notes}</p>
             )}
           </div>
+          {canUpdate && (
+            <div className="flex flex-col gap-1 shrink-0">
+              {rdv.statut === "planifie" && !isPast && (
+                <>
+                  <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300"
+                    onClick={() => onConfirmAction({ id: rdv.id, statut: "confirme", label: "confirmer ce rendez-vous" })}>
+                    Confirmer
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500"
+                    onClick={() => onConfirmAction({ id: rdv.id, statut: "annule", label: "annuler ce rendez-vous" })}>
+                    Annuler
+                  </Button>
+                </>
+              )}
+              {rdv.statut === "confirme" && !isPast && (
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500"
+                  onClick={() => onConfirmAction({ id: rdv.id, statut: "annule", label: "annuler ce rendez-vous" })}>
+                  Annuler
+                </Button>
+              )}
+              {(rdv.statut === "planifie" || rdv.statut === "confirme") && isPast && (
+                <>
+                  <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300"
+                    onClick={() => onConfirmAction({ id: rdv.id, statut: "effectue", label: "marquer ce rendez-vous comme effectué" })}>
+                    Effectué
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-yellow-600"
+                    onClick={() => onConfirmAction({ id: rdv.id, statut: "absent", label: "marquer le patient comme absent" })}>
+                    Absent
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

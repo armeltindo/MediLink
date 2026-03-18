@@ -111,9 +111,23 @@ function FamilyTreeSVG({ antecedentsFamiliaux }: { antecedentsFamiliaux: Anteced
   const L = "#cbd5e1";
   const siblings = [...(byParent["frere"] || []), ...(byParent["soeur"] || [])];
 
+  // Build an accessible summary for screen readers
+  const accessibleSummary = Object.entries(byParent)
+    .filter(([, entries]) => entries.length > 0)
+    .map(([parent, entries]) =>
+      `${LABELS[parent] || parent} : ${entries.map(e => e.pathologie).join(", ")}`
+    ).join(". ") || "Aucun antécédent familial renseigné";
+
   return (
     <div className="space-y-3">
-      <svg viewBox={`0 0 580 ${viewBoxH}`} className="w-full h-auto rounded-lg border bg-slate-50/30">
+      <svg
+        viewBox={`0 0 580 ${viewBoxH}`}
+        className="w-full h-auto rounded-lg border bg-slate-50/30"
+        role="img"
+        aria-label={`Arbre généalogique — ${accessibleSummary}`}
+      >
+        <title>Arbre généalogique des antécédents familiaux</title>
+        <desc>{accessibleSummary}</desc>
         {/* ── Paternal grandparents → père ── */}
         {hasPGP1 && hasPGP2 && <line x1={55} y1={64} x2={175} y2={64} stroke={L} strokeWidth={1.5} />}
         {hasPGP1 && hasPGP2 && hasPere && <line x1={115} y1={64} x2={115} y2={parentRowY} stroke={L} strokeWidth={1.5} />}
@@ -801,7 +815,18 @@ export function OverviewTab({
             </div>
           </CardHeader>
           <CardContent>
-            {aiSummary ? (
+            {aiLoading ? (
+              <div className="space-y-2" aria-busy="true" aria-label="Génération du résumé en cours">
+                <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
+                <div className="h-3 bg-muted rounded animate-pulse w-full" />
+                <div className="h-3 bg-muted rounded animate-pulse w-5/6" />
+                <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
+                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Analyse du dossier en cours...
+                </p>
+              </div>
+            ) : aiSummary ? (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-xs text-blue-600 font-medium mb-2 uppercase tracking-wide">
                   Résumé généré par IA — À valider par le médecin

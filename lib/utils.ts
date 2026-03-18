@@ -55,7 +55,8 @@ export function generateNPI(): string {
 }
 
 export function calculateIMC(poids: number, taille: number): number {
-  if (!poids || !taille) return 0;
+  // Explicit check against <= 0 : évite le bug avec falsy 0 et les valeurs aberrantes
+  if (poids <= 0 || taille <= 0) return 0;
   const tailleM = taille / 100;
   return Math.round((poids / (tailleM * tailleM)) * 10) / 10;
 }
