@@ -46,7 +46,6 @@ import {
   Clock,
   CheckCircle,
   ShieldOff,
-  ClipboardList,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -301,11 +300,11 @@ function AddVaccinationDialog({
         notes: "",
       });
       onSuccess();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         variant: "destructive",
         title: "Erreur lors de l'enregistrement",
-        description: err.message,
+        description: (err as Error).message,
       });
     } finally {
       setLoading(false);
@@ -436,7 +435,7 @@ function AddVaccinationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Voie d'administration</Label>
+              <Label>Voie d&apos;administration</Label>
               <Select
                 value={form.voie}
                 onValueChange={(v) => setForm({ ...form, voie: v })}
@@ -548,7 +547,7 @@ function AddVaccinationDialog({
 // ---------------------------------------------------------------------------
 
 export default function VaccinationsPage() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const [vaccinations, setVaccinations] = useState<VaccinationRow[]>([]);
   const [etablissements, setEtablissements] = useState<EtablissementOption[]>(
     []
