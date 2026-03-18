@@ -164,15 +164,19 @@ const SERVICES = [
 
 interface HospitalisationsTabProps {
   patient: Patient;
-  hospitalisations: Hospitalisation[];
+  hospitalisations?: Hospitalisation[];
   onRefresh: () => void;
 }
 
-export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: HospitalisationsTabProps) {
+export function HospitalisationsTab({ patient, hospitalisations: initialHospitalisations, onRefresh }: HospitalisationsTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin" || user?.role === "admin_etablissement";
+
+  // Lazy-load hospitalisations if not passed as props
+  const [hospitalisations, setHospitalisations] = useState<Hospitalisation[]>(initialHospitalisations || []);
+  const [tabLoading, setTabLoading] = useState(!initialHospitalisations);
 
   const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
   const [form, setForm] = useState({
@@ -181,6 +185,18 @@ export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: Ho
   });
 
   useEffect(() => {
+    if (!initialHospitalisations) {
+      supabase
+        .from("hospitalisations")
+        .select("*")
+        .eq("patient_id", patient.id)
+        .is("deleted_at", null)
+        .order("date_entree", { ascending: false })
+        .then(({ data }) => {
+          setHospitalisations(data || []);
+          setTabLoading(false);
+        });
+    }
     supabase.from("etablissements").select("id, nom").then(({ data }) => setEtablissements(data || []));
   }, []);
 
@@ -220,6 +236,16 @@ export function HospitalisationsTab({ patient, hospitalisations, onRefresh }: Ho
     deces: { label: "Décès", variant: "danger" },
     fugue: { label: "Fugue", variant: "warning" },
   };
+
+  if (tabLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2].map((i) => (
+          <div key={i} className="h-28 rounded-lg border bg-card animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

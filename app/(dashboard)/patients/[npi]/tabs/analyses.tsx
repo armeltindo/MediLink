@@ -181,7 +181,7 @@ const COMMON_ANALYSES = [
 
 interface AnalysesTabProps {
   patient: Patient;
-  analyses: AnalysePrescrite[];
+  analyses?: AnalysePrescrite[];
   onRefresh: () => void;
 }
 
@@ -213,13 +213,31 @@ function ResultatDisplay({ valeur, valeurMin, valeurMax, unite }: {
   );
 }
 
-export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) {
+export function AnalysesTab({ patient, analyses: initialAnalyses, onRefresh }: AnalysesTabProps) {
   const [open, setOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState<string | null>(null);
   const [resultats, setResultats] = useState<Record<string, ResultatAnalyse[]>>({});
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
   const canSaisirResultat = user?.role === "laborantin" || user?.role === "super_admin";
+
+  // Lazy-load analyses if not passed as props
+  const [analyses, setAnalyses] = useState<AnalysePrescrite[]>(initialAnalyses || []);
+  const [tabLoading, setTabLoading] = useState(!initialAnalyses);
+
+  useEffect(() => {
+    if (initialAnalyses) return;
+    supabase
+      .from("analyses_prescrites")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .is("deleted_at", null)
+      .order("date_prescription", { ascending: false })
+      .then(({ data }) => {
+        setAnalyses(data || []);
+        setTabLoading(false);
+      });
+  }, [patient.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase Realtime — notify médecin when a laborantin saves a result ──
   useEffect(() => {
@@ -346,6 +364,16 @@ export function AnalysesTab({ patient, analyses, onRefresh }: AnalysesTabProps) 
     rendu: { label: "Rendu", variant: "success" },
     annule: { label: "Annulé", variant: "danger" },
   };
+
+  if (tabLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 rounded-lg border bg-card animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

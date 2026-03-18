@@ -67,17 +67,18 @@ export default function DashboardPage() {
   }, [user]);
 
   async function loadStats() {
-    const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-    const startOfWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date();
+    // Fix: use separate Date objects to avoid mutation
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const [patientsRes, consultationsRes, prescriptionsRes, analysesRes, activityRes] = await Promise.all([
       // Patients created today
       supabase.from("patients").select("id", { count: "exact" })
         .gte("created_at", startOfDay).is("deleted_at", null),
 
-      // Consultations this week (for this doctor or all if admin)
+      // Consultations this week
       supabase.from("consultations").select("id", { count: "exact" })
         .gte("date_consultation", startOfWeek)
         .is("deleted_at", null),
@@ -86,15 +87,17 @@ export default function DashboardPage() {
       supabase.from("prescriptions").select("id", { count: "exact" })
         .in("statut", ["prescrit", "en_cours"])
         .lte("date_expiration", sevenDaysLater)
-        .gte("date_expiration", new Date().toISOString()),
+        .gte("date_expiration", now.toISOString()),
 
       // Analyses en attente
       supabase.from("analyses_prescrites").select("id", { count: "exact" })
         .in("statut", ["prescrit", "en_attente"]),
 
-      // Recent audit activity
-      supabase.from("audit_logs").select("action, patient_id, timestamp")
-        .order("timestamp", { ascending: false }).limit(10),
+      // Recent audit activity — join patient name
+      supabase.from("audit_logs")
+        .select("action, timestamp, patients(prenom, nom)")
+        .order("timestamp", { ascending: false })
+        .limit(10),
     ]);
 
     setStats({
@@ -102,9 +105,13 @@ export default function DashboardPage() {
       consultationsWeek: consultationsRes.count || 0,
       prescriptionsExpiring: prescriptionsRes.count || 0,
       analysesEnAttente: analysesRes.count || 0,
-      recentActivity: (activityRes.data || []).map((a: { action: string; timestamp: string }) => ({
+      recentActivity: (activityRes.data || []).map((a: {
+        action: string;
+        timestamp: string;
+        patients?: { prenom: string; nom: string } | null;
+      }) => ({
         action: a.action,
-        patientNom: "—",
+        patientNom: a.patients ? `${a.patients.prenom} ${a.patients.nom}` : "—",
         timestamp: a.timestamp,
       })),
       topDiagnostics: [],
@@ -239,6 +246,9 @@ export default function DashboardPage() {
                           <p className="text-sm truncate">
                             {actionLabels[activity.action] || activity.action}
                           </p>
+                          {activity.patientNom !== "—" && (
+                            <p className="text-xs text-muted-foreground truncate">{activity.patientNom}</p>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground shrink-0">
                           {formatDateTime(activity.timestamp)}

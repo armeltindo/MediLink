@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription, AnalysePrescrite, Vaccination, Hospitalisation, RendezVous } from "@/types";
+import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
 import { Header } from "@/components/layout/header";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { PatientHeader } from "@/components/patient/patient-header";
 import { AIAlertsBanner } from "@/components/patient/ai-alerts-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,12 +40,10 @@ export default function PatientPage() {
   const [antecedents, setAntecedents] = useState<Antecedent[]>([]);
   const [antecedentsFamiliaux, setAntecedentsFamiliaux] = useState<AntecedentFamilial[]>([]);
   const [habitudes, setHabitudes] = useState<HabitudesVie | null>(null);
+  // Only consultations and prescriptions are loaded upfront (needed by OverviewTab)
+  // Other tabs (analyses, vaccinations, hospitalisations) fetch their own data lazily
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [analyses, setAnalyses] = useState<AnalysePrescrite[]>([]);
-  const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
-  const [hospitalisations, setHospitalisations] = useState<Hospitalisation[]>([]);
-  const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,29 +79,15 @@ export default function PatientPage() {
       });
     }
 
-    // Load all related data in parallel
-    const [
-      allergiesRes,
-      antecedentsRes,
-      familliauxRes,
-      habitudesRes,
-      consultationsRes,
-      prescriptionsRes,
-      analysesRes,
-      vaccinationsRes,
-      hospitalisationsRes,
-      rendezVousRes,
-    ] = await Promise.all([
+    // Load only the data needed for OverviewTab (default tab) + patient header
+    // Other tabs fetch their own data lazily when first opened
+    const [allergiesRes, antecedentsRes, familliauxRes, habitudesRes, consultationsRes, prescriptionsRes] = await Promise.all([
       supabase.from("allergies").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("created_at", { ascending: false }),
       supabase.from("antecedents").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_debut", { ascending: false }),
       supabase.from("antecedents_familiaux").select("*").eq("patient_id", patientData.id),
       supabase.from("habitudes_vie").select("*").eq("patient_id", patientData.id).single(),
       supabase.from("consultations").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_consultation", { ascending: false }),
       supabase.from("prescriptions").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_prescription", { ascending: false }),
-      supabase.from("analyses_prescrites").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_prescription", { ascending: false }),
-      supabase.from("vaccinations").select("*").eq("patient_id", patientData.id).order("date_vaccination", { ascending: false }),
-      supabase.from("hospitalisations").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_entree", { ascending: false }),
-      supabase.from("rendez_vous").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_rdv", { ascending: false }),
     ]);
 
     setAllergies(allergiesRes.data || []);
@@ -110,11 +96,6 @@ export default function PatientPage() {
     setHabitudes(habitudesRes.data || null);
     setConsultations(consultationsRes.data || []);
     setPrescriptions(prescriptionsRes.data || []);
-    setAnalyses(analysesRes.data || []);
-    setVaccinations(vaccinationsRes.data || []);
-    setHospitalisations(hospitalisationsRes.data || []);
-    setRendezVous(rendezVousRes.data || []);
-    if (rendezVousRes.error) console.error("rendez_vous query error:", rendezVousRes.error);
     setLoading(false);
   }
 
@@ -184,6 +165,14 @@ export default function PatientPage() {
   return (
     <div className="flex flex-col min-h-full">
       <Header />
+      {/* Breadcrumb */}
+      <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1 border-b bg-muted/30">
+        <Link href="/patients" className="hover:text-foreground transition-colors">Patients</Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="text-foreground font-medium truncate">
+          {patient.prenom} {patient.nom.toUpperCase()}
+        </span>
+      </nav>
       <PatientHeader
         patient={patient}
         allergies={allergies}
@@ -244,10 +233,10 @@ export default function PatientPage() {
             <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
             <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
             <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
-            <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
-            <TabsTrigger value="vaccinations">Vaccins ({vaccinations.length})</TabsTrigger>
-            <TabsTrigger value="hospitalisations">Hospitalisations ({hospitalisations.length})</TabsTrigger>
-            <TabsTrigger value="rendez-vous">Rendez-vous ({rendezVous.length})</TabsTrigger>
+            <TabsTrigger value="analyses">Analyses</TabsTrigger>
+            <TabsTrigger value="vaccinations">Vaccins</TabsTrigger>
+            <TabsTrigger value="hospitalisations">Hospitalisations</TabsTrigger>
+            <TabsTrigger value="rendez-vous">Rendez-vous</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
@@ -284,7 +273,6 @@ export default function PatientPage() {
           <TabsContent value="analyses">
             <AnalysesTab
               patient={patient}
-              analyses={analyses}
               onRefresh={() => loadPatient(patient.npi)}
             />
           </TabsContent>
@@ -292,7 +280,6 @@ export default function PatientPage() {
           <TabsContent value="vaccinations">
             <VaccinationsTab
               patient={patient}
-              vaccinations={vaccinations}
               onRefresh={() => loadPatient(patient.npi)}
             />
           </TabsContent>
@@ -300,7 +287,6 @@ export default function PatientPage() {
           <TabsContent value="hospitalisations">
             <HospitalisationsTab
               patient={patient}
-              hospitalisations={hospitalisations}
               onRefresh={() => loadPatient(patient.npi)}
             />
           </TabsContent>

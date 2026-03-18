@@ -1,16 +1,18 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Search, Bell, Sun, Moon, Settings } from "lucide-react";
+import { Search, Bell, Sun, Moon, Settings, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
+import { useSidebar } from "@/components/layout/sidebar-context";
 
 export function Header({ title }: { title?: string }) {
   const { user } = useUser();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [dark, setDark] = useState(false);
+  const { toggle } = useSidebar();
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +27,18 @@ export function Header({ title }: { title?: string }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-background border-b border-border h-16 flex items-center px-6 gap-4">
+    <header className="sticky top-0 z-30 bg-background border-b border-border h-16 flex items-center px-4 gap-3">
+      {/* Hamburger — visible uniquement sur mobile */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={toggle}
+        className="lg:hidden"
+        aria-label="Ouvrir le menu"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
       {title && (
         <h2 className="text-lg font-serif font-semibold text-foreground hidden md:block">
           {title}

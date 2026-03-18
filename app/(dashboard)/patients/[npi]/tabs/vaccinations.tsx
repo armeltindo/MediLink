@@ -42,15 +42,32 @@ const statusConfig = {
 
 interface VaccinationsTabProps {
   patient: Patient;
-  vaccinations: Vaccination[];
+  vaccinations?: Vaccination[];
   onRefresh: () => void;
 }
 
-export function VaccinationsTab({ patient, vaccinations, onRefresh }: VaccinationsTabProps) {
+export function VaccinationsTab({ patient, vaccinations: initialVaccinations, onRefresh }: VaccinationsTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role !== "pharmacien" && user?.role !== "laborantin";
+
+  // Lazy-load vaccinations if not passed as props
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>(initialVaccinations || []);
+  const [tabLoading, setTabLoading] = useState(!initialVaccinations);
+
+  useEffect(() => {
+    if (initialVaccinations) return;
+    supabase
+      .from("vaccinations")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .order("date_vaccination", { ascending: false })
+      .then(({ data }) => {
+        setVaccinations(data || []);
+        setTabLoading(false);
+      });
+  }, [patient.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
   const [form, setForm] = useState({
@@ -100,6 +117,16 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
     acc[v.vaccin] = [...(acc[v.vaccin] || []), v];
     return acc;
   }, {} as Record<string, Vaccination[]>);
+
+  if (tabLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 rounded-lg border bg-card animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

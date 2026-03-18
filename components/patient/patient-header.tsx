@@ -12,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertTriangle, Calendar, MapPin, Briefcase,
-  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText, Camera, Loader2, Pencil,
+  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText, Camera, Loader2, Pencil, ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/hooks/use-toast";
@@ -260,13 +263,48 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 shrink-0 flex-wrap">
+        <div className="flex gap-2 shrink-0">
+          {/* Actions secondaires dans un dropdown */}
+          {(onShowQR || onExportPDF || onLettreRef) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Actions
+                  <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onShowQR && (
+                  <DropdownMenuItem onClick={onShowQR}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    QR Code patient
+                  </DropdownMenuItem>
+                )}
+                {onExportPDF && (
+                  <DropdownMenuItem onClick={onExportPDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exporter PDF
+                  </DropdownMenuItem>
+                )}
+                {onLettreRef && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onLettreRef}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Lettre de référence
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {canEdit && (
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Pencil className="h-4 w-4 mr-1.5" />
-                  Modifier la fiche
+                  Modifier
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -458,24 +496,6 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
                 </form>
               </DialogContent>
             </Dialog>
-          )}
-          {onShowQR && (
-            <Button variant="outline" size="sm" onClick={onShowQR}>
-              <QrCode className="h-4 w-4 mr-1.5" />
-              QR Code
-            </Button>
-          )}
-          {onExportPDF && (
-            <Button variant="outline" size="sm" onClick={onExportPDF}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Exporter PDF
-            </Button>
-          )}
-          {onLettreRef && (
-            <Button variant="outline" size="sm" onClick={onLettreRef}>
-              <FileText className="h-4 w-4 mr-1.5" />
-              Lettre de réf.
-            </Button>
           )}
           {onBreakGlass && (
             <Button variant="outline" size="sm" onClick={onBreakGlass} className="border-red-300 text-red-600 hover:bg-red-50">

@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Heart, Shield, Globe } from "lucide-react";
+import { Loader2, Heart, Shield, Globe, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isDemoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -77,6 +78,28 @@ export default function LoginPage() {
           ))}
         </div>
 
+        {/* Demo accounts hint */}
+        {isDemoMode && (
+          <div className="bg-white/10 rounded-xl p-4 space-y-2">
+            <p className="text-white/90 text-xs font-semibold uppercase tracking-wide mb-2">Comptes de démonstration</p>
+            {[
+              { label: "Médecin", email: "dr.agossou@medilink.bj", password: "demo123" },
+              { label: "Admin établissement", email: "admin@medilink.bj", password: "demo123" },
+              { label: "Pharmacien", email: "pharma@medilink.bj", password: "demo123" },
+            ].map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                onClick={() => { setEmail(account.email); setPassword(account.password); }}
+                className="w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <span className="text-white text-xs font-medium">{account.label}</span>
+                <span className="text-white/60 text-xs font-mono">{account.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Login Form */}
         <Card className="shadow-2xl border-0">
           <CardHeader>
@@ -108,14 +131,25 @@ export default function LoginPage() {
                     </a>
                   )}
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full" variant="medical" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

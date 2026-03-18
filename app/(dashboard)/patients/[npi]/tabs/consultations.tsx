@@ -18,7 +18,7 @@ import { Loader2, Plus, ChevronDown, ChevronUp, Search, Activity } from "lucide-
 
 interface ConsultationsTabProps {
   patient: Patient;
-  consultations: Consultation[];
+  consultations?: Consultation[];
   onRefresh: () => void;
 }
 
@@ -344,10 +344,28 @@ function NewConsultationDialog({ patient, onSuccess, onClose }: {
   );
 }
 
-export function ConsultationsTab({ patient, consultations, onRefresh }: ConsultationsTabProps) {
+export function ConsultationsTab({ patient, consultations: initialConsultations, onRefresh }: ConsultationsTabProps) {
   const [open, setOpen] = useState(false);
   const { user } = useUser();
   const canCreate = user?.role === "medecin" || user?.role === "super_admin";
+
+  // Lazy-load consultations if not passed as props
+  const [consultations, setConsultations] = useState<Consultation[]>(initialConsultations || []);
+  const [tabLoading, setTabLoading] = useState(!initialConsultations);
+
+  useEffect(() => {
+    if (initialConsultations) return;
+    supabase
+      .from("consultations")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .is("deleted_at", null)
+      .order("date_consultation", { ascending: false })
+      .then(({ data }) => {
+        setConsultations(data || []);
+        setTabLoading(false);
+      });
+  }, [patient.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filters
   const [filterType, setFilterType] = useState<string>("all");
@@ -376,6 +394,16 @@ export function ConsultationsTab({ patient, consultations, onRefresh }: Consulta
     if (filterYear !== "all" && new Date(c.date_consultation).getFullYear().toString() !== filterYear) return false;
     return true;
   });
+
+  if (tabLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 rounded-lg border bg-card animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
