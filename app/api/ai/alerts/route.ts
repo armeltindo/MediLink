@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { anthropic, CLINICAL_SYSTEM_PROMPT } from "@/lib/anthropic";
+import { getGeminiModel } from "@/lib/gemini";
 import { formatDate } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
@@ -118,14 +118,9 @@ Réponds UNIQUEMENT en JSON valide, tableau d'alertes (max 3) :
 Si aucune alerte : []`;
 
     try {
-      const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 512,
-        system: CLINICAL_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text = (message.content[0] as { type: string; text: string }).text;
+      const model = getGeminiModel(512);
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       const aiAlerts = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { anthropic, CLINICAL_SYSTEM_PROMPT } from "@/lib/anthropic";
+import { getGeminiModel } from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,19 +13,13 @@ export async function POST(request: NextRequest) {
     const { texte } = await request.json();
     if (!texte) return NextResponse.json({ suggestions: [] });
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 256,
-      system: CLINICAL_SYSTEM_PROMPT,
-      messages: [{
-        role: "user",
-        content: `Pour le diagnostic clinique suivant : "${texte}"
+    const model = getGeminiModel(256);
+    const result = await model.generateContent(
+      `Pour le diagnostic clinique suivant : "${texte}"
 Suggère les 3 codes CIM-10 les plus pertinents.
-Réponds UNIQUEMENT en JSON : [{"code": "E11", "libelle": "Diabète sucré de type 2"}]`,
-      }],
-    });
-
-    const text = (message.content[0] as { type: string; text: string }).text;
+Réponds UNIQUEMENT en JSON : [{"code": "E11", "libelle": "Diabète sucré de type 2"}]`
+    );
+    const text = result.response.text();
     const jsonMatch = text.match(/\[[\s\S]*?\]/);
     const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 

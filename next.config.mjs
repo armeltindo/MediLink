@@ -8,7 +8,7 @@ const nextConfig = {
   },
   // Disable static page optimization for dynamic routes
   experimental: {
-    serverComponentsExternalPackages: ["@anthropic-ai/sdk"],
+    serverComponentsExternalPackages: ["@google/generative-ai"],
   },
 };
 

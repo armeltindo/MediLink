@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { anthropic, CLINICAL_SYSTEM_PROMPT } from "@/lib/anthropic";
+import { getGeminiModel } from "@/lib/gemini";
 import { formatAge, formatDate } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
@@ -71,14 +71,9 @@ Génère un résumé clinique synthétique en français, structuré en sections 
 
 Sois concis, clinique, et utilise le vocabulaire médical approprié. Maximum 300 mots.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: CLINICAL_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const summary = (message.content[0] as { type: string; text: string }).text;
+    const model = getGeminiModel(1024);
+    const result = await model.generateContent(prompt);
+    const summary = result.response.text();
 
     // Log audit
     await supabase.from("audit_logs").insert({
