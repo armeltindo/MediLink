@@ -57,6 +57,7 @@ function AddAntecedentDialog({ patient, onSuccess }: { patient: Patient; onSucce
         notes: form.notes || null,
         date_debut: form.date_debut || null,
         actif: form.actif,
+        created_by: user.id,
       });
       if (error) throw error;
       toast({ title: "Antécédent ajouté" });
@@ -156,6 +157,7 @@ function AddAllergieDialog({ patient, onSuccess }: { patient: Patient; onSuccess
         patient_id: patient.id,
         ...form,
         actif: true,
+        created_by: user.id,
       });
       if (error) throw error;
       toast({ title: "Allergie enregistrée", variant: "default" });
