@@ -345,7 +345,6 @@ function HospitalisationCard({
                     </div>
                     <p className="text-muted-foreground mt-0.5">{s.description}</p>
                     {s.medicament_administre && <p className="text-blue-700 mt-0.5">💊 {s.medicament_administre}</p>}
-                    {s.notes && <p className="italic mt-0.5">{s.notes}</p>}
                   </div>
                 ))}
               </div>
