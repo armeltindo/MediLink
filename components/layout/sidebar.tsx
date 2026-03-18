@@ -12,8 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
-  LogOut, Heart, ShieldCheck, ClipboardList,
+  LogOut, ShieldCheck, ClipboardList,
 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"] },
@@ -46,14 +47,8 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-medical-slate border-r border-slate-700 flex flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700">
-        <div className="bg-medical-green rounded-lg p-1.5">
-          <Heart className="h-5 w-5 text-white" fill="currentColor" />
-        </div>
-        <div>
-          <h1 className="text-white font-serif font-bold text-lg leading-none">MediLink</h1>
-          <p className="text-slate-400 text-xs">DME Unifié</p>
-        </div>
+      <div className="px-4 py-4 border-b border-slate-700">
+        <Logo theme="dark" size="md" />
       </div>
 
       {/* Navigation */}
