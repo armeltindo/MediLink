@@ -19,13 +19,13 @@ ON CONFLICT (id) DO NOTHING;
 -- PROFILS UTILISATEURS (fake auth UUIDs — FK désactivée)
 -- ============================================================
 INSERT INTO users_profiles (id, role, nom, prenom, specialite, etablissement_id, telephone, numero_ordre) VALUES
-  ('u1000000-0000-0000-0000-000000000001', 'medecin',             'KPOSSOU',    'Aristide',  'Médecine interne',    'e1000000-0000-0000-0000-000000000001', '+229 97 01 02 03', 'OM-BJ-2015-0042'),
-  ('u1000000-0000-0000-0000-000000000002', 'medecin',             'AMOUSSOU',   'Clarisse',  'Pédiatrie',           'e1000000-0000-0000-0000-000000000002', '+229 96 04 05 06', 'OM-BJ-2018-0118'),
-  ('u1000000-0000-0000-0000-000000000003', 'super_admin',         'DOHOU',      'Gérard',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 97 07 08 09', NULL),
-  ('u1000000-0000-0000-0000-000000000004', 'infirmier',           'ZANNOU',     'Sophie',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 96 10 11 12', NULL),
-  ('u1000000-0000-0000-0000-000000000005', 'laborantin',          'HOUNKANRIN', 'Maxime',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 97 13 14 15', NULL),
-  ('u1000000-0000-0000-0000-000000000006', 'pharmacien',          'ADJOVI',     'Nadège',    NULL,                  'e1000000-0000-0000-0000-000000000003', '+229 96 16 17 18', NULL),
-  ('u1000000-0000-0000-0000-000000000007', 'admin_etablissement', 'GLELE',      'Romuald',   NULL,                  'e1000000-0000-0000-0000-000000000002', '+229 97 19 20 21', NULL)
+  ('9a000000-0000-0000-0000-000000000001', 'medecin',             'KPOSSOU',    'Aristide',  'Médecine interne',    'e1000000-0000-0000-0000-000000000001', '+229 97 01 02 03', 'OM-BJ-2015-0042'),
+  ('9a000000-0000-0000-0000-000000000002', 'medecin',             'AMOUSSOU',   'Clarisse',  'Pédiatrie',           'e1000000-0000-0000-0000-000000000002', '+229 96 04 05 06', 'OM-BJ-2018-0118'),
+  ('9a000000-0000-0000-0000-000000000003', 'super_admin',         'DOHOU',      'Gérard',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 97 07 08 09', NULL),
+  ('9a000000-0000-0000-0000-000000000004', 'infirmier',           'ZANNOU',     'Sophie',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 96 10 11 12', NULL),
+  ('9a000000-0000-0000-0000-000000000005', 'laborantin',          'HOUNKANRIN', 'Maxime',    NULL,                  'e1000000-0000-0000-0000-000000000001', '+229 97 13 14 15', NULL),
+  ('9a000000-0000-0000-0000-000000000006', 'pharmacien',          'ADJOVI',     'Nadège',    NULL,                  'e1000000-0000-0000-0000-000000000003', '+229 96 16 17 18', NULL),
+  ('9a000000-0000-0000-0000-000000000007', 'admin_etablissement', 'GLELE',      'Romuald',   NULL,                  'e1000000-0000-0000-0000-000000000002', '+229 97 19 20 21', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -46,16 +46,16 @@ ON CONFLICT (id) DO NOTHING;
 -- ANTÉCÉDENTS PERSONNELS
 -- ============================================================
 INSERT INTO antecedents (id, patient_id, categorie, description, date_debut, date_fin, actif, cim10_code, created_by) VALUES
-  ('d1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'medical',        'Diabète sucré de type 2',                             '2015-03-01', NULL,         TRUE,  'E11', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000001', 'medical',        'Hypertension artérielle essentielle',                 '2018-06-15', NULL,         TRUE,  'I10', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000001', 'chirurgical',    'Appendicectomie',                                     '2003-08-20', '2003-08-20', FALSE, 'K35', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000002', 'medical',        'Infection VIH — sous traitement ARV',                 '2019-01-10', NULL,         TRUE,  'B24', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000002', 'obstetrical',    'G4P4 — 4 grossesses, 4 accouchements normaux',        '2024-01-01', NULL,         FALSE, 'Z34', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000003', 'medical',        'Drépanocytose SS homozygote',                         '1960-01-01', NULL,         TRUE,  'D57', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000003', 'medical',        'Maladie rénale chronique stade 3',                    '2020-05-01', NULL,         TRUE,  'N18', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000003', 'traumatologique','Fracture du fémur droit — accident de route 2010',    '2010-07-14', '2010-07-14', FALSE, 'S72', 'u1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000004', 'medical',        'Asthme persistant modéré',                            '2008-01-01', NULL,         TRUE,  'J45', 'u1000000-0000-0000-0000-000000000002'),
-  ('d1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000004', 'psychiatrique',  'Épisode dépressif majeur — rémission partielle',      '2023-03-01', NULL,         TRUE,  'F32', 'u1000000-0000-0000-0000-000000000002')
+  ('d1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'medical',        'Diabète sucré de type 2',                             '2015-03-01', NULL,         TRUE,  'E11', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000001', 'medical',        'Hypertension artérielle essentielle',                 '2018-06-15', NULL,         TRUE,  'I10', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000001', 'chirurgical',    'Appendicectomie',                                     '2003-08-20', '2003-08-20', FALSE, 'K35', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000002', 'medical',        'Infection VIH — sous traitement ARV',                 '2019-01-10', NULL,         TRUE,  'B24', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000002', 'obstetrical',    'G4P4 — 4 grossesses, 4 accouchements normaux',        '2024-01-01', NULL,         FALSE, 'Z34', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000003', 'medical',        'Drépanocytose SS homozygote',                         '1960-01-01', NULL,         TRUE,  'D57', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000003', 'medical',        'Maladie rénale chronique stade 3',                    '2020-05-01', NULL,         TRUE,  'N18', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000003', 'traumatologique','Fracture du fémur droit — accident de route 2010',    '2010-07-14', '2010-07-14', FALSE, 'S72', '9a000000-0000-0000-0000-000000000001'),
+  ('d1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000004', 'medical',        'Asthme persistant modéré',                            '2008-01-01', NULL,         TRUE,  'J45', '9a000000-0000-0000-0000-000000000002'),
+  ('d1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000004', 'psychiatrique',  'Épisode dépressif majeur — rémission partielle',      '2023-03-01', NULL,         TRUE,  'F32', '9a000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -86,10 +86,10 @@ ON CONFLICT (patient_id) DO NOTHING;
 -- ALLERGIES
 -- ============================================================
 INSERT INTO allergies (id, patient_id, substance, type, severite, reaction, date_decouverte, created_by) VALUES
-  ('g1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'Pénicilline', 'medicamenteuse', 'moderee',       'Urticaire généralisée, prurit intense',                 '2010-04-15', 'u1000000-0000-0000-0000-000000000001'),
-  ('g1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'Sulfamides',  'medicamenteuse', 'moderee',       'Éruption cutanée maculopapuleuse',                      '2020-02-10', 'u1000000-0000-0000-0000-000000000001'),
-  ('g1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000004', 'Arachides',   'alimentaire',    'anaphylactique','Choc anaphylactique — hospitalisée urgences 2022',      '2022-08-20', 'u1000000-0000-0000-0000-000000000002'),
-  ('g1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'Aspirine',    'medicamenteuse', 'moderee',       'Bronchospasme, aggravation asthme',                     '2015-05-01', 'u1000000-0000-0000-0000-000000000002')
+  ('9b000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'Pénicilline', 'medicamenteuse', 'moderee',       'Urticaire généralisée, prurit intense',                 '2010-04-15', '9a000000-0000-0000-0000-000000000001'),
+  ('9b000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'Sulfamides',  'medicamenteuse', 'moderee',       'Éruption cutanée maculopapuleuse',                      '2020-02-10', '9a000000-0000-0000-0000-000000000001'),
+  ('9b000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000004', 'Arachides',   'alimentaire',    'anaphylactique','Choc anaphylactique — hospitalisée urgences 2022',      '2022-08-20', '9a000000-0000-0000-0000-000000000002'),
+  ('9b000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'Aspirine',    'medicamenteuse', 'moderee',       'Bronchospasme, aggravation asthme',                     '2015-05-01', '9a000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -100,7 +100,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Agossou — suivi diabète + HTA
   ('c1000000-0000-0000-0000-000000000001',
-   'a1000000-0000-0000-0000-000000000001', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000001', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '6 months', 'externe', 'Suivi diabète type 2 et hypertension artérielle',
    'Patient de 56 ans, diabétique T2 depuis 2015, hypertendu depuis 2018. Polydipsie et fatigue légère. Observance correcte.',
    'Diabète sucré type 2 mal équilibré — HbA1c 8,2%', 'E11',
@@ -108,7 +108,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Agossou — contrôle HbA1c + début néphropathie
   ('c1000000-0000-0000-0000-000000000002',
-   'a1000000-0000-0000-0000-000000000001', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000001', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '3 months', 'externe', 'Contrôle HbA1c et bilan rénal',
    'HbA1c 7,4% (amélioration). Créatinine 98 µmol/L, DFG 68 mL/min. Microalbuminurie 35 mg/g.',
    'Diabète T2 en amélioration — début néphropathie diabétique stade 1', 'E11.2',
@@ -116,7 +116,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Hounsou — suivi VIH
   ('c1000000-0000-0000-0000-000000000003',
-   'a1000000-0000-0000-0000-000000000002', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000002', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '5 months', 'externe', 'Suivi VIH — bilan semestriel',
    'Patiente 39 ans, VIH sous TDF+3TC+EFV depuis 2019. Asymptomatique, bonne observance. CD4 620/mm3, charge virale indétectable.',
    'VIH stade B3 — charge virale indétectable sous ARV', 'B24',
@@ -124,7 +124,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Hounsou — paludisme
   ('c1000000-0000-0000-0000-000000000004',
-   'a1000000-0000-0000-0000-000000000002', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000002',
+   'a1000000-0000-0000-0000-000000000002', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '1 month', 'externe', 'Fièvre et céphalées — suspicion paludisme',
    'Fièvre 38,9°C depuis 48h, céphalées frontales, frissons. Retour de Parakou.',
    'Paludisme à P. falciparum non compliqué', 'B54',
@@ -132,7 +132,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Garba — crise vaso-occlusive (urgence)
   ('c1000000-0000-0000-0000-000000000005',
-   'a1000000-0000-0000-0000-000000000003', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000003', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '4 months', 'urgence', 'Crise vaso-occlusive sévère — douleurs osseuses',
    'Patient 72 ans, drépanocytaire SS. Douleurs membres inférieurs et rachis VAS 8/10. T° 37,8°C. Pas de foyer infectieux.',
    'Crise vaso-occlusive sévère sur drépanocytose', 'D57',
@@ -140,7 +140,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Garba — suivi IRC + drépanocytose
   ('c1000000-0000-0000-0000-000000000006',
-   'a1000000-0000-0000-0000-000000000003', 'u1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000003', '9a000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '2 months', 'externe', 'Suivi IRC et drépanocytose',
    'DFG stable à 42 mL/min, créatinine 140 µmol/L. Hémoglobine 8,2 g/dL. Pas de crise depuis 2 mois.',
    'Maladie rénale chronique stade 3b — drépanocytose SS', 'N18.3',
@@ -148,7 +148,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Dossou — crise asthme (urgence)
   ('c1000000-0000-0000-0000-000000000007',
-   'a1000000-0000-0000-0000-000000000004', 'u1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
+   'a1000000-0000-0000-0000-000000000004', '9a000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '3 months', 'urgence', 'Crise d''asthme modérée — dyspnée aiguë',
    'Patiente 29 ans, asthmatique. Dyspnée sifflante depuis 2h, exposition pollen. SaO2 93%, DEP 55% théorique.',
    'Exacerbation modérée d''asthme persistant', 'J45.1',
@@ -156,7 +156,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Dossou — suivi dépression
   ('c1000000-0000-0000-0000-000000000008',
-   'a1000000-0000-0000-0000-000000000004', 'u1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
+   'a1000000-0000-0000-0000-000000000004', '9a000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '6 weeks', 'externe', 'Suivi psychiatrique — dépression',
    'Score PHQ-9 à 9. Humeur légèrement déprimée, insomnie. Étudiante, charge de travail importante.',
    'Épisode dépressif modéré — amélioration partielle', 'F32.1',
@@ -164,7 +164,7 @@ INSERT INTO consultations (id, patient_id, medecin_id, etablissement_id, date_co
 
   -- Lokossou — bronchite enfant
   ('c1000000-0000-0000-0000-000000000009',
-   'a1000000-0000-0000-0000-000000000005', 'u1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
+   'a1000000-0000-0000-0000-000000000005', '9a000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '2 months', 'externe', 'Consultation pédiatrique — fièvre et toux',
    'Enfant 4 ans, 17 kg. Fièvre 38,5°C depuis 3j, toux productive, rhinorrhée. Quelques râles bronchiques.',
    'Bronchite aiguë virale', 'J20.9',
@@ -191,29 +191,29 @@ ON CONFLICT DO NOTHING;
 INSERT INTO prescriptions (consultation_id, patient_id, medecin_id, medicament_dci, medicament_commercial,
   dosage, forme, posologie, duree, instructions, statut) VALUES
   -- C1 Agossou
-  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Metformine',                   'Glucophage',         '1000 mg',        'comprimé',     '1 cp matin + 1 cp soir au cours des repas',        '3 mois',  'Prendre avec les repas',                    'en_cours'),
-  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Glibenclamide',                 NULL,                 '5 mg',           'comprimé',     '1 cp matin avant le repas',                        '3 mois',  'Surveiller les hypoglycémies',              'en_cours'),
-  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Amlodipine',                   'Amlor',              '5 mg',           'comprimé',     '1 cp/j le matin',                                  '3 mois',  NULL,                                        'en_cours'),
+  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Metformine',                   'Glucophage',         '1000 mg',        'comprimé',     '1 cp matin + 1 cp soir au cours des repas',        '3 mois',  'Prendre avec les repas',                    'en_cours'),
+  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Glibenclamide',                 NULL,                 '5 mg',           'comprimé',     '1 cp matin avant le repas',                        '3 mois',  'Surveiller les hypoglycémies',              'en_cours'),
+  ('c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Amlodipine',                   'Amlor',              '5 mg',           'comprimé',     '1 cp/j le matin',                                  '3 mois',  NULL,                                        'en_cours'),
   -- C2 Agossou
-  ('c1000000-0000-0000-0000-000000000002','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Ramipril',                     'Triatec',            '5 mg',           'comprimé',     '1 cp/j le soir',                                   '6 mois',  'Surveiller créatinine à J15',               'en_cours'),
+  ('c1000000-0000-0000-0000-000000000002','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Ramipril',                     'Triatec',            '5 mg',           'comprimé',     '1 cp/j le soir',                                   '6 mois',  'Surveiller créatinine à J15',               'en_cours'),
   -- C3 Hounsou VIH
-  ('c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','Ténofovir + Lamivudine + Efavirenz','TDF/3TC/EFV',   '300/300/600 mg', 'comprimé',     '1 cp/j le soir à heure fixe',                      '6 mois',  'Jeun ou repas léger',                       'en_cours'),
+  ('c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','Ténofovir + Lamivudine + Efavirenz','TDF/3TC/EFV',   '300/300/600 mg', 'comprimé',     '1 cp/j le soir à heure fixe',                      '6 mois',  'Jeun ou repas léger',                       'en_cours'),
   -- C4 Hounsou paludisme
-  ('c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','Artéméther + Luméfantrine',    'Coartem',            '20/120 mg',      'comprimé',     '4 cp matin + 4 cp soir × 3 jours',                 '3 jours', 'Prendre avec aliment gras',                 'termine'),
-  ('c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','Paracétamol',                  'Doliprane',          '1000 mg',        'comprimé',     '1 cp toutes les 6h si T° > 38,5°C',                '5 jours', NULL,                                        'termine'),
+  ('c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','Artéméther + Luméfantrine',    'Coartem',            '20/120 mg',      'comprimé',     '4 cp matin + 4 cp soir × 3 jours',                 '3 jours', 'Prendre avec aliment gras',                 'termine'),
+  ('c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','Paracétamol',                  'Doliprane',          '1000 mg',        'comprimé',     '1 cp toutes les 6h si T° > 38,5°C',                '5 jours', NULL,                                        'termine'),
   -- C5 Garba CVO
-  ('c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','u1000000-0000-0000-0000-000000000001','Morphine',                     NULL,                 '10 mg',          'injectable IV','Titration IV par paliers de 2mg/5min (max 20mg)',   '48h',     'Sous monitoring continu en USPI',           'termine'),
-  ('c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','u1000000-0000-0000-0000-000000000001','Acide folique',                 NULL,                 '5 mg',           'comprimé',     '1 cp/j',                                           'continu', NULL,                                        'en_cours'),
+  ('c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','9a000000-0000-0000-0000-000000000001','Morphine',                     NULL,                 '10 mg',          'injectable IV','Titration IV par paliers de 2mg/5min (max 20mg)',   '48h',     'Sous monitoring continu en USPI',           'termine'),
+  ('c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','9a000000-0000-0000-0000-000000000001','Acide folique',                 NULL,                 '5 mg',           'comprimé',     '1 cp/j',                                           'continu', NULL,                                        'en_cours'),
   -- C6 Garba IRC
-  ('c1000000-0000-0000-0000-000000000006','a1000000-0000-0000-0000-000000000003','u1000000-0000-0000-0000-000000000001','Hydroxyurée',                  'Hydrea',             '500 mg',         'gélule',       '1 gél/j',                                          'continu', 'NFS mensuelle',                             'en_cours'),
+  ('c1000000-0000-0000-0000-000000000006','a1000000-0000-0000-0000-000000000003','9a000000-0000-0000-0000-000000000001','Hydroxyurée',                  'Hydrea',             '500 mg',         'gélule',       '1 gél/j',                                          'continu', 'NFS mensuelle',                             'en_cours'),
   -- C7 Dossou asthme
-  ('c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','u1000000-0000-0000-0000-000000000002','Prednisolone',                 'Solupred',           '40 mg',          'comprimé',     '1 cp/j le matin',                                  '5 jours', 'Avec repas',                                'termine'),
-  ('c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','u1000000-0000-0000-0000-000000000002','Salbutamol',                   'Ventoline',          '100 µg/bouffée', 'aérosol',      '2 bouffées si besoin, max 8/j',                    'continu', 'En cas de gêne respiratoire',               'en_cours'),
+  ('c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','9a000000-0000-0000-0000-000000000002','Prednisolone',                 'Solupred',           '40 mg',          'comprimé',     '1 cp/j le matin',                                  '5 jours', 'Avec repas',                                'termine'),
+  ('c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','9a000000-0000-0000-0000-000000000002','Salbutamol',                   'Ventoline',          '100 µg/bouffée', 'aérosol',      '2 bouffées si besoin, max 8/j',                    'continu', 'En cas de gêne respiratoire',               'en_cours'),
   -- C8 Dossou dépression
-  ('c1000000-0000-0000-0000-000000000008','a1000000-0000-0000-0000-000000000004','u1000000-0000-0000-0000-000000000002','Sertraline',                   'Zoloft',             '50 mg',          'comprimé',     '1 cp/j le matin',                                  '3 mois',  'Ne pas interrompre brusquement',            'en_cours'),
+  ('c1000000-0000-0000-0000-000000000008','a1000000-0000-0000-0000-000000000004','9a000000-0000-0000-0000-000000000002','Sertraline',                   'Zoloft',             '50 mg',          'comprimé',     '1 cp/j le matin',                                  '3 mois',  'Ne pas interrompre brusquement',            'en_cours'),
   -- C9 Lokossou enfant
-  ('c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','u1000000-0000-0000-0000-000000000002','Ambroxol',                     'Mucosolvan',         '15 mg/5mL',      'sirop',        '5 mL × 3/j pendant les repas',                     '7 jours', NULL,                                        'termine'),
-  ('c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','u1000000-0000-0000-0000-000000000002','Paracétamol',                  'Efferalgan pédiatrie','250 mg/sachet', 'poudre orale', '1 sachet (15 mg/kg) × 3/j',                        '5 jours', 'Diluer dans un verre d''eau',               'termine')
+  ('c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','9a000000-0000-0000-0000-000000000002','Ambroxol',                     'Mucosolvan',         '15 mg/5mL',      'sirop',        '5 mL × 3/j pendant les repas',                     '7 jours', NULL,                                        'termine'),
+  ('c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','9a000000-0000-0000-0000-000000000002','Paracétamol',                  'Efferalgan pédiatrie','250 mg/sachet', 'poudre orale', '1 sachet (15 mg/kg) × 3/j',                        '5 jours', 'Diluer dans un verre d''eau',               'termine')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -221,16 +221,16 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 INSERT INTO analyses_prescrites (id, consultation_id, patient_id, medecin_id, type_analyse, urgence, statut,
   instructions, resultat_rapide, date_rendu) VALUES
-  ('b1000000-0000-0000-0000-000000000001','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','HbA1c',                                FALSE,'rendu', NULL,                        'HbA1c : 8,2%',                              NOW()-INTERVAL '6 months'+INTERVAL '2 days'),
-  ('b1000000-0000-0000-0000-000000000002','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Bilan rénal (créatinine, urée, ionogramme)',FALSE,'rendu', NULL,                        'Créat 98 µmol/L, DFG 68 mL/min',           NOW()-INTERVAL '6 months'+INTERVAL '2 days'),
-  ('b1000000-0000-0000-0000-000000000003','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001','Microalbuminurie/créatininurie',            FALSE,'rendu', 'Urine du matin',           'Microalbuminurie 35 mg/g',                  NOW()-INTERVAL '6 months'+INTERVAL '3 days'),
-  ('b1000000-0000-0000-0000-000000000004','c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','CD4 + Charge virale VIH',                  FALSE,'rendu', 'À jeun recommandé',        'CD4 620/mm3 — CV indétectable < 50 cp/mL', NOW()-INTERVAL '5 months'+INTERVAL '3 days'),
-  ('b1000000-0000-0000-0000-000000000005','c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','Bilan hépatique (ASAT, ALAT, GGT)',         FALSE,'rendu', NULL,                        'Bilan hépatique normal',                    NOW()-INTERVAL '5 months'+INTERVAL '3 days'),
-  ('b1000000-0000-0000-0000-000000000006','c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000001','Goutte épaisse + Frottis sanguin',          TRUE, 'rendu', 'URGENT — résultat sous 2h','P. falciparum +++ — parasitémie 12 000/µL', NOW()-INTERVAL '1 month' +INTERVAL '3 hours'),
-  ('b1000000-0000-0000-0000-000000000007','c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','u1000000-0000-0000-0000-000000000001','NFS complète',                             TRUE, 'rendu', 'Urgent — CVO drépanocytaire','Hb 7,8 g/dL, GB 11 200/mm3, réticulocytes 8,2%', NOW()-INTERVAL '4 months'+INTERVAL '1 hour'),
-  ('b1000000-0000-0000-0000-000000000008','c1000000-0000-0000-0000-000000000006','a1000000-0000-0000-0000-000000000003','u1000000-0000-0000-0000-000000000001','Bilan rénal + ionogramme',                  FALSE,'rendu', NULL,                        'Créat 140 µmol/L, DFG 42 mL/min (stade 3b)',NOW()-INTERVAL '2 months'+INTERVAL '2 days'),
-  ('b1000000-0000-0000-0000-000000000009','c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','u1000000-0000-0000-0000-000000000002','Spirométrie (DEP)',                         FALSE,'rendu', NULL,                        'DEP 55% du théorique — exacerbation modérée',NOW()-INTERVAL '3 months'+INTERVAL '1 day'),
-  ('b1000000-0000-0000-0000-000000000010','c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','u1000000-0000-0000-0000-000000000002','NFS + CRP',                                 FALSE,'rendu', NULL,                        'NFS normale, CRP 12 mg/L (légèrement élevée)',NOW()-INTERVAL '2 months'+INTERVAL '2 days')
+  ('b1000000-0000-0000-0000-000000000001','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','HbA1c',                                FALSE,'rendu', NULL,                        'HbA1c : 8,2%',                              NOW()-INTERVAL '6 months'+INTERVAL '2 days'),
+  ('b1000000-0000-0000-0000-000000000002','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Bilan rénal (créatinine, urée, ionogramme)',FALSE,'rendu', NULL,                        'Créat 98 µmol/L, DFG 68 mL/min',           NOW()-INTERVAL '6 months'+INTERVAL '2 days'),
+  ('b1000000-0000-0000-0000-000000000003','c1000000-0000-0000-0000-000000000001','a1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001','Microalbuminurie/créatininurie',            FALSE,'rendu', 'Urine du matin',           'Microalbuminurie 35 mg/g',                  NOW()-INTERVAL '6 months'+INTERVAL '3 days'),
+  ('b1000000-0000-0000-0000-000000000004','c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','CD4 + Charge virale VIH',                  FALSE,'rendu', 'À jeun recommandé',        'CD4 620/mm3 — CV indétectable < 50 cp/mL', NOW()-INTERVAL '5 months'+INTERVAL '3 days'),
+  ('b1000000-0000-0000-0000-000000000005','c1000000-0000-0000-0000-000000000003','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','Bilan hépatique (ASAT, ALAT, GGT)',         FALSE,'rendu', NULL,                        'Bilan hépatique normal',                    NOW()-INTERVAL '5 months'+INTERVAL '3 days'),
+  ('b1000000-0000-0000-0000-000000000006','c1000000-0000-0000-0000-000000000004','a1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000001','Goutte épaisse + Frottis sanguin',          TRUE, 'rendu', 'URGENT — résultat sous 2h','P. falciparum +++ — parasitémie 12 000/µL', NOW()-INTERVAL '1 month' +INTERVAL '3 hours'),
+  ('b1000000-0000-0000-0000-000000000007','c1000000-0000-0000-0000-000000000005','a1000000-0000-0000-0000-000000000003','9a000000-0000-0000-0000-000000000001','NFS complète',                             TRUE, 'rendu', 'Urgent — CVO drépanocytaire','Hb 7,8 g/dL, GB 11 200/mm3, réticulocytes 8,2%', NOW()-INTERVAL '4 months'+INTERVAL '1 hour'),
+  ('b1000000-0000-0000-0000-000000000008','c1000000-0000-0000-0000-000000000006','a1000000-0000-0000-0000-000000000003','9a000000-0000-0000-0000-000000000001','Bilan rénal + ionogramme',                  FALSE,'rendu', NULL,                        'Créat 140 µmol/L, DFG 42 mL/min (stade 3b)',NOW()-INTERVAL '2 months'+INTERVAL '2 days'),
+  ('b1000000-0000-0000-0000-000000000009','c1000000-0000-0000-0000-000000000007','a1000000-0000-0000-0000-000000000004','9a000000-0000-0000-0000-000000000002','Spirométrie (DEP)',                         FALSE,'rendu', NULL,                        'DEP 55% du théorique — exacerbation modérée',NOW()-INTERVAL '3 months'+INTERVAL '1 day'),
+  ('b1000000-0000-0000-0000-000000000010','c1000000-0000-0000-0000-000000000009','a1000000-0000-0000-0000-000000000005','9a000000-0000-0000-0000-000000000002','NFS + CRP',                                 FALSE,'rendu', NULL,                        'NFS normale, CRP 12 mg/L (légèrement élevée)',NOW()-INTERVAL '2 months'+INTERVAL '2 days')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -238,14 +238,14 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================
 INSERT INTO vaccinations (patient_id, vaccin, dose, lot, voie, operateur_id, etablissement_id,
   date_vaccination, prochain_rappel, statut) VALUES
-  ('a1000000-0000-0000-0000-000000000001','Vaccin grippe saisonnière',      '2024',  'FLU2024-BJ-001',  'IM',   'u1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '8 months',  NOW()+INTERVAL '4 months',  'a_jour'),
-  ('a1000000-0000-0000-0000-000000000001','Vaccin pneumocoque (PPV23)',     NULL,    'PPV23-BJ-045',    'IM',   'u1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '2 years',   NULL,                        'a_jour'),
-  ('a1000000-0000-0000-0000-000000000002','Vaccin pneumocoque (PCV13)',     NULL,    'PCV13-BJ-112',    'IM',   'u1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '6 months',  NULL,                        'a_jour'),
-  ('a1000000-0000-0000-0000-000000000002','Vaccin hépatite B',             '3/3',   'HBV-BJ-778',      'IM',   'u1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '3 years',   NULL,                        'a_jour'),
-  ('a1000000-0000-0000-0000-000000000003','Vaccin méningocoque ACWY',      NULL,    'MEN-BJ-234',      'IM',   'u1000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '1 year',    NOW()+INTERVAL '4 years',   'a_jour'),
-  ('a1000000-0000-0000-0000-000000000005','DTC-Hep B+Hib',                 '3/3',   'DTCHIB-BJ-501',   'IM',   'u1000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '2 years',   NULL,                        'a_jour'),
-  ('a1000000-0000-0000-0000-000000000005','Vaccin antipolio oral (VPO)',   '4/4',   'OPV-BJ-892',      'oral', 'u1000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '1 year',    NULL,                        'a_jour'),
-  ('a1000000-0000-0000-0000-000000000005','ROR (rougeole, oreillons, rubéole)','2/2','ROR-BJ-445',     'SC',   'u1000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '8 months',  NOW()+INTERVAL '3 years',   'a_jour')
+  ('a1000000-0000-0000-0000-000000000001','Vaccin grippe saisonnière',      '2024',  'FLU2024-BJ-001',  'IM',   '9a000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '8 months',  NOW()+INTERVAL '4 months',  'a_jour'),
+  ('a1000000-0000-0000-0000-000000000001','Vaccin pneumocoque (PPV23)',     NULL,    'PPV23-BJ-045',    'IM',   '9a000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '2 years',   NULL,                        'a_jour'),
+  ('a1000000-0000-0000-0000-000000000002','Vaccin pneumocoque (PCV13)',     NULL,    'PCV13-BJ-112',    'IM',   '9a000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '6 months',  NULL,                        'a_jour'),
+  ('a1000000-0000-0000-0000-000000000002','Vaccin hépatite B',             '3/3',   'HBV-BJ-778',      'IM',   '9a000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '3 years',   NULL,                        'a_jour'),
+  ('a1000000-0000-0000-0000-000000000003','Vaccin méningocoque ACWY',      NULL,    'MEN-BJ-234',      'IM',   '9a000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001', NOW()-INTERVAL '1 year',    NOW()+INTERVAL '4 years',   'a_jour'),
+  ('a1000000-0000-0000-0000-000000000005','DTC-Hep B+Hib',                 '3/3',   'DTCHIB-BJ-501',   'IM',   '9a000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '2 years',   NULL,                        'a_jour'),
+  ('a1000000-0000-0000-0000-000000000005','Vaccin antipolio oral (VPO)',   '4/4',   'OPV-BJ-892',      'oral', '9a000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '1 year',    NULL,                        'a_jour'),
+  ('a1000000-0000-0000-0000-000000000005','ROR (rougeole, oreillons, rubéole)','2/2','ROR-BJ-445',     'SC',   '9a000000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000002', NOW()-INTERVAL '8 months',  NOW()+INTERVAL '3 years',   'a_jour')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -253,16 +253,16 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 INSERT INTO hospitalisations (id, patient_id, etablissement_id, medecin_referent_id, date_entree, date_sortie,
   service, motif, resume_sejour, mode_sortie, diagnostic_entree, diagnostic_sortie, chambre, lit) VALUES
-  ('h1000000-0000-0000-0000-000000000001',
-   'a1000000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001','u1000000-0000-0000-0000-000000000001',
+  ('9c000000-0000-0000-0000-000000000001',
+   'a1000000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001','9a000000-0000-0000-0000-000000000001',
    NOW()-INTERVAL '4 months', NOW()-INTERVAL '4 months'+INTERVAL '5 days',
    'Médecine interne', 'Crise vaso-occlusive sévère — douleurs résistantes aux antalgiques oraux',
    'Hospitalisé 5 jours. Morphine IV efficace. Hb stabilisée à 8,5 g/dL. Sortie sous Hydroxyurée 500mg/j + acide folique.',
    'domicile', 'Crise vaso-occlusive sévère (D57)', 'Résolution de crise — sortie sous traitement de fond',
    'B12', 'L3'),
 
-  ('h1000000-0000-0000-0000-000000000002',
-   'a1000000-0000-0000-0000-000000000004','e1000000-0000-0000-0000-000000000002','u1000000-0000-0000-0000-000000000002',
+  ('9c000000-0000-0000-0000-000000000002',
+   'a1000000-0000-0000-0000-000000000004','e1000000-0000-0000-0000-000000000002','9a000000-0000-0000-0000-000000000002',
    NOW()-INTERVAL '1 year 2 months', NOW()-INTERVAL '1 year 2 months'+INTERVAL '2 days',
    'Urgences', 'Choc anaphylactique — ingestion accidentelle d''arachides',
    'Adrénaline 0,5mg IM, O2, remplissage, corticoïdes IV. Évolution favorable en 24h. Prescription EpiPen + éducation.',
