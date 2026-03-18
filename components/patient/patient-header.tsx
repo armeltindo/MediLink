@@ -73,9 +73,9 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
     try {
       const ext = file.name.split(".").pop();
       const path = `patients/${patient.npi}/photo_${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("documents").upload(path, file, { upsert: true });
+      const { error: uploadErr } = await supabase.storage.from("photos").upload(path, file, { upsert: true });
       if (uploadErr) throw uploadErr;
-      const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("photos").getPublicUrl(path);
       const { error: updateErr } = await supabase.from("patients").update({ photo_url: publicUrl }).eq("id", patient.id);
       if (updateErr) throw updateErr;
       setPhotoUrl(publicUrl);
