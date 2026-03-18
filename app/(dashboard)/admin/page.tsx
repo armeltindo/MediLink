@@ -76,16 +76,18 @@ export default function AdminPage() {
 
     // Activity by doctor
     const medecinCount: Record<string, { nom: string; count: number }> = {};
-    (medecinConsultRes.data || []).forEach((c: { medecin_id: string; users_profiles?: { nom: string; prenom: string } | null }) => {
-      if (c.medecin_id) {
-        if (!medecinCount[c.medecin_id]) {
-          const profile = c.users_profiles;
-          medecinCount[c.medecin_id] = {
-            nom: profile ? `Dr. ${profile.prenom} ${profile.nom}` : c.medecin_id.slice(0, 8),
+    (medecinConsultRes.data || []).forEach((c: { medecin_id: unknown; users_profiles?: unknown }) => {
+      const medecinId = c.medecin_id as string;
+      if (medecinId) {
+        if (!medecinCount[medecinId]) {
+          const profiles = c.users_profiles as { nom: string; prenom: string }[] | { nom: string; prenom: string } | null;
+          const profile = Array.isArray(profiles) ? profiles[0] : profiles;
+          medecinCount[medecinId] = {
+            nom: profile ? `Dr. ${profile.prenom} ${profile.nom}` : medecinId.slice(0, 8),
             count: 0,
           };
         }
-        medecinCount[c.medecin_id].count++;
+        medecinCount[medecinId].count++;
       }
     });
     const activiteMedecins = Object.values(medecinCount)
