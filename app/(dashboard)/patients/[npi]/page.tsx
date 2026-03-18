@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription, AnalysePrescrite, Vaccination, Hospitalisation } from "@/types";
@@ -36,9 +36,9 @@ export default function PatientPage() {
   useEffect(() => {
     if (!npi) return;
     loadPatient(decodeURIComponent(npi));
-  }, [npi]);
+  }, [npi, loadPatient]);
 
-  async function loadPatient(npiValue: string) {
+  const loadPatient = useCallback(async (npiValue: string) => {
     setLoading(true);
 
     const { data: patientData, error } = await supabase
@@ -99,7 +99,7 @@ export default function PatientPage() {
     setVaccinations(vaccinationsRes.data || []);
     setHospitalisations(hospitalisationsRes.data || []);
     setLoading(false);
-  }
+  }, [router]);
 
   async function handleExportPDF() {
     if (!patient) return;
@@ -159,7 +159,7 @@ export default function PatientPage() {
       <div className="flex-1 p-6 pt-4">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="bg-muted mb-4 h-auto flex-wrap">
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
             <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
             <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
             <TabsTrigger value="analyses">Analyses ({analyses.length})</TabsTrigger>
