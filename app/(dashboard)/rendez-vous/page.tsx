@@ -77,13 +77,28 @@ export default function RendezVousPage() {
 
     const { data } = await supabase
       .from("rendez_vous")
-      .select("*, patients(nom, prenom, npi), users_profiles!medecin_id(nom, prenom)")
+      .select("*, patients(nom, prenom, npi)")
       .gte("date_rdv", start)
       .lte("date_rdv", end)
       .is("deleted_at", null)
       .order("date_rdv");
 
-    setRdvs((data as RDV[]) || []);
+    const rows = (data as RDV[]) || [];
+
+    // Fetch doctor profiles separately (rendez_vous.medecin_id → auth.users, not users_profiles)
+    const medecinIds = [...new Set(rows.map((r) => r.medecin_id).filter(Boolean))];
+    let profileMap: Record<string, { nom: string; prenom: string }> = {};
+    if (medecinIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("users_profiles")
+        .select("id, nom, prenom")
+        .in("id", medecinIds);
+      if (profiles) {
+        profileMap = Object.fromEntries(profiles.map((p) => [p.id, { nom: p.nom, prenom: p.prenom }]));
+      }
+    }
+
+    setRdvs(rows.map((r) => ({ ...r, users_profiles: profileMap[r.medecin_id] ?? null })));
     setLoading(false);
   }, [dateFilter]);
 
