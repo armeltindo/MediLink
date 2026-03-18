@@ -133,7 +133,7 @@ export default function PEVConfigPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Configuration PEV" subtitle="Programme Élargi de Vaccination — calendrier de référence" />
+      <Header title="Configuration PEV" />
       <main className="flex-1 p-6 space-y-6 max-w-5xl mx-auto w-full">
 
         <div className="flex items-center gap-3">
