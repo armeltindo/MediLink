@@ -13,22 +13,145 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Plus, Loader2, Pill, Clock, CheckCircle } from "lucide-react";
+import { AlertTriangle, Plus, Loader2, Pill, Clock, CheckCircle, Info } from "lucide-react";
 
-// Interactions médicamenteuses — base locale simplifiée
+// ─── Base d'interactions médicamenteuses élargie ───────────────────────────
+// Couvre les médicaments les plus fréquents en Afrique sub-saharienne
 const DRUG_INTERACTIONS: Record<string, { drug: string; severity: "danger" | "warning"; message: string }[]> = {
+  // Anticoagulants
   warfarine: [
-    { drug: "aspirine", severity: "danger", message: "Risque hémorragique majeur avec Warfarine" },
-    { drug: "ibuprofène", severity: "danger", message: "AINS potentialise l'effet anticoagulant" },
+    { drug: "aspirine", severity: "danger", message: "Warfarine + Aspirine : risque hémorragique majeur" },
+    { drug: "ibuprofène", severity: "danger", message: "Warfarine + AINS : potentialisation de l'effet anticoagulant" },
+    { drug: "rifampicine", severity: "danger", message: "Warfarine + Rifampicine : inducteur — diminue l'effet anticoagulant" },
+    { drug: "metronidazole", severity: "danger", message: "Warfarine + Métronidazole : augmentation de l'INR" },
+    { drug: "cotrimoxazole", severity: "warning", message: "Warfarine + Cotrimoxazole : augmentation possible de l'effet anticoagulant" },
+    { drug: "fluconazole", severity: "danger", message: "Warfarine + Fluconazole : forte augmentation de l'INR" },
   ],
+  // Antidiabétiques
   metformine: [
-    { drug: "alcool", severity: "warning", message: "Risque d'acidose lactique" },
-    { drug: "produit de contraste iodé", severity: "warning", message: "Suspendre 48h avant injection" },
+    { drug: "alcool", severity: "warning", message: "Metformine + Alcool : risque d'acidose lactique" },
+    { drug: "produit de contraste iodé", severity: "warning", message: "Metformine + PCI : suspendre 48h avant injection" },
+    { drug: "glucocorticoïde", severity: "warning", message: "Metformine + Corticoïde : risque d'hyperglycémie" },
+    { drug: "prednisolone", severity: "warning", message: "Metformine + Prednisolone : risque d'hyperglycémie" },
+    { drug: "dexamethasone", severity: "warning", message: "Metformine + Dexaméthasone : risque d'hyperglycémie" },
   ],
+  glibenclamide: [
+    { drug: "fluconazole", severity: "danger", message: "Glibenclamide + Fluconazole : risque d'hypoglycémie sévère" },
+    { drug: "cotrimoxazole", severity: "warning", message: "Glibenclamide + Cotrimoxazole : potentialisation hypoglycémique" },
+  ],
+  // Antituberculeux / Antiparasitaires
   rifampicine: [
-    { drug: "contraceptif oral", severity: "danger", message: "Rifampicine réduit l'efficacité des contraceptifs oraux" },
-    { drug: "warfarine", severity: "danger", message: "Inducteur enzymatique — diminue l'effet anticoagulant" },
+    { drug: "contraceptif oral", severity: "danger", message: "Rifampicine + Contraceptif oral : inducteur enzymatique — efficacité réduite" },
+    { drug: "warfarine", severity: "danger", message: "Rifampicine + Warfarine : inducteur enzymatique" },
+    { drug: "atazanavir", severity: "danger", message: "Rifampicine + Atazanavir : contre-indication absolue" },
+    { drug: "lopinavir", severity: "danger", message: "Rifampicine + Lopinavir : réduction majeure des concentrations" },
+    { drug: "prednisolone", severity: "warning", message: "Rifampicine + Prednisolone : inducteur — diminue l'effet du corticoïde" },
+    { drug: "ciclosporine", severity: "danger", message: "Rifampicine + Ciclosporine : réduction des taux de ciclosporine" },
+    { drug: "digoxine", severity: "warning", message: "Rifampicine + Digoxine : inducteur — diminue l'efficacité de la digoxine" },
   ],
+  // Antipaludéens
+  artemether: [
+    { drug: "halofantrine", severity: "danger", message: "Artéméther + Halofantrine : risque d'allongement du QT" },
+    { drug: "quinine", severity: "danger", message: "Artéméther + Quinine : risque d'allongement du QT" },
+  ],
+  quinine: [
+    { drug: "artemether", severity: "danger", message: "Quinine + Artéméther : risque d'allongement du QT" },
+    { drug: "digoxine", severity: "warning", message: "Quinine + Digoxine : augmentation des concentrations de digoxine" },
+    { drug: "mefloquine", severity: "warning", message: "Quinine + Méfloquine : risque de convulsions" },
+  ],
+  // Antirétroviraux
+  efavirenz: [
+    { drug: "rifampicine", severity: "warning", message: "Efavirenz + Rifampicine : ajustement de dose nécessaire" },
+    { drug: "contraceptif oral", severity: "warning", message: "Efavirenz + Contraceptif : efficacité contraceptive réduite" },
+    { drug: "fluconazole", severity: "warning", message: "Efavirenz + Fluconazole : augmentation possible de la toxicité" },
+  ],
+  // Cardiologie
+  digoxine: [
+    { drug: "amiodarone", severity: "danger", message: "Digoxine + Amiodarone : augmentation de la digoxinémie — risque toxicité" },
+    { drug: "quinine", severity: "warning", message: "Digoxine + Quinine : augmentation de la digoxinémie" },
+    { drug: "rifampicine", severity: "warning", message: "Digoxine + Rifampicine : réduction des concentrations de digoxine" },
+    { drug: "furosémide", severity: "warning", message: "Digoxine + Furosémide : hypokaliémie — augmente la toxicité" },
+  ],
+  amiodarone: [
+    { drug: "digoxine", severity: "danger", message: "Amiodarone + Digoxine : augmentation de la digoxinémie" },
+    { drug: "warfarine", severity: "danger", message: "Amiodarone + Warfarine : augmentation de l'INR" },
+  ],
+  // Antibiotiques
+  cotrimoxazole: [
+    { drug: "methotrexate", severity: "danger", message: "Cotrimoxazole + Méthotrexate : toxicité hématologique sévère" },
+    { drug: "warfarine", severity: "warning", message: "Cotrimoxazole + Warfarine : augmentation de l'INR" },
+    { drug: "glibenclamide", severity: "warning", message: "Cotrimoxazole + Glibenclamide : potentialisation hypoglycémique" },
+  ],
+  metronidazole: [
+    { drug: "alcool", severity: "danger", message: "Métronidazole + Alcool : effet antabuse (nausées, vomissements)" },
+    { drug: "warfarine", severity: "danger", message: "Métronidazole + Warfarine : augmentation de l'INR" },
+    { drug: "lithium", severity: "warning", message: "Métronidazole + Lithium : augmentation de la lithiémie" },
+  ],
+  // Psychotropes
+  haloperidol: [
+    { drug: "lithium", severity: "danger", message: "Halopéridol + Lithium : risque de neurotoxicité" },
+    { drug: "carbamazepine", severity: "warning", message: "Halopéridol + Carbamazépine : réduction des concentrations" },
+  ],
+  carbamazepine: [
+    { drug: "contraceptif oral", severity: "danger", message: "Carbamazépine + Contraceptif : inducteur — efficacité contraceptive réduite" },
+    { drug: "warfarine", severity: "danger", message: "Carbamazépine + Warfarine : inducteur — diminue l'anticoagulation" },
+    { drug: "haloperidol", severity: "warning", message: "Carbamazépine + Halopéridol : réduction des concentrations" },
+  ],
+  // Diurétiques
+  furosemide: [
+    { drug: "digoxine", severity: "warning", message: "Furosémide + Digoxine : hypokaliémie — augmente la toxicité de la digoxine" },
+    { drug: "gentamicine", severity: "danger", message: "Furosémide + Gentamicine : risque ototoxicité et néphrotoxicité" },
+    { drug: "aminoside", severity: "danger", message: "Furosémide + Aminoside : ototoxicité et néphrotoxicité" },
+  ],
+  // AINS
+  ibuprofene: [
+    { drug: "warfarine", severity: "danger", message: "Ibuprofène + Warfarine : risque hémorragique majeur" },
+    { drug: "aspirine", severity: "warning", message: "Ibuprofène + Aspirine : double AINS — augmentation des effets indésirables" },
+    { drug: "lithium", severity: "warning", message: "Ibuprofène + Lithium : augmentation de la lithiémie" },
+  ],
+  aspirine: [
+    { drug: "warfarine", severity: "danger", message: "Aspirine + Warfarine : risque hémorragique majeur" },
+    { drug: "ibuprofène", severity: "warning", message: "Aspirine + Ibuprofène : double AINS — risque GI augmenté" },
+    { drug: "methotrexate", severity: "danger", message: "Aspirine + Méthotrexate : augmentation de la toxicité du méthotrexate" },
+  ],
+};
+
+// ─── Génériques courants ────────────────────────────────────────────────────
+const GENERICS_MAP: Record<string, string[]> = {
+  "Amoxicilline": ["Clamoxyl", "Amoxil", "Gramaxin"],
+  "Ampicilline": ["Totapen", "Penbritin"],
+  "Ciprofloxacine": ["Ciflox", "Ciprobay", "Ciprobid"],
+  "Métronidazole": ["Flagyl", "Métronide"],
+  "Cotrimoxazole": ["Bactrim", "Septrin", "Eusaprim"],
+  "Doxycycline": ["Vibramycine", "Doxy"],
+  "Artéméther-Luméfantrine": ["Coartem", "Lumartem", "Artefan"],
+  "Artésunate-Amodiaquine": ["ASAQ", "Arsucam", "Coarsucam"],
+  "Quinine": ["Quinimax", "Surquina"],
+  "Métformine": ["Glucophage", "Diaformine", "Metforal"],
+  "Glibenclamide": ["Daonil", "Euglucon"],
+  "Lisinopril": ["Zestril", "Prinivil"],
+  "Amlodipine": ["Amlor", "Norvasc", "Amlopin"],
+  "Furosémide": ["Lasilix", "Lasix"],
+  "Atenolol": ["Ténormine", "Atenol"],
+  "Paracétamol": ["Doliprane", "Efferalgan", "Panadol", "Perfalgan"],
+  "Ibuprofène": ["Advil", "Nurofen", "Brufen"],
+  "Diclofénac": ["Voltarène", "Diclofen"],
+  "Oméprazole": ["Mopral", "Losec", "Prilosec"],
+  "Ranitidine": ["Azantac", "Zantac"],
+  "Prednisolone": ["Cortancyl", "Solupred"],
+  "Dexaméthasone": ["Soludécadron", "Dectancyl"],
+  "Salbutamol": ["Ventoline", "Airomir"],
+  "Amoxicilline-Acide clavulanique": ["Augmentin", "Claventin"],
+  "Érythromycine": ["Érythrocine", "Abboticine"],
+  "Fluconazole": ["Triflucan", "Diflucan"],
+  "Acyclovir": ["Zovirax"],
+  "Efavirenz": ["Stocrin", "Sustiva"],
+  "Lamivudine": ["Epivir", "Zefix"],
+  "Zidovudine": ["Rétrovir"],
+  "Rifampicine": ["Rifadine", "Rimactan"],
+  "Isoniazide": ["Rimifon"],
+  "Pyrazinamide": ["Pirilène"],
+  "Ethambutol": ["Myambutol", "Dexambutol"],
 };
 
 function checkInteractions(newDrug: string, existingDrugs: string[]): Array<{ drug: string; severity: "danger" | "warning"; message: string }> {
@@ -44,6 +167,22 @@ function checkInteractions(newDrug: string, existingDrugs: string[]): Array<{ dr
       }
     }
   }
+  // Check reverse direction
+  for (const existingDrug of existingDrugs) {
+    const existingLower = existingDrug.toLowerCase();
+    for (const [drug, interactions] of Object.entries(DRUG_INTERACTIONS)) {
+      if (existingLower.includes(drug)) {
+        for (const interaction of interactions) {
+          if (drugLower.includes(interaction.drug)) {
+            // Avoid duplicate
+            if (!alerts.some((a) => a.message === interaction.message)) {
+              alerts.push({ ...interaction, message: interaction.message });
+            }
+          }
+        }
+      }
+    }
+  }
   return alerts;
 }
 
@@ -53,6 +192,16 @@ function checkAllergyConflict(newDrug: string, allergies: Allergie[]): Allergie 
     const substanceLower = a.substance.toLowerCase();
     return drugLower.includes(substanceLower) || substanceLower.includes(drugLower.split(" ")[0]);
   }) || null;
+}
+
+function getGenericSuggestions(dci: string): string[] {
+  const dciLower = dci.toLowerCase();
+  for (const [genericName, brands] of Object.entries(GENERICS_MAP)) {
+    if (dciLower.includes(genericName.toLowerCase()) || genericName.toLowerCase().includes(dciLower)) {
+      return brands;
+    }
+  }
+  return [];
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "success" | "warning" | "danger" | "info" | "secondary" }> = {
@@ -81,6 +230,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
   const [loading, setLoading] = useState(false);
   const [interactions, setInteractions] = useState<Array<{ drug: string; severity: "danger" | "warning"; message: string }>>([]);
   const [allergyConflict, setAllergyConflict] = useState<Allergie | null>(null);
+  const [genericSuggestions, setGenericSuggestions] = useState<string[]>([]);
   const [form, setForm] = useState({
     medicament_dci: "", medicament_commercial: "", dosage: "",
     forme: "", posologie: "", duree: "", instructions: "", date_expiration: "",
@@ -94,9 +244,11 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         .map((p) => p.medicament_dci);
       setInteractions(checkInteractions(value, existingDrugs));
       setAllergyConflict(checkAllergyConflict(value, allergies));
+      setGenericSuggestions(getGenericSuggestions(value));
     } else {
       setInteractions([]);
       setAllergyConflict(null);
+      setGenericSuggestions([]);
     }
   }
 
@@ -108,7 +260,6 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
       return;
     }
     setLoading(true);
-
     try {
       const { error } = await supabase.from("prescriptions").insert({
         patient_id: patient.id,
@@ -119,8 +270,16 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         statut: "prescrit",
         date_expiration: form.date_expiration || null,
       });
-
       if (error) throw error;
+
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        patient_id: patient.id,
+        action: "create_prescription",
+        details: JSON.stringify({ medicament: form.medicament_dci, dosage: form.dosage }),
+        timestamp: new Date().toISOString(),
+      });
+
       toast({ title: "Prescription enregistrée", description: `${form.medicament_dci} ${form.dosage}` });
       onSuccess();
       onClose();
@@ -156,15 +315,42 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
       ))}
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
+        <div className="space-y-1 col-span-2">
           <Label>Médicament DCI *</Label>
           <Input
             value={form.medicament_dci}
             onChange={(e) => handleDrugChange(e.target.value)}
-            placeholder="Ex: Metformine, Amlodipine..."
+            placeholder="Ex: Metformine, Amlodipine, Artéméther-Luméfantrine..."
             required
+            list="dci-list"
           />
+          <datalist id="dci-list">
+            {Object.keys(GENERICS_MAP).map((dci) => <option key={dci} value={dci} />)}
+          </datalist>
         </div>
+
+        {/* Generic suggestions */}
+        {genericSuggestions.length > 0 && (
+          <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Info className="h-3.5 w-3.5 text-blue-600" />
+              <span className="text-xs font-medium text-blue-700">Noms commerciaux disponibles :</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {genericSuggestions.map((brand) => (
+                <button
+                  key={brand}
+                  type="button"
+                  onClick={() => setForm({ ...form, medicament_commercial: brand })}
+                  className="text-xs bg-white border border-blue-300 rounded px-2 py-0.5 hover:bg-blue-100 transition-colors text-blue-800"
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-1">
           <Label>Nom commercial</Label>
           <Input
@@ -186,10 +372,13 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
               <SelectItem value="gélule">Gélule</SelectItem>
               <SelectItem value="sirop">Sirop</SelectItem>
               <SelectItem value="injectable">Injectable</SelectItem>
+              <SelectItem value="perfusion">Perfusion IV</SelectItem>
               <SelectItem value="pommade">Pommade</SelectItem>
               <SelectItem value="gouttes">Gouttes</SelectItem>
               <SelectItem value="patch">Patch</SelectItem>
               <SelectItem value="spray">Spray</SelectItem>
+              <SelectItem value="suppositoire">Suppositoire</SelectItem>
+              <SelectItem value="sachet">Sachet</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -213,7 +402,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
           value={form.instructions}
           onChange={(e) => setForm({ ...form, instructions: e.target.value })}
           rows={2}
-          placeholder="Ex: À prendre pendant les repas, éviter le soleil..."
+          placeholder="Ex: À prendre pendant les repas, éviter le soleil, surveiller glycémie..."
         />
       </div>
 
@@ -241,6 +430,13 @@ export function PrescriptionsTab({ patient, prescriptions, allergies, onRefresh 
       .eq("id", prescriptionId);
 
     if (!error) {
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        patient_id: patient.id,
+        action: "dispense_medication",
+        details: JSON.stringify({ prescription_id: prescriptionId }),
+        timestamp: new Date().toISOString(),
+      });
       toast({ title: "Médicament dispensé" });
       onRefresh();
     }

@@ -13,7 +13,7 @@ import { Badge, BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BedDouble, Plus, Loader2, Calendar, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
+import { BedDouble, Plus, Loader2, Calendar, ClipboardList, ChevronDown, ChevronUp, FileText } from "lucide-react";
 
 const SERVICES = [
   "Médecine interne", "Chirurgie générale", "Maternité / Obstétrique",
@@ -269,6 +269,36 @@ function HospitalisationCard({
             </div>
             {h.resume_sejour && (
               <p className="text-xs text-muted-foreground mt-2 border-t pt-2">{h.resume_sejour}</p>
+            )}
+
+            {/* Lettre de sortie button */}
+            {!isOngoing && (user?.role === "medecin" || user?.role === "super_admin" || user?.role === "admin_etablissement") && (
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs border-medical-green text-medical-green hover:bg-medical-green-light"
+                  onClick={async () => {
+                    const { data: medProfile } = await import("@/lib/supabase").then(({ supabase }) =>
+                      supabase.from("users_profiles").select("nom, prenom, specialite, numero_ordre, titre").eq("id", h.medecin_referent_id).single()
+                    );
+                    const { data: etabData } = await import("@/lib/supabase").then(({ supabase }) =>
+                      supabase.from("etablissements").select("nom, adresse, ville, telephone").eq("id", h.etablissement_id).single()
+                    );
+                    const res = await fetch("/api/lettre-sortie", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ patient, hospitalisation: h, medecin: medProfile, etablissement: etabData }),
+                    });
+                    const html = await res.text();
+                    const win = window.open("", "_blank");
+                    if (win) { win.document.write(html); win.document.close(); }
+                  }}
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  Lettre de sortie
+                </Button>
+              </div>
             )}
 
             {/* Soins infirmiers toggle */}

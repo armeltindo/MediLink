@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, UserPlus, Copy, Check, Camera } from "lucide-react";
+import { Loader2, UserPlus, Copy, Check, Camera, AlertTriangle } from "lucide-react";
 
 const patientSchema = z.object({
   nom: z.string().min(2, "Nom requis"),
@@ -47,6 +47,8 @@ export default function NouveauPatientPage() {
   const [npiCopied, setNpiCopied] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [duplicates, setDuplicates] = useState<{ id: string; npi: string; nom: string; prenom: string; date_naissance: string }[]>([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
   const {
     register,
@@ -65,6 +67,30 @@ export default function NouveauPatientPage() {
   });
 
   const sexe = watch("sexe");
+  const watchedNom = watch("nom");
+  const watchedPrenom = watch("prenom");
+  const watchedDOB = watch("date_naissance");
+
+  // Debounced duplicate check
+  useEffect(() => {
+    if (!watchedNom || !watchedPrenom || watchedNom.length < 2 || watchedPrenom.length < 2) {
+      setDuplicates([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setCheckingDuplicates(true);
+      const { data } = await supabase
+        .from("patients")
+        .select("id, npi, nom, prenom, date_naissance")
+        .ilike("nom", `%${watchedNom}%`)
+        .ilike("prenom", `%${watchedPrenom}%`)
+        .is("deleted_at", null)
+        .limit(5);
+      setDuplicates(data || []);
+      setCheckingDuplicates(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [watchedNom, watchedPrenom, watchedDOB]);
 
   function copyNPI() {
     navigator.clipboard.writeText(npi);
@@ -366,6 +392,36 @@ export default function NouveauPatientPage() {
             </CardContent>
           </Card>
 
+          {/* Duplicate warning */}
+          {duplicates.length > 0 && (
+            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                <p className="font-semibold text-yellow-800 text-sm">
+                  {checkingDuplicates ? "Vérification en cours..." : `${duplicates.length} patient(s) similaire(s) détecté(s)`}
+                </p>
+              </div>
+              {!checkingDuplicates && duplicates.map((d) => (
+                <div key={d.id} className="flex items-center justify-between bg-white rounded p-2 border border-yellow-200">
+                  <span className="text-sm text-yellow-900">
+                    <strong>{d.prenom} {d.nom}</strong>
+                    {d.date_naissance && ` — né(e) le ${new Date(d.date_naissance).toLocaleDateString("fr-FR")}`}
+                    <span className="text-xs font-mono ml-2 text-muted-foreground">{d.npi}</span>
+                  </span>
+                  <a
+                    href={`/patients/${d.npi}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-medical-green hover:underline ml-2 shrink-0"
+                  >
+                    Voir dossier →
+                  </a>
+                </div>
+              ))}
+              <p className="text-xs text-yellow-700">Vérifiez qu&apos;il ne s&apos;agit pas d&apos;un patient déjà enregistré avant de continuer.</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -374,7 +430,7 @@ export default function NouveauPatientPage() {
             <Button type="submit" variant="medical" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <UserPlus className="h-4 w-4 mr-2" />
-              Enregistrer le patient
+              {duplicates.length > 0 ? "Enregistrer quand même" : "Enregistrer le patient"}
             </Button>
           </div>
         </form>

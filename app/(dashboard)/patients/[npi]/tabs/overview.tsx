@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatDate, getSeverityColor } from "@/lib/utils";
@@ -462,6 +462,142 @@ function AddAntecedentFamilialDialog({ patient, onSuccess }: { patient: Patient;
   );
 }
 
+interface ConsentementRGPD {
+  id: string;
+  type_consentement: string;
+  statut: string;
+  date_consentement: string;
+}
+
+const CONSENT_TYPES: Record<string, string> = {
+  traitement_donnees: "Traitement des données médicales",
+  partage_inter_etablissement: "Partage inter-établissement",
+  recherche_medicale: "Recherche médicale",
+  telemedicine: "Télémédecine",
+  contact_urgence: "Contact d'urgence autorisé",
+  photo_identite: "Photo d'identité",
+};
+
+function RGPDConsentSection({ patient, canWrite }: { patient: Patient; canWrite: boolean }) {
+  const { user } = useUser();
+  const [consentements, setConsentements] = useState<ConsentementRGPD[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [newType, setNewType] = useState("");
+  const [newStatut, setNewStatut] = useState("accorde");
+
+  useEffect(() => {
+    loadConsentements();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadConsentements() {
+    const { data } = await supabase
+      .from("consentements_rgpd")
+      .select("id, type_consentement, statut, date_consentement")
+      .eq("patient_id", patient.id)
+      .order("date_consentement", { ascending: false });
+    setConsentements((data as ConsentementRGPD[]) || []);
+    setLoading(false);
+  }
+
+  async function addConsentement() {
+    if (!user || !newType) return;
+    setAdding(true);
+    const { error } = await supabase.from("consentements_rgpd").insert({
+      patient_id: patient.id,
+      type_consentement: newType,
+      statut: newStatut,
+      recueilli_par: user.id,
+      date_consentement: new Date().toISOString(),
+    });
+    setAdding(false);
+    if (!error) {
+      setNewType("");
+      loadConsentements();
+    }
+  }
+
+  async function updateStatut(id: string, statut: string) {
+    await supabase.from("consentements_rgpd").update({ statut, updated_at: new Date().toISOString() }).eq("id", id);
+    loadConsentements();
+  }
+
+  const statutConfig: Record<string, { label: string; color: string }> = {
+    accorde: { label: "Accordé", color: "text-green-600" },
+    refuse: { label: "Refusé", color: "text-red-600" },
+    retire: { label: "Retiré", color: "text-orange-500" },
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Shield className="h-4 w-4 text-blue-600" />
+          Consentements RGPD
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {loading ? (
+          <p className="text-xs text-muted-foreground">Chargement...</p>
+        ) : consentements.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aucun consentement enregistré</p>
+        ) : (
+          <div className="space-y-1.5">
+            {consentements.map((c) => {
+              const statut = statutConfig[c.statut] || { label: c.statut, color: "text-muted-foreground" };
+              return (
+                <div key={c.id} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{CONSENT_TYPES[c.type_consentement] || c.type_consentement}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-medium ${statut.color}`}>{statut.label}</span>
+                    {canWrite && c.statut === "accorde" && (
+                      <button
+                        onClick={() => updateStatut(c.id, "retire")}
+                        className="text-orange-400 hover:text-orange-600 text-xs underline"
+                        title="Retirer le consentement"
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {canWrite && (
+          <div className="pt-2 border-t space-y-2">
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Ajouter un consentement..." /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(CONSENT_TYPES)
+                  .filter(([key]) => !consentements.some((c) => c.type_consentement === key && c.statut === "accorde"))
+                  .map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)
+                }
+              </SelectContent>
+            </Select>
+            {newType && (
+              <div className="flex gap-2">
+                <Select value={newStatut} onValueChange={setNewStatut}>
+                  <SelectTrigger className="h-7 text-xs flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="accorde">Accordé</SelectItem>
+                    <SelectItem value="refuse">Refusé</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="medical" className="h-7 text-xs" onClick={addConsentement} disabled={adding}>
+                  {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main OverviewTab Component ───────────────────────────────────────────
 export function OverviewTab({
   patient, allergies, antecedents, antecedentsFamiliaux,
@@ -815,6 +951,9 @@ export function OverviewTab({
             </div>
           </CardContent>
         </Card>
+
+        {/* RGPD Consents */}
+        <RGPDConsentSection patient={patient} canWrite={canWrite} />
       </div>
     </div>
   );

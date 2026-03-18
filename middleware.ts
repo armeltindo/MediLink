@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Routes accessibles uniquement aux admins
+const ADMIN_ONLY_PATHS = ["/admin", "/audit"];
+// Routes accessibles à tous les rôles authentifiés
+const PROTECTED_PATHS = ["/dashboard", "/patients", "/consultations", "/prescriptions", "/analyses", "/vaccinations", "/hospitalisations", "/documents", "/etablissements", "/rendez-vous"];
+
+const ADMIN_ROLES = ["super_admin", "admin_etablissement"];
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isPublicPath = pathname === "/login" || pathname === "/";
+  const isPublicPath = pathname === "/login" || pathname === "/" || pathname === "/forgot-password" || pathname === "/reset-password";
 
   // Guard: if Supabase env vars are not configured, use demo session cookie
   if (
@@ -52,22 +59,65 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // Not authenticated → redirect to login
     if (!user && !isPublicPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
-    if (user && pathname === "/login") {
+    // Already authenticated → redirect away from login
+    if (user && (pathname === "/login" || pathname === "/")) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
 
+    // Role-based access for admin-only routes
+    if (user && ADMIN_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+      const { data: profile } = await supabase
+        .from("users_profiles")
+        .select("role, deleted_at")
+        .eq("id", user.id)
+        .single();
+
+      // Disabled account
+      if (profile?.deleted_at) {
+        await supabase.auth.signOut();
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "account_disabled");
+        return NextResponse.redirect(url);
+      }
+
+      if (!profile || !ADMIN_ROLES.includes(profile.role)) {
+        // Redirect to dashboard with error
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        url.searchParams.set("error", "access_denied");
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // Check disabled accounts on any protected path
+    if (user && PROTECTED_PATHS.some((p) => pathname.startsWith(p))) {
+      const { data: profile } = await supabase
+        .from("users_profiles")
+        .select("deleted_at")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.deleted_at) {
+        await supabase.auth.signOut();
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "account_disabled");
+        return NextResponse.redirect(url);
+      }
+    }
+
     return supabaseResponse;
   } catch {
-    // On unexpected errors, allow public paths through and redirect
-    // protected paths to login to avoid a blank 500 page.
     if (!isPublicPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -79,12 +129,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths except:
-     * - /api/* (API routes handle their own auth)
-     * - /_next/static, /_next/image (Next.js internals)
-     * - /favicon.ico and static assets
-     */
     "/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

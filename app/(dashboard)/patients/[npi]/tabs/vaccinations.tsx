@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Syringe, Plus, Loader2, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { Syringe, Plus, Loader2, CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
 
 const VACCINS_PEV = [
   "BCG (Tuberculose)",
@@ -105,6 +105,30 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Carnet vaccinal ({vaccinations.length} vaccinations)</h3>
+        <div className="flex items-center gap-2">
+          {vaccinations.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const res = await fetch("/api/certificat-vaccinal", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    patient,
+                    vaccinations,
+                    etablissement: etablissements[0]?.nom || "MediLink",
+                  }),
+                });
+                const html = await res.text();
+                const win = window.open("", "_blank");
+                if (win) { win.document.write(html); win.document.close(); }
+              }}
+            >
+              <FileText className="h-4 w-4 mr-1.5" />
+              Certificat vaccinal
+            </Button>
+          )}
         {canCreate && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -183,6 +207,7 @@ export function VaccinationsTab({ patient, vaccinations, onRefresh }: Vaccinatio
             </DialogContent>
           </Dialog>
         )}
+        </div>
       </div>
 
       {/* Rappels en retard */}

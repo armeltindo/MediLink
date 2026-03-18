@@ -12,13 +12,14 @@ import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
-  LogOut, ShieldCheck, ClipboardList,
+  LogOut, ShieldCheck, ClipboardList, CalendarDays,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"] },
   { href: "/patients", label: "Patients", icon: Users, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"] },
+  { href: "/rendez-vous", label: "Rendez-vous", icon: CalendarDays, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"] },
   { href: "/consultations", label: "Consultations", icon: ClipboardList, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"] },
   { href: "/prescriptions", label: "Prescriptions", icon: Pill, roles: ["medecin", "pharmacien", "super_admin"] },
   { href: "/analyses", label: "Analyses", icon: FlaskConical, roles: ["medecin", "laborantin", "super_admin"] },
