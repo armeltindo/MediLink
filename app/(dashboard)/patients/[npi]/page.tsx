@@ -190,6 +190,7 @@ export default function PatientPage() {
         onShowQR={handleShowQR}
         onLettreRef={handleLettreRef}
         onBreakGlass={() => setBtgOpen(true)}
+        onPatientUpdate={(updated) => setPatient(updated)}
       />
 
       {/* IA Alerts */}

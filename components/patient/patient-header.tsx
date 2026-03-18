@@ -5,10 +5,14 @@ import { formatDate, formatAge, getBloodGroupColor } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertTriangle, Calendar, MapPin, Briefcase,
-  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText, Camera, Loader2,
+  Phone, Shield, QrCode, Download, User, ShieldAlert, FileText, Camera, Loader2, Pencil,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
@@ -22,15 +26,41 @@ interface PatientHeaderProps {
   onBreakGlass?: () => void;
   onLettreRef?: () => void;
   onPhotoUpdate?: (newUrl: string) => void;
+  onPatientUpdate?: (updated: Patient) => void;
 }
 
-export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBreakGlass, onLettreRef, onPhotoUpdate }: PatientHeaderProps) {
+export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBreakGlass, onLettreRef, onPhotoUpdate, onPatientUpdate }: PatientHeaderProps) {
   const { user } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState(patient.photo_url || "");
   const [uploading, setUploading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    nom: patient.nom,
+    prenom: patient.prenom,
+    date_naissance: patient.date_naissance,
+    lieu_naissance: patient.lieu_naissance || "",
+    sexe: patient.sexe,
+    situation_matrimoniale: patient.situation_matrimoniale || "",
+    nombre_enfants: patient.nombre_enfants?.toString() || "",
+    nationalite: patient.nationalite || "Béninoise",
+    ethnie: patient.ethnie || "",
+    profession: patient.profession || "",
+    niveau_etudes: patient.niveau_etudes || "",
+    langue_preferee: patient.langue_preferee || "Français",
+    groupe_sanguin: patient.groupe_sanguin || "",
+    rhesus: patient.rhesus || "",
+    contact_urgence_nom: patient.contact_urgence_nom || "",
+    contact_urgence_lien: patient.contact_urgence_lien || "",
+    contact_urgence_tel: patient.contact_urgence_tel || "",
+    assurance_organisme: patient.assurance_organisme || "",
+    assurance_numero: patient.assurance_numero || "",
+    assurance_taux: patient.assurance_taux?.toString() || "",
+  });
 
-  const canEditPhoto = user?.role === "super_admin" || user?.role === "admin_etablissement" || user?.role === "medecin";
+  const canEdit = user?.role === "super_admin" || user?.role === "admin_etablissement" || user?.role === "medecin";
+  const canEditPhoto = canEdit;
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -56,6 +86,51 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        nom: form.nom.trim(),
+        prenom: form.prenom.trim(),
+        date_naissance: form.date_naissance,
+        lieu_naissance: form.lieu_naissance || null,
+        sexe: form.sexe as "M" | "F",
+        situation_matrimoniale: form.situation_matrimoniale || null,
+        nombre_enfants: form.nombre_enfants ? parseInt(form.nombre_enfants) : null,
+        nationalite: form.nationalite || null,
+        ethnie: form.ethnie || null,
+        profession: form.profession || null,
+        niveau_etudes: form.niveau_etudes || null,
+        langue_preferee: form.langue_preferee || null,
+        groupe_sanguin: form.groupe_sanguin || null,
+        rhesus: (form.rhesus || null) as "+" | "-" | null,
+        contact_urgence_nom: form.contact_urgence_nom || null,
+        contact_urgence_lien: form.contact_urgence_lien || null,
+        contact_urgence_tel: form.contact_urgence_tel || null,
+        assurance_organisme: form.assurance_organisme || null,
+        assurance_numero: form.assurance_numero || null,
+        assurance_taux: form.assurance_taux ? parseFloat(form.assurance_taux) : null,
+      };
+
+      const { data, error } = await supabase
+        .from("patients")
+        .update(payload)
+        .eq("id", patient.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast({ title: "Fiche patient mise à jour" });
+      setEditOpen(false);
+      onPatientUpdate?.(data as Patient);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur lors de la mise à jour" });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -186,6 +261,204 @@ export function PatientHeader({ patient, allergies, onExportPDF, onShowQR, onBre
 
         {/* Actions */}
         <div className="flex gap-2 shrink-0 flex-wrap">
+          {canEdit && (
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Pencil className="h-4 w-4 mr-1.5" />
+                  Modifier la fiche
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Modifier la fiche — {patient.prenom} {patient.nom}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSave} className="space-y-6">
+
+                  {/* Identité civile */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Identité civile</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Nom *</Label>
+                        <Input value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} required />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Prénom *</Label>
+                        <Input value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} required />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Date de naissance *</Label>
+                        <Input type="date" value={form.date_naissance} onChange={(e) => setForm({ ...form, date_naissance: e.target.value })} required />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Lieu de naissance</Label>
+                        <Input value={form.lieu_naissance} onChange={(e) => setForm({ ...form, lieu_naissance: e.target.value })} placeholder="Ville, Pays" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Sexe *</Label>
+                        <Select value={form.sexe} onValueChange={(v) => setForm({ ...form, sexe: v as "M" | "F" })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="M">Masculin</SelectItem>
+                            <SelectItem value="F">Féminin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Situation matrimoniale</Label>
+                        <Select value={form.situation_matrimoniale} onValueChange={(v) => setForm({ ...form, situation_matrimoniale: v })}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="celibataire">Célibataire</SelectItem>
+                            <SelectItem value="marie">Marié(e)</SelectItem>
+                            <SelectItem value="divorce">Divorcé(e)</SelectItem>
+                            <SelectItem value="veuf">Veuf/Veuve</SelectItem>
+                            <SelectItem value="union_libre">Union libre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {form.sexe === "F" && (
+                        <div className="space-y-1">
+                          <Label>Nombre d&apos;enfants</Label>
+                          <Input type="number" min={0} value={form.nombre_enfants} onChange={(e) => setForm({ ...form, nombre_enfants: e.target.value })} />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <Label>Nationalité</Label>
+                        <Input value={form.nationalite} onChange={(e) => setForm({ ...form, nationalite: e.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Ethnie</Label>
+                        <Input value={form.ethnie} onChange={(e) => setForm({ ...form, ethnie: e.target.value })} placeholder="Optionnel" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Profession</Label>
+                        <Input value={form.profession} onChange={(e) => setForm({ ...form, profession: e.target.value })} placeholder="Optionnel" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Niveau d&apos;études</Label>
+                        <Select value={form.niveau_etudes} onValueChange={(v) => setForm({ ...form, niveau_etudes: v })}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="aucun">Aucun</SelectItem>
+                            <SelectItem value="primaire">Primaire</SelectItem>
+                            <SelectItem value="college">Collège</SelectItem>
+                            <SelectItem value="lycee">Lycée</SelectItem>
+                            <SelectItem value="bts">BTS</SelectItem>
+                            <SelectItem value="licence">Licence</SelectItem>
+                            <SelectItem value="master">Master</SelectItem>
+                            <SelectItem value="doctorat">Doctorat</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Langue préférée</Label>
+                        <Select value={form.langue_preferee} onValueChange={(v) => setForm({ ...form, langue_preferee: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Français">Français</SelectItem>
+                            <SelectItem value="Fon">Fon</SelectItem>
+                            <SelectItem value="Yoruba">Yoruba</SelectItem>
+                            <SelectItem value="Dendi">Dendi</SelectItem>
+                            <SelectItem value="Bariba">Bariba</SelectItem>
+                            <SelectItem value="Anglais">Anglais</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Données biologiques */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Données biologiques</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Groupe sanguin</Label>
+                        <Select value={form.groupe_sanguin} onValueChange={(v) => setForm({ ...form, groupe_sanguin: v })}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A">A</SelectItem>
+                            <SelectItem value="B">B</SelectItem>
+                            <SelectItem value="AB">AB</SelectItem>
+                            <SelectItem value="O">O</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Rhésus</Label>
+                        <Select value={form.rhesus} onValueChange={(v) => setForm({ ...form, rhesus: v })}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="+">Positif (+)</SelectItem>
+                            <SelectItem value="-">Négatif (−)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact d'urgence */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Contact d&apos;urgence</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Nom complet</Label>
+                        <Input value={form.contact_urgence_nom} onChange={(e) => setForm({ ...form, contact_urgence_nom: e.target.value })} placeholder="Nom Prénom" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Lien de parenté</Label>
+                        <Select value={form.contact_urgence_lien} onValueChange={(v) => setForm({ ...form, contact_urgence_lien: v })}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Époux/Épouse">Époux / Épouse</SelectItem>
+                            <SelectItem value="Père">Père</SelectItem>
+                            <SelectItem value="Mère">Mère</SelectItem>
+                            <SelectItem value="Frère">Frère</SelectItem>
+                            <SelectItem value="Sœur">Sœur</SelectItem>
+                            <SelectItem value="Fils/Fille">Fils / Fille</SelectItem>
+                            <SelectItem value="Ami(e)">Ami(e)</SelectItem>
+                            <SelectItem value="Autre">Autre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label>Téléphone</Label>
+                        <Input value={form.contact_urgence_tel} onChange={(e) => setForm({ ...form, contact_urgence_tel: e.target.value })} placeholder="+229 XX XX XX XX" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Assurance */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Assurance maladie</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Organisme</Label>
+                        <Input value={form.assurance_organisme} onChange={(e) => setForm({ ...form, assurance_organisme: e.target.value })} placeholder="Ex: RAMU, CNSS, privé..." />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Numéro de police</Label>
+                        <Input value={form.assurance_numero} onChange={(e) => setForm({ ...form, assurance_numero: e.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Taux de couverture (%)</Label>
+                        <Input type="number" min={0} max={100} value={form.assurance_taux} onChange={(e) => setForm({ ...form, assurance_taux: e.target.value })} placeholder="Ex: 80" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Annuler</Button>
+                    <Button type="submit" variant="medical" disabled={saving || !form.nom || !form.prenom}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Enregistrer les modifications
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
           {onShowQR && (
             <Button variant="outline" size="sm" onClick={onShowQR}>
               <QrCode className="h-4 w-4 mr-1.5" />
