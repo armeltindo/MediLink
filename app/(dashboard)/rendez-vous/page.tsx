@@ -77,7 +77,7 @@ export default function RendezVousPage() {
 
     const { data } = await supabase
       .from("rendez_vous")
-      .select("*, patients(nom, prenom, npi), users_profiles(nom, prenom)")
+      .select("*, patients(nom, prenom, npi), users_profiles!medecin_id(nom, prenom)")
       .gte("date_rdv", start)
       .lte("date_rdv", end)
       .is("deleted_at", null)
