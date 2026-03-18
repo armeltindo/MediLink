@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
-  LayoutDashboard, Users, UserPlus, Building2, FlaskConical,
+  LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
   LogOut, Heart, ShieldCheck, ClipboardList,
 } from "lucide-react";
@@ -19,7 +19,6 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"] },
   { href: "/patients", label: "Patients", icon: Users, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"] },
-  { href: "/patients/nouveau", label: "Nouveau patient", icon: UserPlus, roles: ["super_admin", "admin_etablissement", "medecin"] },
   { href: "/consultations", label: "Consultations", icon: ClipboardList, roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"] },
   { href: "/prescriptions", label: "Prescriptions", icon: Pill, roles: ["medecin", "pharmacien", "super_admin"] },
   { href: "/analyses", label: "Analyses", icon: FlaskConical, roles: ["medecin", "laborantin", "super_admin"] },
