@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
 import { Header } from "@/components/layout/header";
 import Link from "next/link";
 import {
-  ChevronRight, LayoutDashboard, Stethoscope, Pill, FlaskConical,
+  ChevronLeft, LayoutDashboard, Stethoscope, Pill, FlaskConical,
   Syringe, Building2, CalendarDays, FolderOpen, ShieldCheck, ShieldAlert, Loader2,
 } from "lucide-react";
 import { PatientHeader } from "@/components/patient/patient-header";
@@ -29,30 +29,51 @@ import { RendezVousTab } from "./tabs/rendez-vous";
 import { DocumentsTab } from "./tabs/documents";
 import { AuditTab } from "./tabs/audit";
 
-export default function PatientPage() {
+// ─── Tab count badge ──────────────────────────────────────────────────────────
+function TabCount({ value }: { value: number | undefined }) {
+  if (!value) return null;
+  return (
+    <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium tabular-nums">
+      {value > 99 ? "99+" : value}
+    </span>
+  );
+}
+
+// ─── Inner page (needs useSearchParams, wrapped in Suspense below) ────────────
+function PatientPageInner() {
   const { npi } = useParams<{ npi: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
 
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [btgOpen, setBtgOpen] = useState(false);
-  const [btgReason, setBtgReason] = useState("");
-  const [btgLoading, setBtgLoading] = useState(false);
-  const [allergies, setAllergies] = useState<Allergie[]>([]);
-  const [antecedents, setAntecedents] = useState<Antecedent[]>([]);
+  const activeTab = searchParams.get("tab") || "overview";
+
+  const [patient, setPatient]                 = useState<Patient | null>(null);
+  const [btgOpen, setBtgOpen]                 = useState(false);
+  const [btgReason, setBtgReason]             = useState("");
+  const [btgLoading, setBtgLoading]           = useState(false);
+  const [allergies, setAllergies]             = useState<Allergie[]>([]);
+  const [antecedents, setAntecedents]         = useState<Antecedent[]>([]);
   const [antecedentsFamiliaux, setAntecedentsFamiliaux] = useState<AntecedentFamilial[]>([]);
-  const [habitudes, setHabitudes] = useState<HabitudesVie | null>(null);
-  // Only consultations and prescriptions are loaded upfront (needed by OverviewTab)
-  // Other tabs (analyses, vaccinations, hospitalisations) fetch their own data lazily
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [habitudes, setHabitudes]             = useState<HabitudesVie | null>(null);
+  const [consultations, setConsultations]     = useState<Consultation[]>([]);
+  const [prescriptions, setPrescriptions]     = useState<Prescription[]>([]);
+  const [tabCounts, setTabCounts]             = useState<Record<string, number>>({});
+  const [loading, setLoading]                 = useState(true);
 
   useEffect(() => {
     if (!npi) return;
     loadPatient(decodeURIComponent(npi));
-  }, [npi]);
+  }, [npi]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Tab navigation (updates URL without full reload) ──────────────────────
+  function handleTabChange(tab: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`/patients/${npi}?${params.toString()}`, { scroll: false });
+  }
+
+  // ─── Data loading ──────────────────────────────────────────────────────────
   async function loadPatient(npiValue: string) {
     setLoading(true);
 
@@ -71,19 +92,22 @@ export default function PatientPage() {
     setPatient(patientData);
 
     // Log audit view
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
       await supabase.from("audit_logs").insert({
-        user_id: user.id,
+        user_id: authUser.id,
         patient_id: patientData.id,
         action: "view_patient",
         timestamp: new Date().toISOString(),
       });
     }
 
-    // Load only the data needed for OverviewTab (default tab) + patient header
-    // Other tabs fetch their own data lazily when first opened
-    const [allergiesRes, antecedentsRes, familliauxRes, habitudesRes, consultationsRes, prescriptionsRes] = await Promise.all([
+    // Load data needed for OverviewTab + patient header upfront.
+    // Other tabs (analyses, vaccinations…) fetch lazily when first opened.
+    const [
+      allergiesRes, antecedentsRes, familliauxRes, habitudesRes,
+      consultationsRes, prescriptionsRes,
+    ] = await Promise.all([
       supabase.from("allergies").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("created_at", { ascending: false }),
       supabase.from("antecedents").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_debut", { ascending: false }),
       supabase.from("antecedents_familiaux").select("*").eq("patient_id", patientData.id),
@@ -99,23 +123,29 @@ export default function PatientPage() {
     setConsultations(consultationsRes.data || []);
     setPrescriptions(prescriptionsRes.data || []);
     setLoading(false);
+
+    // Fetch tab counts in background (non-blocking)
+    Promise.all([
+      supabase.from("analyses_prescrites").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id),
+      supabase.from("vaccinations").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id),
+      supabase.from("hospitalisations").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id).is("deleted_at", null),
+      supabase.from("rendez_vous").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id),
+      supabase.from("documents").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id).is("deleted_at", null),
+    ]).then(([ana, vac, hos, rdv, doc]) => {
+      setTabCounts({
+        analyses: ana.count || 0,
+        vaccinations: vac.count || 0,
+        hospitalisations: hos.count || 0,
+        "rendez-vous": rdv.count || 0,
+        documents: doc.count || 0,
+      });
+    });
   }
 
-  async function handleExportPDF() {
-    if (!patient) return;
-    const url = `/api/export-pdf?patientId=${patient.id}`;
-    window.open(url, "_blank");
-  }
-
-  async function handleShowQR() {
-    if (!patient) return;
-    window.open(`/api/qr?npi=${patient.npi}`, "_blank");
-  }
-
-  async function handleLettreRef() {
-    if (!patient) return;
-    window.open(`/api/lettre-reference?patientId=${patient.id}`, "_blank");
-  }
+  // ─── Actions ───────────────────────────────────────────────────────────────
+  function handleExportPDF()  { if (patient) window.open(`/api/export-pdf?patientId=${patient.id}`, "_blank"); }
+  function handleShowQR()     { if (patient) window.open(`/api/qr?npi=${patient.npi}`, "_blank"); }
+  function handleLettreRef()  { if (patient) window.open(`/api/lettre-reference?patientId=${patient.id}`, "_blank"); }
 
   async function handleBreakGlass() {
     if (!patient || !btgReason.trim() || !user) return;
@@ -128,11 +158,7 @@ export default function PatientPage() {
         details: JSON.stringify({ reason: btgReason, accessed_at: new Date().toISOString() }),
         timestamp: new Date().toISOString(),
       });
-      toast({
-        title: "Accès d'urgence enregistré",
-        description: "Cet accès a été loggé et sera notifié à l'administrateur.",
-        variant: "default",
-      });
+      toast({ title: "Accès d'urgence enregistré", description: "Cet accès a été loggé et sera notifié à l'administrateur." });
       setBtgOpen(false);
       setBtgReason("");
     } catch {
@@ -142,15 +168,15 @@ export default function PatientPage() {
     }
   }
 
+  // ─── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex flex-col min-h-full bg-muted/20">
         <Header />
-        {/* Skeleton breadcrumb */}
-        <div className="px-6 py-2 border-b bg-card">
+        <div className="px-6 py-2.5 border-b bg-card flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
           <Skeleton className="h-4 w-48" />
         </div>
-        {/* Skeleton header */}
         <div className="bg-card border-b px-6 py-4 shadow-sm">
           <div className="flex gap-5 items-start">
             <Skeleton className="h-20 w-20 rounded-full shrink-0" />
@@ -165,12 +191,13 @@ export default function PatientPage() {
             </div>
           </div>
         </div>
-        {/* Skeleton tabs */}
         <div className="p-6 space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-28 rounded-md" />
-            ))}
+          <div className="overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-28 rounded-md shrink-0" />
+              ))}
+            </div>
           </div>
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
@@ -185,16 +212,25 @@ export default function PatientPage() {
   return (
     <div className="flex flex-col min-h-full bg-muted/20">
       <Header />
+
       {/* Breadcrumb */}
       <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1.5 border-b bg-card">
-        <Link href="/patients" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
+        <Link
+          href="/patients"
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
           Patients
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+        <span className="text-muted-foreground/30">/</span>
         <span className="text-foreground font-medium truncate">
-          {patient.prenom} {patient.nom.toUpperCase()}
+          {patient.prenom} <span className="uppercase">{patient.nom}</span>
+        </span>
+        <span className="ml-1 text-xs text-muted-foreground/60 font-mono hidden sm:inline">
+          {patient.npi}
         </span>
       </nav>
+
       <PatientHeader
         patient={patient}
         allergies={allergies}
@@ -208,7 +244,7 @@ export default function PatientPage() {
       {/* IA Alerts */}
       <AIAlertsBanner patientId={patient.id} />
 
-      {/* Break-the-glass — Emergency Access */}
+      {/* Break-the-glass */}
       <Dialog open={btgOpen} onOpenChange={setBtgOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -220,7 +256,8 @@ export default function PatientPage() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-sm text-red-700">
-                Vous êtes sur le point d&apos;accéder à ce dossier en mode d&apos;urgence. Cet accès sera <strong>enregistré, horodaté</strong> et notifié à l&apos;administrateur de l&apos;établissement.
+                Vous êtes sur le point d&apos;accéder à ce dossier en mode d&apos;urgence. Cet accès sera{" "}
+                <strong>enregistré, horodaté</strong> et notifié à l&apos;administrateur de l&apos;établissement.
               </p>
             </div>
             <div className="space-y-1">
@@ -235,11 +272,7 @@ export default function PatientPage() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setBtgOpen(false)}>Annuler</Button>
-              <Button
-                variant="destructive"
-                onClick={handleBreakGlass}
-                disabled={btgLoading || !btgReason.trim()}
-              >
+              <Button variant="destructive" onClick={handleBreakGlass} disabled={btgLoading || !btgReason.trim()}>
                 {btgLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Confirmer l&apos;accès d&apos;urgence
               </Button>
@@ -248,59 +281,67 @@ export default function PatientPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Tabs */}
-      <div className="flex-1 p-6 pt-5">
-        <Tabs defaultValue="overview">
-          <TabsList className="bg-card border shadow-sm mb-5 h-auto flex-wrap gap-0.5 p-1">
-            <TabsTrigger value="overview" className="gap-1.5 text-xs">
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Vue d&apos;ensemble
-            </TabsTrigger>
-            <TabsTrigger value="consultations" className="gap-1.5 text-xs">
-              <Stethoscope className="h-3.5 w-3.5" />
-              Consultations
-              {consultations.length > 0 && (
-                <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium">
-                  {consultations.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="prescriptions" className="gap-1.5 text-xs">
-              <Pill className="h-3.5 w-3.5" />
-              Prescriptions
-              {prescriptions.length > 0 && (
-                <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium">
-                  {prescriptions.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="analyses" className="gap-1.5 text-xs">
-              <FlaskConical className="h-3.5 w-3.5" />
-              Analyses
-            </TabsTrigger>
-            <TabsTrigger value="vaccinations" className="gap-1.5 text-xs">
-              <Syringe className="h-3.5 w-3.5" />
-              Vaccins
-            </TabsTrigger>
-            <TabsTrigger value="hospitalisations" className="gap-1.5 text-xs">
-              <Building2 className="h-3.5 w-3.5" />
-              Hospitalisations
-            </TabsTrigger>
-            <TabsTrigger value="rendez-vous" className="gap-1.5 text-xs">
-              <CalendarDays className="h-3.5 w-3.5" />
-              Rendez-vous
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-1.5 text-xs">
-              <FolderOpen className="h-3.5 w-3.5" />
-              Documents
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="audit" className="gap-1.5 text-xs">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Audit
+      {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
+      <div className="flex-1 p-4 sm:p-6 pt-4 sm:pt-5">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          {/* Horizontally scrollable tab bar */}
+          <div className="overflow-x-auto -mx-1 px-1 pb-0.5 mb-5">
+            <TabsList className="bg-card border shadow-sm h-auto gap-0.5 p-1 flex-nowrap min-w-max w-full">
+              <TabsTrigger value="overview" className="gap-1.5 text-xs shrink-0">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Vue d&apos;ensemble
               </TabsTrigger>
-            )}
-          </TabsList>
+
+              <TabsTrigger value="consultations" className="gap-1.5 text-xs shrink-0">
+                <Stethoscope className="h-3.5 w-3.5" />
+                Consultations
+                <TabCount value={consultations.length} />
+              </TabsTrigger>
+
+              <TabsTrigger value="prescriptions" className="gap-1.5 text-xs shrink-0">
+                <Pill className="h-3.5 w-3.5" />
+                Prescriptions
+                <TabCount value={prescriptions.length} />
+              </TabsTrigger>
+
+              <TabsTrigger value="analyses" className="gap-1.5 text-xs shrink-0">
+                <FlaskConical className="h-3.5 w-3.5" />
+                Analyses
+                <TabCount value={tabCounts.analyses} />
+              </TabsTrigger>
+
+              <TabsTrigger value="vaccinations" className="gap-1.5 text-xs shrink-0">
+                <Syringe className="h-3.5 w-3.5" />
+                Vaccins
+                <TabCount value={tabCounts.vaccinations} />
+              </TabsTrigger>
+
+              <TabsTrigger value="hospitalisations" className="gap-1.5 text-xs shrink-0">
+                <Building2 className="h-3.5 w-3.5" />
+                Hospitalisations
+                <TabCount value={tabCounts.hospitalisations} />
+              </TabsTrigger>
+
+              <TabsTrigger value="rendez-vous" className="gap-1.5 text-xs shrink-0">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Rendez-vous
+                <TabCount value={tabCounts["rendez-vous"]} />
+              </TabsTrigger>
+
+              <TabsTrigger value="documents" className="gap-1.5 text-xs shrink-0">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Documents
+                <TabCount value={tabCounts.documents} />
+              </TabsTrigger>
+
+              {isAdmin && (
+                <TabsTrigger value="audit" className="gap-1.5 text-xs shrink-0">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Audit
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
           <TabsContent value="overview">
             <OverviewTab
@@ -312,6 +353,7 @@ export default function PatientPage() {
               consultations={consultations}
               prescriptions={prescriptions}
               onRefresh={() => loadPatient(patient.npi)}
+              navigateToTab={handleTabChange}
             />
           </TabsContent>
 
@@ -332,31 +374,19 @@ export default function PatientPage() {
           </TabsContent>
 
           <TabsContent value="analyses">
-            <AnalysesTab
-              patient={patient}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
+            <AnalysesTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
           </TabsContent>
 
           <TabsContent value="vaccinations">
-            <VaccinationsTab
-              patient={patient}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
+            <VaccinationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
           </TabsContent>
 
           <TabsContent value="hospitalisations">
-            <HospitalisationsTab
-              patient={patient}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
+            <HospitalisationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
           </TabsContent>
 
           <TabsContent value="rendez-vous">
-            <RendezVousTab
-              patient={patient}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
+            <RendezVousTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
           </TabsContent>
 
           <TabsContent value="documents">
@@ -371,5 +401,14 @@ export default function PatientPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// ─── Export wrapped in Suspense (required for useSearchParams in Next.js 14+) ─
+export default function PatientPage() {
+  return (
+    <Suspense fallback={null}>
+      <PatientPageInner />
+    </Suspense>
   );
 }

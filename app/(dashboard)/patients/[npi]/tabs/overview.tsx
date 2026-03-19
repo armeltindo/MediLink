@@ -17,6 +17,7 @@ import {
   AlertTriangle, CheckCircle, Clock, Stethoscope,
   Pill, Activity, Loader2, Sparkles, Cigarette,
   Wine, Utensils, User2, Plus, Shield, Network, List,
+  ArrowRight,
 } from "lucide-react";
 import { searchCIM10, CIM10Code } from "@/lib/cim10";
 
@@ -189,6 +190,7 @@ interface OverviewTabProps {
   consultations: Consultation[];
   prescriptions: Prescription[];
   onRefresh: () => void;
+  navigateToTab?: (tab: string) => void;
 }
 
 // ─── Add Antécédent Dialog ─────────────────────────────────────────────────
@@ -761,7 +763,7 @@ function RGPDConsentSection({ patient, canWrite }: { patient: Patient; canWrite:
 // ─── Main OverviewTab Component ───────────────────────────────────────────
 export function OverviewTab({
   patient, allergies, antecedents, antecedentsFamiliaux,
-  habitudes, consultations, prescriptions, onRefresh,
+  habitudes, consultations, prescriptions, onRefresh, navigateToTab,
 }: OverviewTabProps) {
   const { user } = useUser();
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -993,10 +995,25 @@ export function OverviewTab({
         {/* Prescriptions actives */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Pill className="h-4 w-4 text-medical-orange" />
-              Traitements en cours
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Pill className="h-4 w-4 text-medical-orange" />
+                Traitements en cours
+                {activePrescriptions.length > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({activePrescriptions.length})
+                  </span>
+                )}
+              </CardTitle>
+              {navigateToTab && activePrescriptions.length > 0 && (
+                <button
+                  onClick={() => navigateToTab("prescriptions")}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-medical-green transition-colors"
+                >
+                  Voir tout <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {activePrescriptions.length === 0 ? (
@@ -1087,16 +1104,37 @@ export function OverviewTab({
         {lastConsultation && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Stethoscope className="h-4 w-4 text-medical-green" />
-                Dernière consultation
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-medical-green" />
+                  Dernière consultation
+                </CardTitle>
+                {navigateToTab && consultations.length > 1 && (
+                  <button
+                    onClick={() => navigateToTab("consultations")}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-medical-green transition-colors"
+                  >
+                    Historique ({consultations.length}) <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="text-xs space-y-1">
-              <p className="text-muted-foreground">{formatDate(lastConsultation.date_consultation)}</p>
-              <p className="font-medium">{lastConsultation.motif}</p>
+            <CardContent className="text-xs space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground font-medium">{formatDate(lastConsultation.date_consultation)}</span>
+              </div>
+              <p className="font-semibold text-sm leading-snug">{lastConsultation.motif}</p>
               {lastConsultation.diagnostic_principal && (
-                <p className="text-muted-foreground">{lastConsultation.diagnostic_principal}</p>
+                <p className="text-muted-foreground leading-relaxed">{lastConsultation.diagnostic_principal}</p>
+              )}
+              {navigateToTab && (
+                <button
+                  onClick={() => navigateToTab("consultations")}
+                  className="mt-2 w-full flex items-center justify-center gap-1 text-xs text-medical-green border border-medical-green/20 rounded-md py-1.5 hover:bg-medical-green/5 transition-colors"
+                >
+                  Voir les constantes <ArrowRight className="h-3 w-3" />
+                </button>
               )}
             </CardContent>
           </Card>
@@ -1110,38 +1148,58 @@ export function OverviewTab({
               Informations administratives
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-xs space-y-1.5">
+          <CardContent className="text-xs space-y-2.5">
             {patient.assurance_organisme && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Assurance</span>
-                <span className="font-medium">{patient.assurance_organisme} ({patient.assurance_taux}%)</span>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-muted-foreground shrink-0">Assurance</span>
+                <span className="font-medium text-right">
+                  {patient.assurance_organisme}
+                  {patient.assurance_taux != null && (
+                    <span className="ml-1 text-emerald-600 font-semibold">{patient.assurance_taux}%</span>
+                  )}
+                  {patient.assurance_numero && (
+                    <span className="block font-mono text-muted-foreground text-[10px] mt-0.5">{patient.assurance_numero}</span>
+                  )}
+                </span>
               </div>
             )}
             {patient.situation_matrimoniale && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Statut marital</span>
-                <span className="font-medium capitalize">{patient.situation_matrimoniale}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Situation</span>
+                <span className="font-medium capitalize">{patient.situation_matrimoniale.replace(/_/g, " ")}</span>
               </div>
             )}
             {patient.nombre_enfants !== null && patient.nombre_enfants !== undefined && (
-              <div className="flex justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Enfants</span>
                 <span className="font-medium">{patient.nombre_enfants}</span>
               </div>
             )}
+            {patient.ethnie && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Ethnie</span>
+                <span className="font-medium">{patient.ethnie}</span>
+              </div>
+            )}
             {patient.nationalite && (
-              <div className="flex justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Nationalité</span>
                 <span className="font-medium">{patient.nationalite}</span>
               </div>
             )}
             {patient.langue_preferee && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Langue préférée</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Langue</span>
                 <span className="font-medium">{patient.langue_preferee}</span>
               </div>
             )}
-            <div className="flex justify-between">
+            {patient.niveau_etudes && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Niveau d&apos;études</span>
+                <span className="font-medium capitalize">{patient.niveau_etudes}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2 border-t pt-2 mt-2">
               <span className="text-muted-foreground">Dossier créé</span>
               <span className="font-medium">{formatDate(patient.created_at)}</span>
             </div>
