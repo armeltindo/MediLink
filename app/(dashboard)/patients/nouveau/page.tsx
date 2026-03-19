@@ -120,7 +120,7 @@ export default function NouveauPatientPage() {
           }
           // Pick the visible section with the highest ratio (most visible)
           if (visibleSections.size > 0) {
-            const best = [...visibleSections.entries()].reduce((a, b) => a[1] >= b[1] ? a : b)[0];
+            const best = Array.from(visibleSections.entries()).reduce((a, b) => a[1] >= b[1] ? a : b)[0];
             setActiveSection(best);
           }
         },
