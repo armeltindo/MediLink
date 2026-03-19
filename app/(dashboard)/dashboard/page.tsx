@@ -233,9 +233,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <h2 className="text-xl sm:text-2xl font-bold leading-tight">
-                    {greeting},{" "}
-                    {user?.titre ? <span className="opacity-90">{user.titre} </span> : null}
-                    {user?.prenom} {user?.nom}
+                    {greeting}, {user?.prenom} {user?.nom}
                   </h2>
                   <div className="flex items-center gap-2 flex-wrap">
                     {roleBadge && (
