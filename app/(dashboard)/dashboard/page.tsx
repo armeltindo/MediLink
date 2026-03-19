@@ -69,14 +69,18 @@ const TYPE_RDV_META: Record<string, {
   bilan:            { label: "Bilan",          icon: FlaskConical,   dotColor: "bg-amber-500",   badgeBg: "bg-amber-50 text-amber-700"  },
 };
 
+const ALL_ROLES = ["medecin", "infirmier", "laborantin", "pharmacien", "super_admin", "admin_etablissement"];
+const ADMIN_ROLES = ["super_admin", "admin_etablissement"];
+
 const QUICK_ACTIONS = [
-  { href: "/patients/nouveau", label: "Nouveau patient",    icon: UserPlus,    roles: ["medecin", "admin_etablissement", "super_admin"],                                            iconColor: "text-emerald-600", iconBg: "bg-emerald-50" },
-  { href: "/patients",         label: "Rechercher patient", icon: Users,       roles: ["medecin", "infirmier", "laborantin", "pharmacien", "super_admin", "admin_etablissement"],   iconColor: "text-blue-600",    iconBg: "bg-blue-50"    },
-  { href: "/rendez-vous",      label: "Rendez-vous",        icon: CalendarDays,roles: ["medecin", "infirmier", "super_admin", "admin_etablissement"],                              iconColor: "text-violet-600",  iconBg: "bg-violet-50"  },
-  { href: "/consultations",    label: "Consultations",      icon: Stethoscope, roles: ["medecin"],                                                                                 iconColor: "text-violet-600",  iconBg: "bg-violet-50"  },
-  { href: "/prescriptions",    label: "Prescriptions",      icon: Pill,        roles: ["pharmacien", "medecin"],                                                                   iconColor: "text-amber-600",   iconBg: "bg-amber-50"   },
-  { href: "/analyses",         label: "Saisir résultats",   icon: FlaskConical,roles: ["laborantin"],                                                                              iconColor: "text-rose-600",    iconBg: "bg-rose-50"    },
-  { href: "/admin",            label: "Administration",     icon: TrendingUp,  roles: ["admin_etablissement", "super_admin"],                                                      iconColor: "text-indigo-600",  iconBg: "bg-indigo-50"  },
+  { href: "/patients/nouveau", label: "Nouveau patient",    icon: UserPlus,    roles: ["medecin", ...ADMIN_ROLES],                              iconColor: "text-emerald-600", iconBg: "bg-emerald-50" },
+  { href: "/patients",         label: "Rechercher patient", icon: Users,       roles: ALL_ROLES,                                                iconColor: "text-blue-600",    iconBg: "bg-blue-50"    },
+  { href: "/rendez-vous",      label: "Rendez-vous",        icon: CalendarDays,roles: ["medecin", "infirmier", ...ADMIN_ROLES],                 iconColor: "text-violet-600",  iconBg: "bg-violet-50"  },
+  { href: "/consultations",    label: "Consultations",      icon: Stethoscope, roles: ["medecin", "infirmier", ...ADMIN_ROLES],                 iconColor: "text-teal-600",    iconBg: "bg-teal-50"    },
+  { href: "/prescriptions",    label: "Prescriptions",      icon: Pill,        roles: ["pharmacien", "medecin", ...ADMIN_ROLES],                iconColor: "text-amber-600",   iconBg: "bg-amber-50"   },
+  { href: "/analyses",         label: "Analyses",           icon: FlaskConical,roles: ["laborantin", "medecin", ...ADMIN_ROLES],                iconColor: "text-rose-600",    iconBg: "bg-rose-50"    },
+  { href: "/vaccinations",     label: "Vaccinations",       icon: Syringe,     roles: ["medecin", "infirmier", ...ADMIN_ROLES],                 iconColor: "text-cyan-600",    iconBg: "bg-cyan-50"    },
+  { href: "/admin",            label: "Administration",     icon: TrendingUp,  roles: ADMIN_ROLES,                                              iconColor: "text-indigo-600",  iconBg: "bg-indigo-50"  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
