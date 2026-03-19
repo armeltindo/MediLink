@@ -3,9 +3,11 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Building2, MapPin, Phone, Mail, Search, X,
   Hospital, Stethoscope, FlaskConical, Pill, Landmark,
+  Calendar, ExternalLink, ChevronRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -96,14 +98,127 @@ function StatsBar({ rows, activeType, onType }: {
   );
 }
 
+// ─── Etablissement Detail Dialog ──────────────────────────────────────────────
+
+function EtablissementDetail({ e, open, onClose }: {
+  e: EtablissementRow;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const cfg = getConfig(e.type);
+  const Icon = cfg.icon;
+  const fullAddress = [e.adresse, e.ville, e.region, e.pays].filter(Boolean).join(", ");
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="sr-only">{e.nom}</DialogTitle>
+        </DialogHeader>
+
+        {/* Header band */}
+        <div className={`-mx-6 -mt-6 px-6 pt-6 pb-5 ${cfg.bg} border-b ${cfg.border}`}>
+          <div className="flex items-center gap-4">
+            {e.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={e.logo_url}
+                alt={e.nom}
+                className="h-16 w-16 rounded-xl object-contain border bg-white shrink-0 shadow-sm"
+              />
+            ) : (
+              <div className={`h-16 w-16 rounded-xl flex items-center justify-center shrink-0 border bg-white shadow-sm ${cfg.border}`}>
+                <Icon className={`h-8 w-8 ${cfg.color}`} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="font-bold text-base leading-tight">{e.nom}</h2>
+              {e.type && (
+                <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.color} ${cfg.border} bg-white/60`}>
+                  <Icon className="h-3 w-3" />
+                  {cfg.label}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="space-y-4 pt-1">
+
+          {/* Localisation */}
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Localisation</p>
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="text-sm">
+                {e.adresse && <p className="font-medium">{e.adresse}</p>}
+                <p className="text-muted-foreground">{[e.ville, e.region, e.pays].filter(Boolean).join(", ")}</p>
+              </div>
+            </div>
+            {fullAddress && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-medical-blue hover:underline mt-1 ml-6"
+              >
+                Voir sur la carte
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+
+          {/* Contact */}
+          {(e.telephone || e.email) && (
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Contact</p>
+              <div className="space-y-2">
+                {e.telephone && (
+                  <a
+                    href={`tel:${e.telephone}`}
+                    className="flex items-center gap-2.5 text-sm hover:text-medical-blue transition-colors group"
+                  >
+                    <Phone className="h-4 w-4 text-muted-foreground group-hover:text-medical-blue shrink-0" />
+                    {e.telephone}
+                  </a>
+                )}
+                {e.email && (
+                  <a
+                    href={`mailto:${e.email}`}
+                    className="flex items-center gap-2.5 text-sm hover:text-medical-blue transition-colors group"
+                  >
+                    <Mail className="h-4 w-4 text-muted-foreground group-hover:text-medical-blue shrink-0" />
+                    <span className="truncate">{e.email}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Meta */}
+          <div className="pt-3 border-t flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            Enregistré le {new Date(e.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Etablissement Card ───────────────────────────────────────────────────────
 
-function EtablissementCard({ e }: { e: EtablissementRow }) {
+function EtablissementCard({ e, onSelect }: { e: EtablissementRow; onSelect: () => void }) {
   const cfg = getConfig(e.type);
   const Icon = cfg.icon;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 group">
+    <Card
+      className="overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 group cursor-pointer"
+      onClick={onSelect}
+    >
       {/* Colored top bar */}
       <div className={`h-1 w-full ${cfg.bg.replace("bg-", "bg-").replace("-50", "-400")}`}
         style={{ background: `var(--tw-gradient-from, currentColor)` }}
@@ -146,6 +261,9 @@ function EtablissementCard({ e }: { e: EtablissementRow }) {
               <p className="text-xs text-muted-foreground mt-0.5 truncate pl-4">{e.adresse}</p>
             )}
           </div>
+
+          {/* Arrow hint */}
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5 group-hover:text-muted-foreground transition-colors" />
         </div>
 
         {/* Contact */}
@@ -154,6 +272,7 @@ function EtablissementCard({ e }: { e: EtablissementRow }) {
             {e.telephone && (
               <a
                 href={`tel:${e.telephone}`}
+                onClick={(ev) => ev.stopPropagation()}
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group/link"
               >
                 <Phone className="h-3.5 w-3.5 shrink-0 group-hover/link:text-medical-blue" />
@@ -163,6 +282,7 @@ function EtablissementCard({ e }: { e: EtablissementRow }) {
             {e.email && (
               <a
                 href={`mailto:${e.email}`}
+                onClick={(ev) => ev.stopPropagation()}
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group/link"
               >
                 <Mail className="h-3.5 w-3.5 shrink-0 group-hover/link:text-medical-blue" />
@@ -181,6 +301,7 @@ function EtablissementCard({ e }: { e: EtablissementRow }) {
 export function EtablissementsClient({ rows }: { rows: EtablissementRow[] }) {
   const [search, setSearch] = useState("");
   const [activeType, setActiveType] = useState("all");
+  const [selected, setSelected] = useState<EtablissementRow | null>(null);
 
   const filtered = useMemo(() =>
     rows.filter((e) => {
@@ -247,9 +368,18 @@ export function EtablissementsClient({ rows }: { rows: EtablissementRow[] }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((e) => (
-            <EtablissementCard key={e.id} e={e} />
+            <EtablissementCard key={e.id} e={e} onSelect={() => setSelected(e)} />
           ))}
         </div>
+      )}
+
+      {/* Detail dialog */}
+      {selected && (
+        <EtablissementDetail
+          e={selected}
+          open={!!selected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
