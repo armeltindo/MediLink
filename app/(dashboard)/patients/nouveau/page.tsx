@@ -100,6 +100,38 @@ export default function NouveauPatientPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [duplicates, setDuplicates]     = useState<{ id: string; npi: string; nom: string; prenom: string; date_naissance: string }[]>([]);
   const [checkingDups, setCheckingDups] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("section-identite");
+
+  // ─── Active section via IntersectionObserver ───────────────────────────────
+  useEffect(() => {
+    const sectionIds = SECTIONS.map((s) => s.id);
+    const observers: IntersectionObserver[] = [];
+    const visibleSections = new Map<string, number>();
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            visibleSections.set(id, entry.intersectionRatio);
+          } else {
+            visibleSections.delete(id);
+          }
+          // Pick the visible section with the highest ratio (most visible)
+          if (visibleSections.size > 0) {
+            const best = [...visibleSections.entries()].reduce((a, b) => a[1] >= b[1] ? a : b)[0];
+            setActiveSection(best);
+          }
+        },
+        { threshold: [0, 0.1, 0.5], rootMargin: "-80px 0px -40% 0px" }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   const {
     register,
@@ -292,17 +324,31 @@ export default function NouveauPatientPage() {
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-3">
                 Sections
               </p>
-              {SECTIONS.map(({ id, label, icon: Icon, required }) => (
-                <a
-                  key={id}
-                  href={`#${id}`}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors group"
-                >
-                  <Icon className="h-4 w-4 shrink-0 group-hover:text-medical-green transition-colors" />
-                  <span>{label}</span>
-                  {required && <span className="ml-auto text-[10px] text-red-400">*</span>}
-                </a>
-              ))}
+              {SECTIONS.map(({ id, label, icon: Icon, required }) => {
+                const isActive = activeSection === id;
+                return (
+                  <a
+                    key={id}
+                    href={`#${id}`}
+                    className={cn(
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group relative",
+                      isActive
+                        ? "bg-medical-green/10 text-medical-green font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-medical-green rounded-r-full" />
+                    )}
+                    <Icon className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-medical-green" : "group-hover:text-medical-green"
+                    )} />
+                    <span>{label}</span>
+                    {required && <span className="ml-auto text-[10px] text-red-400">*</span>}
+                  </a>
+                );
+              })}
             </nav>
           </aside>
 
