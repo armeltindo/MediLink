@@ -180,6 +180,8 @@ export default function PatientPage() {
 
   if (!patient) return null;
 
+  const isAdmin = user?.role === "super_admin" || user?.role === "admin_etablissement";
+
   return (
     <div className="flex flex-col min-h-full bg-muted/20">
       <Header />
@@ -292,10 +294,12 @@ export default function PatientPage() {
               <FolderOpen className="h-3.5 w-3.5" />
               Documents
             </TabsTrigger>
-            <TabsTrigger value="audit" className="gap-1.5 text-xs">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Audit
-            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="audit" className="gap-1.5 text-xs">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Audit
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview">
@@ -359,9 +363,11 @@ export default function PatientPage() {
             <DocumentsTab patient={patient} />
           </TabsContent>
 
-          <TabsContent value="audit">
-            <AuditTab patient={patient} />
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="audit">
+              <AuditTab patient={patient} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
