@@ -5,7 +5,10 @@ import { supabase } from "@/lib/supabase";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
 import { Header } from "@/components/layout/header";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronRight, LayoutDashboard, Stethoscope, Pill, FlaskConical,
+  Syringe, Building2, CalendarDays, FolderOpen, ShieldCheck, ShieldAlert, Loader2,
+} from "lucide-react";
 import { PatientHeader } from "@/components/patient/patient-header";
 import { AIAlertsBanner } from "@/components/patient/ai-alerts-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldAlert, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { OverviewTab } from "./tabs/overview";
@@ -142,19 +144,35 @@ export default function PatientPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-full">
+      <div className="flex flex-col min-h-full bg-muted/20">
         <Header />
-        <div className="p-6 space-y-4">
-          <div className="flex gap-4">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <div className="space-y-2 flex-1">
-              <Skeleton className="h-6 w-64" />
-              <Skeleton className="h-4 w-48" />
+        {/* Skeleton breadcrumb */}
+        <div className="px-6 py-2 border-b bg-card">
+          <Skeleton className="h-4 w-48" />
+        </div>
+        {/* Skeleton header */}
+        <div className="bg-card border-b px-6 py-4 shadow-sm">
+          <div className="flex gap-5 items-start">
+            <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-7 w-56" />
+              <Skeleton className="h-4 w-32" />
               <Skeleton className="h-4 w-96" />
             </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-24 rounded-md" />
+              <Skeleton className="h-8 w-24 rounded-md" />
+            </div>
           </div>
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
+        </div>
+        {/* Skeleton tabs */}
+        <div className="p-6 space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-28 rounded-md" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -163,12 +181,14 @@ export default function PatientPage() {
   if (!patient) return null;
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-muted/20">
       <Header />
       {/* Breadcrumb */}
-      <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1 border-b bg-muted/30">
-        <Link href="/patients" className="hover:text-foreground transition-colors">Patients</Link>
-        <ChevronRight className="h-3.5 w-3.5" />
+      <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1.5 border-b bg-card">
+        <Link href="/patients" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
+          Patients
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
         <span className="text-foreground font-medium truncate">
           {patient.prenom} {patient.nom.toUpperCase()}
         </span>
@@ -227,18 +247,55 @@ export default function PatientPage() {
       </Dialog>
 
       {/* Tabs */}
-      <div className="flex-1 p-6 pt-4">
+      <div className="flex-1 p-6 pt-5">
         <Tabs defaultValue="overview">
-          <TabsList className="bg-muted mb-4 h-auto flex-wrap">
-            <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
-            <TabsTrigger value="consultations">Consultations ({consultations.length})</TabsTrigger>
-            <TabsTrigger value="prescriptions">Prescriptions ({prescriptions.length})</TabsTrigger>
-            <TabsTrigger value="analyses">Analyses</TabsTrigger>
-            <TabsTrigger value="vaccinations">Vaccins</TabsTrigger>
-            <TabsTrigger value="hospitalisations">Hospitalisations</TabsTrigger>
-            <TabsTrigger value="rendez-vous">Rendez-vous</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="audit">Audit</TabsTrigger>
+          <TabsList className="bg-card border shadow-sm mb-5 h-auto flex-wrap gap-0.5 p-1">
+            <TabsTrigger value="overview" className="gap-1.5 text-xs">
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Vue d&apos;ensemble
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="gap-1.5 text-xs">
+              <Stethoscope className="h-3.5 w-3.5" />
+              Consultations
+              {consultations.length > 0 && (
+                <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium">
+                  {consultations.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="prescriptions" className="gap-1.5 text-xs">
+              <Pill className="h-3.5 w-3.5" />
+              Prescriptions
+              {prescriptions.length > 0 && (
+                <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium">
+                  {prescriptions.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="analyses" className="gap-1.5 text-xs">
+              <FlaskConical className="h-3.5 w-3.5" />
+              Analyses
+            </TabsTrigger>
+            <TabsTrigger value="vaccinations" className="gap-1.5 text-xs">
+              <Syringe className="h-3.5 w-3.5" />
+              Vaccins
+            </TabsTrigger>
+            <TabsTrigger value="hospitalisations" className="gap-1.5 text-xs">
+              <Building2 className="h-3.5 w-3.5" />
+              Hospitalisations
+            </TabsTrigger>
+            <TabsTrigger value="rendez-vous" className="gap-1.5 text-xs">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Rendez-vous
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-1.5 text-xs">
+              <FolderOpen className="h-3.5 w-3.5" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-1.5 text-xs">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Audit
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
