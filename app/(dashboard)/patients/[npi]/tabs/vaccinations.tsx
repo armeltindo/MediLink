@@ -59,7 +59,7 @@ function RappelBadge({ dateStr }: { dateStr: string | null }) {
   if (days < 0)
     return <span className="text-xs font-medium text-red-600">Rappel en retard de {Math.abs(days)} j</span>;
   if (days === 0)
-    return <span className="text-xs font-medium text-orange-600">Rappel aujourd'hui</span>;
+    return <span className="text-xs font-medium text-orange-600">Rappel aujourd&apos;hui</span>;
   if (days <= 30)
     return <span className="text-xs font-medium text-amber-600">Rappel dans {days} j ({formatDate(dateStr!)})</span>;
   return <span className="text-xs text-blue-600">Rappel : {formatDate(dateStr!)}</span>;
@@ -73,8 +73,6 @@ function StatsBar({ vaccinations }: { vaccinations: Vaccination[] }) {
   );
   const aJour    = byVaccin.filter((v) => v.statut === "a_jour").length;
   const enRetard = byVaccin.filter((v) => v.statut === "en_retard").length;
-  const ci       = byVaccin.filter((v) => v.statut === "contre_indique").length;
-
   return (
     <div className="grid grid-cols-4 gap-2">
       {[
