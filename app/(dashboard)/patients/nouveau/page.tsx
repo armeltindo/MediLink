@@ -26,7 +26,7 @@ const patientSchema = z.object({
   prenom: z.string().min(2, "Prénom requis (min. 2 caractères)"),
   date_naissance: z.string().min(1, "Date de naissance requise"),
   lieu_naissance: z.string().optional(),
-  sexe: z.enum(["M", "F"], { required_error: "Sexe requis" }),
+  sexe: z.enum(["M", "F"], { error: "Sexe requis" }),
   situation_matrimoniale: z.string().optional(),
   nombre_enfants: z.coerce.number().min(0).optional(),
   groupe_sanguin: z.string().optional(),
