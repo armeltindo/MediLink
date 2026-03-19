@@ -27,7 +27,7 @@ export async function GET() {
 
   const get = <T>(r: PromiseSettledResult<T>, fallback: T): T =>
     r.status === "fulfilled" ? r.value : fallback;
-  const empty = { data: [] as never[], count: 0, error: null };
+  const empty = { data: [] as never[], count: 0, error: null, status: 200, statusText: "OK" } as never;
 
   const [p, c, rx, a, activity] = [
     get(patientsRes, empty), get(consultationsRes, empty),
