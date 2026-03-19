@@ -17,7 +17,7 @@ import {
   AlertTriangle, CheckCircle, Clock, Stethoscope,
   Pill, Activity, Loader2, Sparkles, Cigarette,
   Wine, Utensils, User2, Plus, Shield, Network, List,
-  ArrowRight,
+  ArrowRight, Phone, Mail, MapPin,
 } from "lucide-react";
 import { searchCIM10, CIM10Code } from "@/lib/cim10";
 
@@ -992,6 +992,52 @@ export function OverviewTab({
       {/* Right column */}
       <div className="space-y-4">
 
+        {/* Coordonnées & contact */}
+        {(patient.telephone || patient.email || patient.adresse_commune || patient.medecin_traitant) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-blue-500" />
+                Coordonnées
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs space-y-2">
+              {patient.telephone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <a href={`tel:${patient.telephone}`} className="font-medium hover:text-medical-green transition-colors">
+                    {patient.telephone}
+                  </a>
+                </div>
+              )}
+              {patient.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <a href={`mailto:${patient.email}`} className="font-medium hover:text-medical-green transition-colors truncate">
+                    {patient.email}
+                  </a>
+                </div>
+              )}
+              {(patient.adresse_quartier || patient.adresse_commune || patient.adresse_departement) && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <span className="font-medium">
+                    {[patient.adresse_quartier, patient.adresse_commune, patient.adresse_departement]
+                      .filter(Boolean).join(", ")}
+                  </span>
+                </div>
+              )}
+              {patient.medecin_traitant && (
+                <div className="flex items-center gap-2 pt-1 border-t">
+                  <Stethoscope className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">Médecin traitant :</span>
+                  <span className="font-medium">{patient.medecin_traitant}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Prescriptions actives */}
         <Card>
           <CardHeader className="pb-3">
@@ -1197,6 +1243,65 @@ export function OverviewTab({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Niveau d&apos;études</span>
                 <span className="font-medium capitalize">{patient.niveau_etudes}</span>
+              </div>
+            )}
+            {/* Anthropométrie */}
+            {(patient.taille || patient.poids) && (
+              <div className="border-t pt-2 mt-2 space-y-1.5">
+                {patient.taille && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Taille</span>
+                    <span className="font-medium">{patient.taille} cm</span>
+                  </div>
+                )}
+                {patient.poids && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Poids</span>
+                    <span className="font-medium">{patient.poids} kg</span>
+                  </div>
+                )}
+                {patient.taille && patient.poids && (() => {
+                  const imc = Math.round((patient.poids / ((patient.taille / 100) ** 2)) * 10) / 10;
+                  const label = imc < 18.5 ? "Maigreur" : imc < 25 ? "Normal" : imc < 30 ? "Surpoids" : "Obésité";
+                  const color = imc < 18.5 ? "text-blue-600" : imc < 25 ? "text-green-600" : imc < 30 ? "text-amber-600" : "text-red-600";
+                  return (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">IMC</span>
+                      <span className="font-medium">{imc} <span className={color}>— {label}</span></span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            {/* Tuteur légal */}
+            {patient.tuteur_nom && (
+              <div className="border-t pt-2 mt-2 space-y-1.5">
+                <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-widest">Tuteur légal</p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Nom</span>
+                  <span className="font-medium">{patient.tuteur_nom}</span>
+                </div>
+                {patient.tuteur_lien && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Lien</span>
+                    <span className="font-medium">{patient.tuteur_lien}</span>
+                  </div>
+                )}
+                {patient.tuteur_tel && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Tél.</span>
+                    <a href={`tel:${patient.tuteur_tel}`} className="font-medium hover:text-medical-green transition-colors">
+                      {patient.tuteur_tel}
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Note médicale initiale */}
+            {patient.note_medicale_initiale && (
+              <div className="border-t pt-2 mt-2">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Note d&apos;admission</p>
+                <p className="text-xs italic text-muted-foreground leading-relaxed">{patient.note_medicale_initiale}</p>
               </div>
             )}
             <div className="flex items-center justify-between gap-2 border-t pt-2 mt-2">

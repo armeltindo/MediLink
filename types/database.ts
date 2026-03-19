@@ -68,6 +68,22 @@ export interface Database {
           assurance_organisme: string | null;
           assurance_numero: string | null;
           assurance_taux: number | null;
+          // Coordonnées
+          telephone: string | null;
+          email: string | null;
+          adresse_quartier: string | null;
+          adresse_commune: string | null;
+          adresse_departement: string | null;
+          // Anthropométrie
+          taille: number | null;
+          poids: number | null;
+          // Informations médicales initiales
+          medecin_traitant: string | null;
+          note_medicale_initiale: string | null;
+          // Tuteur légal (patients mineurs)
+          tuteur_nom: string | null;
+          tuteur_tel: string | null;
+          tuteur_lien: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;

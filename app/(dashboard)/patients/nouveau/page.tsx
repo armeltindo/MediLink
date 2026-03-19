@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2, UserPlus, Copy, Check, Camera, AlertTriangle,
   ChevronLeft, User2, HeartPulse, Phone, Shield, X,
+  MapPin, Mail, Stethoscope, Users,
 } from "lucide-react";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -42,6 +44,28 @@ const patientSchema = z.object({
   assurance_organisme: z.string().optional(),
   assurance_numero: z.string().optional(),
   assurance_taux: z.coerce.number().min(0).max(100).optional(),
+  // Coordonnées
+  telephone: z.string().optional(),
+  email: z.string().optional(),
+  adresse_quartier: z.string().optional(),
+  adresse_commune: z.string().optional(),
+  adresse_departement: z.string().optional(),
+  // Anthropométrie
+  taille: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null ? undefined : Number(v)),
+    z.number().min(30, "Min 30 cm").max(250, "Max 250 cm").optional()
+  ),
+  poids: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null ? undefined : Number(v)),
+    z.number().min(1, "Min 1 kg").max(500, "Max 500 kg").optional()
+  ),
+  // Informations médicales initiales
+  medecin_traitant: z.string().optional(),
+  note_medicale_initiale: z.string().optional(),
+  // Tuteur légal
+  tuteur_nom: z.string().optional(),
+  tuteur_tel: z.string().optional(),
+  tuteur_lien: z.string().optional(),
 });
 
 type PatientFormData = z.infer<typeof patientSchema>;
@@ -49,10 +73,12 @@ type PatientFormData = z.infer<typeof patientSchema>;
 // ─── Sections nav config ──────────────────────────────────────────────────────
 
 const SECTIONS = [
-  { id: "section-identite",   label: "Identité civile",       icon: User2,      required: true  },
-  { id: "section-biologie",   label: "Données biologiques",   icon: HeartPulse, required: false },
-  { id: "section-contact",    label: "Contact d'urgence",     icon: Phone,      required: false },
-  { id: "section-assurance",  label: "Assurance maladie",     icon: Shield,     required: false },
+  { id: "section-identite",    label: "Identité civile",        icon: User2,       required: true  },
+  { id: "section-coordonnees", label: "Coordonnées",            icon: MapPin,      required: false },
+  { id: "section-biologie",    label: "Données biologiques",    icon: HeartPulse,  required: false },
+  { id: "section-medical",     label: "Infos médicales",        icon: Stethoscope, required: false },
+  { id: "section-contact",     label: "Contact d'urgence",      icon: Users,       required: false },
+  { id: "section-assurance",   label: "Assurance maladie",      icon: Shield,      required: false },
 ];
 
 const BLOOD_BG: Record<string, string> = {
@@ -93,6 +119,8 @@ export default function NouveauPatientPage() {
   const watchedNom    = watch("nom");
   const watchedPrenom = watch("prenom");
   const watchedDOB    = watch("date_naissance");
+  const watchedTaille = watch("taille");
+  const watchedPoids  = watch("poids");
 
   // ─── Age en temps réel ─────────────────────────────────────────────────────
   const calculatedAge = useMemo(() => {
@@ -105,6 +133,22 @@ export default function NouveauPatientPage() {
     if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
     return age >= 0 && age <= 150 ? age : null;
   }, [watchedDOB]);
+
+  const isMinor = calculatedAge !== null && calculatedAge < 18;
+
+  // ─── IMC en temps réel ─────────────────────────────────────────────────────
+  const imc = useMemo(() => {
+    const t = Number(watchedTaille);
+    const p = Number(watchedPoids);
+    if (!t || !p || t < 30) return null;
+    return Math.round((p / ((t / 100) ** 2)) * 10) / 10;
+  }, [watchedTaille, watchedPoids]);
+
+  const imcLabel = imc === null ? null
+    : imc < 18.5 ? { text: "Maigreur", color: "text-blue-600" }
+    : imc < 25   ? { text: "Normal",   color: "text-green-600" }
+    : imc < 30   ? { text: "Surpoids", color: "text-amber-600" }
+    :              { text: "Obésité",  color: "text-red-600" };
 
   // ─── Détection doublons (debounce 600ms) ───────────────────────────────────
   useEffect(() => {
@@ -496,6 +540,53 @@ export default function NouveauPatientPage() {
               </CardContent>
             </Card>
 
+            {/* ═══ Coordonnées ════════════════════════════════════════════ */}
+            <Card id="section-coordonnees" className="scroll-mt-20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-500" />
+                  Coordonnées
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+
+                {/* Téléphone + Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telephone">
+                      <Phone className="h-3.5 w-3.5 inline mr-1 text-muted-foreground" />
+                      Téléphone
+                    </Label>
+                    <Input id="telephone" type="tel" {...register("telephone")} placeholder="+229 XX XX XX XX" autoComplete="tel" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">
+                      <Mail className="h-3.5 w-3.5 inline mr-1 text-muted-foreground" />
+                      Adresse email
+                    </Label>
+                    <Input id="email" type="email" {...register("email")} placeholder="patient@exemple.com" autoComplete="email" />
+                  </div>
+                </div>
+
+                {/* Adresse */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="adresse_quartier">Quartier</Label>
+                    <Input id="adresse_quartier" {...register("adresse_quartier")} placeholder="Agla, Cadjehoun…" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="adresse_commune">Commune / Arrondissement</Label>
+                    <Input id="adresse_commune" {...register("adresse_commune")} placeholder="Cotonou, Abomey-Calavi…" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="adresse_departement">Département</Label>
+                    <Input id="adresse_departement" {...register("adresse_departement")} placeholder="Littoral, Atlantique…" />
+                  </div>
+                </div>
+
+              </CardContent>
+            </Card>
+
             {/* ═══ Données biologiques ════════════════════════════════════ */}
             <Card id="section-biologie" className="scroll-mt-20">
               <CardHeader className="pb-4">
@@ -505,6 +596,29 @@ export default function NouveauPatientPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
+
+                {/* Taille + Poids + IMC */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="taille">Taille (cm)</Label>
+                      <Input id="taille" type="number" min="30" max="250" step="0.5" {...register("taille")} placeholder="170" />
+                      {errors.taille && <p className="text-xs text-destructive">{errors.taille.message as string}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="poids">Poids (kg)</Label>
+                      <Input id="poids" type="number" min="1" max="500" step="0.1" {...register("poids")} placeholder="70" />
+                      {errors.poids && <p className="text-xs text-destructive">{errors.poids.message as string}</p>}
+                    </div>
+                  </div>
+                  {imc !== null && imcLabel && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">IMC :</span>
+                      <span className="font-bold">{imc}</span>
+                      <span className={`font-medium ${imcLabel.color}`}>— {imcLabel.text}</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Groupe sanguin — pills */}
                 <div className="space-y-2">
@@ -574,11 +688,75 @@ export default function NouveauPatientPage() {
               </CardContent>
             </Card>
 
+            {/* ═══ Informations médicales ═════════════════════════════════ */}
+            <Card id="section-medical" className="scroll-mt-20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-medical-green" />
+                  Informations médicales initiales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+
+                {/* Médecin traitant */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="medecin_traitant">Médecin traitant habituel</Label>
+                  <Input id="medecin_traitant" {...register("medecin_traitant")} placeholder="Dr. Nom Prénom" />
+                </div>
+
+                {/* Note médicale initiale */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="note_medicale_initiale">Note médicale initiale</Label>
+                  <Textarea
+                    id="note_medicale_initiale"
+                    {...register("note_medicale_initiale")}
+                    rows={3}
+                    placeholder="Motif d'admission, observations préliminaires… (les antécédents complets seront saisis dans l'onglet Résumé)"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Note provisoire à l&apos;admission — les antécédents complets sont renseignés dans le dossier clinique.</p>
+                </div>
+
+                {/* Tuteur légal (mineurs) */}
+                {isMinor && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <p className="text-xs font-semibold text-amber-800">
+                        Patient mineur ({calculatedAge} ans) — Tuteur légal
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="tuteur_nom">Nom du tuteur *</Label>
+                        <Input id="tuteur_nom" {...register("tuteur_nom")} placeholder="Nom Prénom" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Lien de parenté</Label>
+                        <Select onValueChange={(v) => setValue("tuteur_lien", v)}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                          <SelectContent>
+                            {["Père","Mère","Grand-père","Grand-mère","Oncle","Tante","Frère","Sœur","Tuteur légal"].map((l) => (
+                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="tuteur_tel">Téléphone du tuteur</Label>
+                        <Input id="tuteur_tel" type="tel" {...register("tuteur_tel")} placeholder="+229 XX XX XX XX" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </CardContent>
+            </Card>
+
             {/* ═══ Contact d'urgence ══════════════════════════════════════ */}
             <Card id="section-contact" className="scroll-mt-20">
               <CardHeader className="pb-4">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-rose-500" />
+                  <Users className="h-4 w-4 text-rose-500" />
                   Contact d&apos;urgence
                 </CardTitle>
               </CardHeader>
