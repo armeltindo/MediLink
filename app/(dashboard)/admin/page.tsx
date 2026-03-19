@@ -197,7 +197,7 @@ export default function AdminPage() {
   async function exportCSV() {
     const res = await fetch("/api/admin/export/patients");
     if (!res.ok) return;
-    const data = await res.json();
+    const data = await res.json() as { npi: string; nom: string; prenom: string; date_naissance: string; sexe: string; groupe_sanguin?: string; rhesus?: string; nationalite?: string; created_at: string }[];
     if (!data) return;
     const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
     const rows = data.map((p) => [
