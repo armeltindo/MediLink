@@ -94,7 +94,7 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
         {today && isActive && (
           <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center gap-1.5">
             <Bell className="h-3 w-3 text-amber-500" />
-            <span className="text-xs font-semibold text-amber-700">Aujourd'hui</span>
+            <span className="text-xs font-semibold text-amber-700">Aujourd&apos;hui</span>
           </div>
         )}
 
