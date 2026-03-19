@@ -30,14 +30,27 @@ import { DocumentsTab } from "./tabs/documents";
 import { AuditTab } from "./tabs/audit";
 
 // ─── Tab count badge ──────────────────────────────────────────────────────────
-function TabCount({ value }: { value: number | undefined }) {
+function TabCount({ value, active }: { value: number | undefined; active?: boolean }) {
   if (!value) return null;
   return (
-    <span className="ml-0.5 bg-muted-foreground/20 text-muted-foreground rounded px-1 text-[10px] font-medium tabular-nums">
+    <span className={`ml-0.5 rounded px-1 text-[10px] font-medium tabular-nums ${
+      active
+        ? "bg-medical-green/15 text-medical-green"
+        : "bg-muted-foreground/20 text-muted-foreground"
+    }`}>
       {value > 99 ? "99+" : value}
     </span>
   );
 }
+
+// ─── Active tab trigger class helper ─────────────────────────────────────────
+const TRIGGER_CLS = [
+  "gap-1.5 text-xs shrink-0 relative transition-colors",
+  "data-[state=active]:text-medical-green",
+  "data-[state=active]:bg-medical-green/8",
+  "data-[state=active]:shadow-none",
+  "data-[state=active]:ring-1 data-[state=active]:ring-medical-green/25",
+].join(" ");
 
 // ─── Inner page (needs useSearchParams, wrapped in Suspense below) ────────────
 function PatientPageInner() {
@@ -287,55 +300,55 @@ function PatientPageInner() {
           {/* Horizontally scrollable tab bar */}
           <div className="overflow-x-auto -mx-1 px-1 pb-0.5 mb-5">
             <TabsList className="bg-card border shadow-sm h-auto gap-0.5 p-1 flex-nowrap min-w-max w-full">
-              <TabsTrigger value="overview" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="overview" className={TRIGGER_CLS}>
                 <LayoutDashboard className="h-3.5 w-3.5" />
                 Vue d&apos;ensemble
               </TabsTrigger>
 
-              <TabsTrigger value="consultations" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="consultations" className={TRIGGER_CLS}>
                 <Stethoscope className="h-3.5 w-3.5" />
                 Consultations
-                <TabCount value={consultations.length} />
+                <TabCount value={consultations.length} active={activeTab === "consultations"} />
               </TabsTrigger>
 
-              <TabsTrigger value="prescriptions" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="prescriptions" className={TRIGGER_CLS}>
                 <Pill className="h-3.5 w-3.5" />
                 Prescriptions
-                <TabCount value={prescriptions.length} />
+                <TabCount value={prescriptions.length} active={activeTab === "prescriptions"} />
               </TabsTrigger>
 
-              <TabsTrigger value="analyses" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="analyses" className={TRIGGER_CLS}>
                 <FlaskConical className="h-3.5 w-3.5" />
                 Analyses
-                <TabCount value={tabCounts.analyses} />
+                <TabCount value={tabCounts.analyses} active={activeTab === "analyses"} />
               </TabsTrigger>
 
-              <TabsTrigger value="vaccinations" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="vaccinations" className={TRIGGER_CLS}>
                 <Syringe className="h-3.5 w-3.5" />
                 Vaccins
-                <TabCount value={tabCounts.vaccinations} />
+                <TabCount value={tabCounts.vaccinations} active={activeTab === "vaccinations"} />
               </TabsTrigger>
 
-              <TabsTrigger value="hospitalisations" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="hospitalisations" className={TRIGGER_CLS}>
                 <Building2 className="h-3.5 w-3.5" />
                 Hospitalisations
-                <TabCount value={tabCounts.hospitalisations} />
+                <TabCount value={tabCounts.hospitalisations} active={activeTab === "hospitalisations"} />
               </TabsTrigger>
 
-              <TabsTrigger value="rendez-vous" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="rendez-vous" className={TRIGGER_CLS}>
                 <CalendarDays className="h-3.5 w-3.5" />
                 Rendez-vous
-                <TabCount value={tabCounts["rendez-vous"]} />
+                <TabCount value={tabCounts["rendez-vous"]} active={activeTab === "rendez-vous"} />
               </TabsTrigger>
 
-              <TabsTrigger value="documents" className="gap-1.5 text-xs shrink-0">
+              <TabsTrigger value="documents" className={TRIGGER_CLS}>
                 <FolderOpen className="h-3.5 w-3.5" />
                 Documents
-                <TabCount value={tabCounts.documents} />
+                <TabCount value={tabCounts.documents} active={activeTab === "documents"} />
               </TabsTrigger>
 
               {isAdmin && (
-                <TabsTrigger value="audit" className="gap-1.5 text-xs shrink-0">
+                <TabsTrigger value="audit" className={TRIGGER_CLS}>
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Audit
                 </TabsTrigger>
