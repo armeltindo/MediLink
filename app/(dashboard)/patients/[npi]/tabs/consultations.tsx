@@ -100,6 +100,9 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
     setExpanded(true);
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadConstantes(); }, []);
+
   const c0 = constantes[0];
   const vitals = c0 ? [
     { key: "ta_sys",      label: "TA",    value: c0.ta_sys && c0.ta_dia ? `${c0.ta_sys}/${c0.ta_dia}` : null, numVal: c0.ta_sys, unit: "mmHg" },

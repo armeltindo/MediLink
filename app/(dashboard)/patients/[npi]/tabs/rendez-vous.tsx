@@ -17,7 +17,7 @@ import {
   CalendarClock, Plus, Loader2, Calendar, Clock, RefreshCw,
   Stethoscope, Syringe, FlaskConical, Scissors, AlertCircle,
   CheckCircle2, XCircle, UserX, CalendarCheck, Hourglass,
-  MapPin, Bell,
+  MapPin, Bell, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // ─── Config ────────────────────────────────────────────────────────────────
@@ -75,6 +75,8 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
   canUpdate: boolean;
   onConfirmAction: (action: { id: string; statut: string; label: string }) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const statut = STATUT_CONFIG[rdv.statut] ?? { label: rdv.statut, badge: "bg-slate-100 text-slate-600 border-slate-200", border: "border-l-slate-300", icon: CalendarClock };
   const type   = TYPE_CONFIG[rdv.type_rdv]  ?? TYPE_CONFIG.autre;
   const TypeIcon   = type.icon;
@@ -98,7 +100,10 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
           </div>
         )}
 
-        <div className="flex items-start gap-4 p-4">
+        <div
+          className="flex items-start gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+          onClick={() => setExpanded(!expanded)}
+        >
           {/* Type icon */}
           <div className={`mt-0.5 p-2 rounded-lg bg-muted flex-shrink-0`}>
             <TypeIcon className={`h-4 w-4 ${type.color}`} />
@@ -141,18 +146,11 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
                 </span>
               )}
             </div>
-
-            {rdv.notes && (
-              <p className="text-xs text-muted-foreground mt-2 pt-2 border-t flex items-start gap-1.5">
-                <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                {rdv.notes}
-              </p>
-            )}
           </div>
 
           {/* Actions */}
           {canUpdate && (
-            <div className="flex flex-col gap-1 shrink-0">
+            <div className="flex flex-col gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               {rdv.statut === "planifie" && !isPast && (
                 <>
                   <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300 hover:bg-green-50"
@@ -185,7 +183,21 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
               )}
             </div>
           )}
+
+          <Button variant="ghost" size="icon-sm" className="shrink-0 mt-0.5">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
         </div>
+
+        {/* Expanded — notes + détails supplémentaires */}
+        {expanded && rdv.notes && (
+          <div className="border-t bg-muted/20 px-4 py-3">
+            <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+              <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              {rdv.notes}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

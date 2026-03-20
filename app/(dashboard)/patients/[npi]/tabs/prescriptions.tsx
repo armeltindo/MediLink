@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Plus, Loader2, Pill, Clock, CheckCircle, Info } from "lucide-react";
+import { AlertTriangle, Plus, Loader2, Pill, Clock, CheckCircle, Info, ChevronDown, ChevronUp } from "lucide-react";
 
 // ─── Base d'interactions médicamenteuses élargie ───────────────────────────
 // Couvre les médicaments les plus fréquents en Afrique sub-saharienne
@@ -427,6 +427,99 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
   );
 }
 
+// ─── Prescription Row (active) ────────────────────────────────────────────────
+
+function PrescriptionRow({ p, canDispense, onDispense }: {
+  p: Prescription;
+  canDispense: boolean;
+  onDispense: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const status = statusConfig[p.statut];
+
+  return (
+    <div className="rounded-lg border overflow-hidden">
+      <div
+        className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm">{p.medicament_dci}</span>
+            {p.medicament_commercial && (
+              <span className="text-xs text-muted-foreground">({p.medicament_commercial})</span>
+            )}
+            <span className="text-sm font-medium text-medical-green">{p.dosage}</span>
+            {p.forme && <Badge variant="outline" className="text-xs">{p.forme}</Badge>}
+            <Badge variant={status.variant}>{status.label}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">{p.posologie} — {p.duree}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {canDispense && p.statut === "prescrit" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onDispense(p.id); }}
+              className="shrink-0 border-medical-green text-medical-green hover:bg-medical-green-light"
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+              Dispenser
+            </Button>
+          )}
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t bg-muted/20 px-4 py-3 space-y-1.5">
+          {p.instructions && (
+            <p className="text-xs text-muted-foreground italic">{p.instructions}</p>
+          )}
+          <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
+            <span>Prescrit le {formatDate(p.date_prescription)}</span>
+            {p.date_expiration && <span>Expire le {formatDate(p.date_expiration)}</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── History Row ──────────────────────────────────────────────────────────────
+
+function HistoryRow({ p }: { p: Prescription }) {
+  const [expanded, setExpanded] = useState(false);
+  const status = statusConfig[p.statut];
+
+  return (
+    <div className="rounded-lg border overflow-hidden opacity-60">
+      <div
+        className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium">{p.medicament_dci} {p.dosage}</span>
+            <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{p.posologie} — {p.duree}</p>
+        </div>
+        {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+      </div>
+      {expanded && (
+        <div className="border-t bg-muted/20 px-4 py-3 space-y-1 text-xs text-muted-foreground">
+          {p.medicament_commercial && <p>Nom commercial : {p.medicament_commercial}</p>}
+          {p.forme && <p>Forme : {p.forme}</p>}
+          {p.instructions && <p className="italic">{p.instructions}</p>}
+          <p>Prescrit le {formatDate(p.date_prescription)}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Tab ─────────────────────────────────────────────────────────────────
+
 export function PrescriptionsTab({ patient, allergies }: PrescriptionsTabProps) {
   const [open, setOpen] = useState(false);
   const { user } = useUser();
@@ -543,41 +636,9 @@ export function PrescriptionsTab({ patient, allergies }: PrescriptionsTabProps) 
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {activePrescriptions.map((p) => {
-                const status = statusConfig[p.statut];
-                return (
-                  <div key={p.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{p.medicament_dci}</span>
-                        {p.medicament_commercial && (
-                          <span className="text-xs text-muted-foreground">({p.medicament_commercial})</span>
-                        )}
-                        <span className="text-sm font-medium text-medical-green">{p.dosage}</span>
-                        {p.forme && <Badge variant="outline" className="text-xs">{p.forme}</Badge>}
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">{p.posologie} — {p.duree}</p>
-                      {p.instructions && <p className="text-xs text-muted-foreground mt-0.5 italic">{p.instructions}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Prescrit le {formatDate(p.date_prescription)}
-                        {p.date_expiration && ` — Expire le ${formatDate(p.date_expiration)}`}
-                      </p>
-                    </div>
-                    {canDispense && p.statut === "prescrit" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDispense(p.id)}
-                        className="shrink-0 border-medical-green text-medical-green hover:bg-medical-green-light"
-                      >
-                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                        Dispenser
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
+              {activePrescriptions.map((p) => (
+                <PrescriptionRow key={p.id} p={p} canDispense={canDispense} onDispense={handleDispense} />
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -591,20 +652,9 @@ export function PrescriptionsTab({ patient, allergies }: PrescriptionsTabProps) 
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {historique.map((p) => {
-                const status = statusConfig[p.statut];
-                return (
-                  <div key={p.id} className="flex items-start gap-3 p-3 opacity-60">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{p.medicament_dci} {p.dosage}</span>
-                        <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{p.posologie} — {p.duree}</p>
-                    </div>
-                  </div>
-                );
-              })}
+              {historique.map((p) => (
+                <HistoryRow key={p.id} p={p} />
+              ))}
             </div>
           </CardContent>
         </Card>

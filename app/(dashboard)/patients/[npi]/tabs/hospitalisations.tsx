@@ -194,8 +194,8 @@ function HospitalisationCard({
   patient: Patient;
   user: { id: string; role: string } | null;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [showSoins, setShowSoins] = useState(false);
-  const [showResume, setShowResume] = useState(false);
   const [soins, setSoins] = useState<SoinInfirmier[]>([]);
   const [loadingSoins, setLoadingSoins] = useState(false);
   const [openSoin, setOpenSoin] = useState(false);
@@ -219,6 +219,10 @@ function HospitalisationCard({
     setLoadingSoins(false);
     setShowSoins(true);
   }
+
+  useEffect(() => {
+    if (expanded) loadSoins();
+  }, [expanded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSoinSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -251,8 +255,11 @@ function HospitalisationCard({
       isOngoing ? "border-l-green-400 bg-green-50/20" : "border-l-slate-300"
     }`}>
       <CardContent className="p-0">
-        {/* Header */}
-        <div className="flex items-start gap-3 p-4">
+        {/* Header — cliquable pour expand */}
+        <div
+          className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+          onClick={() => setExpanded(!expanded)}
+        >
           {/* Status icon */}
           <div className={`mt-0.5 p-1.5 rounded-md border shrink-0 ${
             isOngoing ? "bg-green-50 border-green-200" : "bg-muted border-border"
@@ -303,29 +310,32 @@ function HospitalisationCard({
                 </span>
               )}
             </div>
+          </div>
 
-            {/* Resume (collapsible) */}
+          <Button variant="ghost" size="icon-sm" className="shrink-0 mt-0.5">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Contenu expand : résumé + actions + soins */}
+        {expanded && (
+          <div className="border-t">
+            {/* Résumé du séjour */}
             {h.resume_sejour && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowResume(!showResume)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showResume ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              <div className="px-4 pt-3 pb-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5" />
                   Résumé du séjour
-                </button>
-                {showResume && (
-                  <p className="text-xs text-muted-foreground mt-1.5 p-2 rounded bg-muted/40 border leading-relaxed">
-                    {h.resume_sejour}
-                  </p>
-                )}
+                </p>
+                <p className="text-xs text-muted-foreground p-2 rounded bg-muted/40 border leading-relaxed">
+                  {h.resume_sejour}
+                </p>
               </div>
             )}
 
             {/* Action buttons */}
             {(isMedecin || canSortie) && (
-              <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <div className="px-4 pt-3 pb-0 flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                 {isMedecin && (
                   <CROperatoireDialog
                     hospitalisation={{ id: h.id, etablissement_id: h.etablissement_id }}
@@ -360,108 +370,108 @@ function HospitalisationCard({
                 )}
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Soins infirmiers section */}
-        <div className="border-t bg-muted/20">
-          <div className="flex items-center justify-between px-4 py-2">
-            <button
-              type="button"
-              onClick={loadSoins}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Soins infirmiers
-              {soins.length > 0 && !showSoins && (
-                <span className="ml-1 bg-blue-100 text-blue-700 rounded-full px-1.5 text-xs font-medium">{soins.length}</span>
-              )}
-              {loadingSoins
-                ? <Loader2 className="h-3 w-3 animate-spin ml-1" />
-                : showSoins ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-            {canAddSoin && (
-              <Dialog open={openSoin} onOpenChange={setOpenSoin}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 text-xs">
-                    <Plus className="h-3 w-3 mr-1" />Soin
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Soin infirmier — {patient.prenom} {patient.nom}</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSoinSubmit} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label>Type de soin *</Label>
-                      <Select value={soinForm.type_soin} onValueChange={(v) => setSoinForm({ ...soinForm, type_soin: v })}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pansement">Pansement</SelectItem>
-                          <SelectItem value="injection">Injection</SelectItem>
-                          <SelectItem value="perfusion">Perfusion / Perf IV</SelectItem>
-                          <SelectItem value="prise_constantes">Prise de constantes</SelectItem>
-                          <SelectItem value="administration_medicament">Administration médicament</SelectItem>
-                          <SelectItem value="nursing">Nursing (hygiène, mobilisation)</SelectItem>
-                          <SelectItem value="surveillance">Surveillance</SelectItem>
-                          <SelectItem value="autre">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Description *</Label>
-                      <Textarea value={soinForm.description} onChange={(e) => setSoinForm({ ...soinForm, description: e.target.value })}
-                        required rows={2} placeholder="Décrivez le soin effectué…" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Médicament administré (si applicable)</Label>
-                      <Input value={soinForm.medicament_administre} onChange={(e) => setSoinForm({ ...soinForm, medicament_administre: e.target.value })}
-                        placeholder="Ex: Paracétamol 1g IV, Morphine 5mg SC…" className="h-9" />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setOpenSoin(false)}>Annuler</Button>
-                      <Button type="submit" variant="medical" disabled={soinLoading || !soinForm.type_soin || !soinForm.description}>
-                        {soinLoading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Enregistrer
+            {/* Soins infirmiers section */}
+            <div className="bg-muted/20 mt-3">
+              <div className="flex items-center justify-between px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={loadSoins}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Soins infirmiers
+                  {soins.length > 0 && !showSoins && (
+                    <span className="ml-1 bg-blue-100 text-blue-700 rounded-full px-1.5 text-xs font-medium">{soins.length}</span>
+                  )}
+                  {loadingSoins
+                    ? <Loader2 className="h-3 w-3 animate-spin ml-1" />
+                    : showSoins ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+                {canAddSoin && (
+                  <Dialog open={openSoin} onOpenChange={setOpenSoin}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 text-xs">
+                        <Plus className="h-3 w-3 mr-1" />Soin
                       </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Soin infirmier — {patient.prenom} {patient.nom}</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleSoinSubmit} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label>Type de soin *</Label>
+                          <Select value={soinForm.type_soin} onValueChange={(v) => setSoinForm({ ...soinForm, type_soin: v })}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pansement">Pansement</SelectItem>
+                              <SelectItem value="injection">Injection</SelectItem>
+                              <SelectItem value="perfusion">Perfusion / Perf IV</SelectItem>
+                              <SelectItem value="prise_constantes">Prise de constantes</SelectItem>
+                              <SelectItem value="administration_medicament">Administration médicament</SelectItem>
+                              <SelectItem value="nursing">Nursing (hygiène, mobilisation)</SelectItem>
+                              <SelectItem value="surveillance">Surveillance</SelectItem>
+                              <SelectItem value="autre">Autre</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Description *</Label>
+                          <Textarea value={soinForm.description} onChange={(e) => setSoinForm({ ...soinForm, description: e.target.value })}
+                            required rows={2} placeholder="Décrivez le soin effectué…" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Médicament administré (si applicable)</Label>
+                          <Input value={soinForm.medicament_administre} onChange={(e) => setSoinForm({ ...soinForm, medicament_administre: e.target.value })}
+                            placeholder="Ex: Paracétamol 1g IV, Morphine 5mg SC…" className="h-9" />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" variant="outline" onClick={() => setOpenSoin(false)}>Annuler</Button>
+                          <Button type="submit" variant="medical" disabled={soinLoading || !soinForm.type_soin || !soinForm.description}>
+                            {soinLoading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Enregistrer
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
 
-          {/* Soins list */}
-          {showSoins && (
-            <div className="px-4 pb-3 space-y-2">
-              {soins.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-1">Aucun soin enregistré pour cette hospitalisation.</p>
-              ) : (
-                soins.map((s) => {
-                  const soinCfg = SOIN_TYPE_CONFIG[s.type_soin] ?? SOIN_TYPE_CONFIG.autre;
-                  return (
-                    <div key={s.id} className="rounded-lg border bg-background p-2.5 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${soinCfg.bg} ${soinCfg.color}`}>
-                          {soinCfg.label}
-                        </span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {formatDateTime(s.heure_administration || s.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-foreground/80">{s.description}</p>
-                      {s.medicament_administre && (
-                        <p className="flex items-center gap-1.5 text-xs text-blue-700">
-                          <Pill className="h-3 w-3 shrink-0" />
-                          {s.medicament_administre}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })
+              {/* Soins list */}
+              {showSoins && (
+                <div className="px-4 pb-3 space-y-2">
+                  {soins.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-1">Aucun soin enregistré pour cette hospitalisation.</p>
+                  ) : (
+                    soins.map((s) => {
+                      const soinCfg = SOIN_TYPE_CONFIG[s.type_soin] ?? SOIN_TYPE_CONFIG.autre;
+                      return (
+                        <div key={s.id} className="rounded-lg border bg-background p-2.5 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${soinCfg.bg} ${soinCfg.color}`}>
+                              {soinCfg.label}
+                            </span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {formatDateTime(s.heure_administration || s.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-foreground/80">{s.description}</p>
+                          {s.medicament_administre && (
+                            <p className="flex items-center gap-1.5 text-xs text-blue-700">
+                              <Pill className="h-3 w-3 shrink-0" />
+                              {s.medicament_administre}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

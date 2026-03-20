@@ -340,8 +340,11 @@ function AnalyseCard({
       setResultats(data || []);
       setLoading(false);
     }
-    setExpanded(!expanded);
+    setExpanded((prev) => !prev);
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { toggle(); }, []);
 
   async function submitResultat(e: FormEvent) {
     e.preventDefault();

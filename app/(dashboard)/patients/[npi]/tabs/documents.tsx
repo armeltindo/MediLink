@@ -157,7 +157,10 @@ function DocumentCard({ doc }: { doc: Document }) {
   return (
     <Card className={`overflow-hidden border-l-4 ${config.border} hover:shadow-md transition-shadow`}>
       <CardContent className="p-0">
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+          onClick={() => window.open(doc.url, "_blank")}
+        >
           {/* Type icon */}
           <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${config.bg} border`}>
             <Icon className={`h-5 w-5 ${config.color}`} />
@@ -178,7 +181,7 @@ function DocumentCard({ doc }: { doc: Document }) {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-1 shrink-0">
+          <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             {canPreview && (
               <Button variant="ghost" size="icon-sm" asChild title="Aperçu">
                 <a href={doc.url} target="_blank" rel="noopener noreferrer">

@@ -154,7 +154,7 @@ function PEVCoverageSection({ vaccinations }: { vaccinations: Vaccination[] }) {
 // ─── Vaccine Card ─────────────────────────────────────────────────────────────
 
 function VaccineCard({ vaccin, records }: { vaccin: string; records: Vaccination[] }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const latest = records[0];
   const status = STATUS_CONFIG[latest.statut] ?? STATUS_CONFIG.a_jour;
   const StatusIcon = status.icon;
