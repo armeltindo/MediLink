@@ -4,19 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { formatDate, formatAge } from "@/lib/utils";
 
-// ── Logo SVG partagé (fond clair) ───────────────────────────────────────────
-const LOGO_DARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
-  <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="#1E3A5F"/>
-  <path d="M20 8 L20 30" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-  <path d="M20 10 Q15 8 14 11 Q15 13 20 12 Z" fill="white"/>
-  <path d="M20 10 Q25 8 26 11 Q25 13 20 12 Z" fill="white"/>
-  <path d="M20 14 Q16.5 17 20 20 Q23.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  <path d="M20 14 Q23.5 17 20 20 Q16.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  <text x="42" y="24" font-family="Georgia,serif" font-weight="700" font-size="17" fill="#1E3A5F">MediLink</text>
-  <text x="43" y="35" font-family="Arial,sans-serif" font-size="8" fill="#64748B" letter-spacing="0.4">DME Unifié · Bénin</text>
-</svg>`;
-
-// ── Logo SVG fond sombre ─────────────────────────────────────────────────────
+// ── Logo SVG (fond sombre) ───────────────────────────────────────────────────
 const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
   <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="white" fill-opacity="0.2"/>
   <path d="M20 8 L20 30" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
