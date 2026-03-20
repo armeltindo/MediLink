@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertTriangle, CheckCircle, Clock, Stethoscope,
-  Pill, Activity, Loader2, Sparkles, Cigarette,
+  Pill, Activity, Loader2, Cigarette,
   Wine, Utensils, User2, Plus, Shield, Network, List,
   ArrowRight, Phone, Mail, MapPin,
 } from "lucide-react";
@@ -766,30 +766,12 @@ export function OverviewTab({
   habitudes, consultations, prescriptions, onRefresh, navigateToTab,
 }: OverviewTabProps) {
   const { user } = useUser();
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
   const [familyView, setFamilyView] = useState<"tree" | "list">("tree");
 
   const canWrite = user?.role === "medecin" || user?.role === "super_admin" || user?.role === "infirmier";
   const activePrescriptions = prescriptions.filter((p) => p.statut === "en_cours" || p.statut === "prescrit");
   const lastConsultation = consultations[0];
 
-  async function generateAISummary() {
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai/summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId: patient.id }),
-      });
-      const data = await res.json();
-      setAiSummary(data.summary);
-    } catch {
-      toast({ variant: "destructive", title: "Erreur IA", description: "Impossible de générer le résumé." });
-    } finally {
-      setAiLoading(false);
-    }
-  }
 
   const parentLabels: Record<string, string> = {
     pere: "Père", mere: "Mère", frere: "Frère", soeur: "Sœur",
@@ -801,47 +783,6 @@ export function OverviewTab({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Left column */}
       <div className="lg:col-span-2 space-y-4">
-
-        {/* AI Summary */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-medical-blue" />
-                Résumé clinique IA
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={generateAISummary} disabled={aiLoading}>
-                {aiLoading && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-                {aiLoading ? "Génération..." : "Générer résumé"}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {aiLoading ? (
-              <div className="space-y-2" aria-busy="true" aria-label="Génération du résumé en cours">
-                <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
-                <div className="h-3 bg-muted rounded animate-pulse w-full" />
-                <div className="h-3 bg-muted rounded animate-pulse w-5/6" />
-                <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Analyse du dossier en cours...
-                </p>
-              </div>
-            ) : aiSummary ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-xs text-blue-600 font-medium mb-2 uppercase tracking-wide">
-                  Résumé généré par IA — À valider par le médecin
-                </p>
-                <p className="text-sm whitespace-pre-wrap">{aiSummary}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Cliquez sur &quot;Générer résumé&quot; pour obtenir une synthèse clinique automatique basée sur les données du dossier.
-              </p>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Antécédents médicaux personnels */}
         <Card>
