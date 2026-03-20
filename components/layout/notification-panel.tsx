@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, AlertTriangle, Clock, FileText, Shield, Activity, X, CheckCheck } from "lucide-react";
+import { Bell, Clock, FileText, Shield, Activity, X, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { UserProfile } from "@/types";
