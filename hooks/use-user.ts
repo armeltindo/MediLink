@@ -1,9 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
 import { UserProfile } from "@/types";
-
-const isDemoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 export function useUser() {
   const [user, setUser] = useState<UserProfile | null>(null);

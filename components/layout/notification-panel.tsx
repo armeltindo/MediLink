@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Clock, FileText, Shield, Activity, X, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
 import { UserProfile } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -158,8 +158,6 @@ export function NotificationPanel({ user }: { user: UserProfile }) {
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-
-    const isDemoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
     async function fetchNotifs() {
       if (isDemoMode) {

@@ -4,6 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
+// True when either Supabase env var is missing — matches the middleware guard.
+export const isDemoMode = !supabaseUrl || !supabaseAnonKey;
+
 // Client-side Supabase client — uses createBrowserClient so the session is
 // stored in cookies (not localStorage), which the SSR middleware can read.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

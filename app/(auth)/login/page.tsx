@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +17,6 @@ export default function LoginPage() {
   const [password, setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]       = useState(false);
-
-  const isDemoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
