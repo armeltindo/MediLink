@@ -1,23 +1,11 @@
-import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/utils";
-import { Syringe } from "lucide-react";
+import { VaccinationsList, VaccinationRow } from "./vaccinations-client";
+import { Syringe, AlertTriangle, Clock, Users } from "lucide-react";
 
-interface VaccinationRow {
-  id: string;
-  vaccin: string;
-  date_vaccination: string;
-  dose: string | null;
-  lot: string | null;
-  prochain_rappel: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
-}
-
-function needsRappel(date: string | null): boolean {
-  if (!date) return false;
-  return new Date(date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000);
 }
 
 export default async function VaccinationsPage() {
@@ -27,57 +15,65 @@ export default async function VaccinationsPage() {
     const supabase = createServerSupabaseClient();
     const { data } = await supabase
       .from("vaccinations")
-      .select("id, vaccin, date_vaccination, dose, lot, prochain_rappel, patients(npi, nom, prenom)")
+      .select("id, vaccin, date_vaccination, dose, lot, voie, statut, prochain_rappel, patients(npi, nom, prenom)")
       .order("date_vaccination", { ascending: false })
-      .limit(100);
+      .limit(200);
     rows = (data as unknown as VaccinationRow[]) || [];
   }
 
+  const patientsUniques = new Set(rows.map((v) => v.patients?.npi).filter(Boolean)).size;
+  const rappelsUrgents = rows.filter((v) => {
+    const d = daysUntil(v.prochain_rappel);
+    return d !== null && d >= 0 && d <= 30;
+  }).length;
+  const enRetard = rows.filter((v) => {
+    const d = daysUntil(v.prochain_rappel);
+    return v.statut === "en_retard" || (d !== null && d < 0);
+  }).length;
+
+  const stats = [
+    { label: "Vaccinations",       value: rows.length,      icon: Syringe,       color: "text-blue-600",  bg: "bg-blue-50",   border: "border-blue-200" },
+    { label: "Patients vaccinés",  value: patientsUniques,  icon: Users,         color: "text-slate-600", bg: "bg-slate-50",  border: "border-slate-200" },
+    { label: "Rappels dans 30 j",  value: rappelsUrgents,   icon: Clock,         color: "text-amber-600", bg: "bg-amber-50",  border: "border-amber-200" },
+    { label: "Rappels en retard",  value: enRetard,         icon: AlertTriangle, color: "text-red-600",   bg: "bg-red-50",    border: "border-red-200" },
+  ];
+
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-slate-50/40">
       <Header title="Vaccinations" />
-      <div className="p-6 space-y-4">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} vaccination{rows.length > 1 ? "s" : ""} enregistrée{rows.length > 1 ? "s" : ""}
-        </p>
 
-        <div className="space-y-2">
-          {rows.map((v) => (
-            <Link key={v.id} href={v.patients ? `/patients/${v.patients.npi}` : "#"} className="block">
-              <Card className={`hover:bg-accent transition-colors cursor-pointer ${needsRappel(v.prochain_rappel) ? "border-orange-300" : ""}`}>
-                <CardContent className="p-4 flex items-start gap-4">
-                  <div className="h-9 w-9 rounded-full bg-medical-green/10 flex items-center justify-center shrink-0">
-                    <Syringe className="h-4 w-4 text-medical-green" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{v.vaccin}</span>
-                      {v.dose && <span className="text-xs text-muted-foreground">Dose {v.dose}</span>}
-                      {needsRappel(v.prochain_rappel) && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-medium">Rappel à prévoir</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Patient : {v.patients ? `${v.patients.prenom} ${v.patients.nom}` : "—"}
-                      {v.lot && ` · Lot ${v.lot}`}
-                    </p>
-                    {v.prochain_rappel && (
-                      <p className="text-xs text-muted-foreground">Prochain rappel : {formatDate(v.prochain_rappel)}</p>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{formatDate(v.date_vaccination)}</span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-
-          {rows.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <Syringe className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Aucune vaccination enregistrée</p>
-            </div>
-          )}
+      {/* Identity strip */}
+      <div className="bg-white border-b px-6 py-3 flex items-center gap-3">
+        <div className="p-1.5 rounded-lg bg-medical-green/10 border border-medical-green/20">
+          <Syringe className="h-4 w-4 text-medical-green" />
         </div>
+        <div>
+          <p className="text-sm font-medium leading-none">Registre des vaccinations</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {rows.length} vaccination{rows.length !== 1 ? "s" : ""} · {patientsUniques} patient{patientsUniques !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Stats */}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {stats.map(({ label, value, icon: Icon, color, bg, border }) => (
+              <div key={label} className={`rounded-xl border ${border} ${bg} px-4 py-3 flex items-center gap-3`}>
+                <div className={`p-2 rounded-lg bg-white border ${border} shrink-0`}>
+                  <Icon className={`h-4 w-4 ${color}`} />
+                </div>
+                <div>
+                  <p className={`text-xl font-bold leading-none ${color}`}>{value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <VaccinationsList rows={rows} />
       </div>
     </div>
   );
