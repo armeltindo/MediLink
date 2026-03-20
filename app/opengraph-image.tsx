@@ -16,27 +16,65 @@ export default function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0D7A5F 0%, #1E293B 100%)",
+          background: "linear-gradient(135deg, #0f1f38 0%, #1E3A5F 50%, #0f2a1e 100%)",
           fontFamily: "Georgia, serif",
           padding: 80,
         }}
       >
-        {/* Icon card */}
+        {/* Icon card — bouclier */}
         <div
           style={{
-            background: "white",
-            borderRadius: 28,
-            width: 128,
-            height: 128,
+            background: "#F1F5F9",
+            borderRadius: 32,
+            width: 148,
+            height: 148,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 40,
-            boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            marginBottom: 44,
+            boxShadow: "0 28px 72px rgba(0,0,0,0.45)",
           }}
         >
-          <svg viewBox="0 0 24 24" width="84" height="84" fill="#0D7A5F">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          <svg viewBox="0 0 148 148" width="148" height="148">
+            {/* Bouclier */}
+            <path
+              d="M74 14 L122 34 L122 82 Q122 116 74 134 Q26 116 26 82 L26 34 Z"
+              fill="#1E3A5F"
+            />
+            {/* ECG */}
+            <path
+              d="M30 82 L40 82 L46 66 L52 98 L58 72 L64 82 L78 82"
+              stroke="#60A5FA"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            {/* Réseau */}
+            <path d="M88 58 L100 50" stroke="#60A5FA" strokeWidth="1.2" fill="none" strokeOpacity="0.6"/>
+            <path d="M100 50 L110 60" stroke="#60A5FA" strokeWidth="1.2" fill="none" strokeOpacity="0.6"/>
+            <path d="M110 60 L104 72" stroke="#60A5FA" strokeWidth="1.2" fill="none" strokeOpacity="0.6"/>
+            <path d="M88 58 L104 72" stroke="#60A5FA" strokeWidth="1.2" fill="none" strokeOpacity="0.5"/>
+            <circle cx="88"  cy="58" r="3.2" fill="#60A5FA" fillOpacity="0.85"/>
+            <circle cx="100" cy="50" r="2.8" fill="#60A5FA" fillOpacity="0.75"/>
+            <circle cx="110" cy="60" r="2.8" fill="#60A5FA" fillOpacity="0.75"/>
+            <circle cx="104" cy="72" r="3.2" fill="#60A5FA" fillOpacity="0.85"/>
+            {/* Bâton */}
+            <path d="M74 36 L74 112" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+            {/* Ailettes */}
+            <path d="M74 42 Q61 36 58 42 Q61 48 74 46 Z" fill="white" fillOpacity="0.95"/>
+            <path d="M74 42 Q87 36 90 42 Q87 48 74 46 Z" fill="white" fillOpacity="0.95"/>
+            {/* Serpent gauche */}
+            <path
+              d="M74 52 Q66 58 74 66 Q82 74 74 82 Q66 90 74 98 Q79 104 74 110"
+              stroke="white" strokeWidth="2.4" strokeLinecap="round" fill="none"
+            />
+            {/* Serpent droit */}
+            <path
+              d="M74 52 Q82 58 74 66 Q66 74 74 82 Q82 90 74 98 Q69 104 74 110"
+              stroke="white" strokeWidth="2.4" strokeLinecap="round" fill="none"
+            />
+            <circle cx="74" cy="111" r="3" fill="white" fillOpacity="0.8"/>
           </svg>
         </div>
 
@@ -57,7 +95,7 @@ export default function OgImage() {
         <div
           style={{
             fontSize: 34,
-            color: "rgba(255,255,255,0.75)",
+            color: "rgba(255,255,255,0.70)",
             marginBottom: 56,
             fontFamily: "system-ui, sans-serif",
             fontWeight: 400,
@@ -73,8 +111,8 @@ export default function OgImage() {
               <div
                 key={tag}
                 style={{
-                  background: "rgba(255,255,255,0.15)",
-                  border: "1px solid rgba(255,255,255,0.3)",
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.25)",
                   borderRadius: 50,
                   padding: "10px 28px",
                   color: "white",

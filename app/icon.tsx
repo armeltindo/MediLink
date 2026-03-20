@@ -14,12 +14,45 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0D7A5F",
+          background: "#1E3A5F",
           borderRadius: 7,
         }}
       >
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        <svg viewBox="0 0 32 32" width="26" height="26">
+          {/* Bouclier */}
+          <path
+            d="M16 3 L27 7.5 L27 16.5 Q27 24 16 29 Q5 24 5 16.5 L5 7.5 Z"
+            fill="white"
+            fillOpacity="0.15"
+          />
+          {/* Bâton */}
+          <path
+            d="M16 8 L16 25"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+          />
+          {/* Ailette gauche */}
+          <path d="M16 9.5 Q11 7 10 10.5 Q11 13 16 11.5 Z" fill="white" />
+          {/* Ailette droite */}
+          <path d="M16 9.5 Q21 7 22 10.5 Q21 13 16 11.5 Z" fill="white" />
+          {/* Serpent gauche */}
+          <path
+            d="M16 13 Q12.5 15.5 16 18 Q19.5 20.5 16 23"
+            stroke="white"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            fill="none"
+          />
+          {/* Serpent droit */}
+          <path
+            d="M16 13 Q19.5 15.5 16 18 Q12.5 20.5 16 23"
+            stroke="white"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            fill="none"
+          />
         </svg>
       </div>
     ),

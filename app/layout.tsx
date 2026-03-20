@@ -29,11 +29,19 @@ export const metadata: Metadata = {
     title: "MediLink — DME Unifié Bénin",
     description: "Système DME unifié pour les établissements de santé au Bénin.",
   },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/apple-icon",
+    shortcut: "/favicon.svg",
+  },
   robots: {
     index: false,
     follow: false,
   },
-  themeColor: "#0D7A5F",
+  themeColor: "#1E3A5F",
 };
 
 export default function RootLayout({
