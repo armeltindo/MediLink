@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Patient, Allergie, Antecedent, AntecedentFamilial, HabitudesVie, Consultation, Prescription } from "@/types";
@@ -43,6 +43,50 @@ function TabCount({ value, active }: { value: number | undefined; active?: boole
   );
 }
 
+// ─── Valid tabs ───────────────────────────────────────────────────────────────
+const VALID_TABS = [
+  "overview", "consultations", "prescriptions", "analyses",
+  "vaccinations", "hospitalisations", "rendez-vous", "documents", "audit",
+] as const;
+type TabId = typeof VALID_TABS[number];
+
+// ─── Loading skeleton (shared by page + Suspense fallback) ────────────────────
+function PageSkeleton() {
+  return (
+    <div className="flex flex-col min-h-full bg-muted/20">
+      <Header />
+      <div className="px-6 py-2.5 border-b bg-card flex items-center gap-2">
+        <Skeleton className="h-4 w-4 rounded" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+      <div className="bg-card border-b px-6 py-4 shadow-sm">
+        <div className="flex gap-5 items-start">
+          <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-8 w-24 rounded-md" />
+          </div>
+        </div>
+      </div>
+      <div className="p-6 space-y-4">
+        <div className="overflow-x-auto">
+          <div className="flex gap-1 min-w-max">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-28 rounded-md shrink-0" />
+            ))}
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Active tab trigger class helper ─────────────────────────────────────────
 const TRIGGER_CLS = [
   "gap-1.5 text-xs shrink-0 relative transition-colors",
@@ -59,7 +103,12 @@ function PatientPageInner() {
   const searchParams = useSearchParams();
   const { user } = useUser();
 
-  const activeTab = searchParams.get("tab") || "overview";
+  const rawTab = searchParams.get("tab") ?? "overview";
+  const activeTab: TabId = (VALID_TABS as readonly string[]).includes(rawTab)
+    ? (rawTab as TabId)
+    : "overview";
+
+  const auditLoggedRef = useRef(false);
 
   const [patient, setPatient]                 = useState<Patient | null>(null);
   const [btgOpen, setBtgOpen]                 = useState(false);
@@ -104,15 +153,18 @@ function PatientPageInner() {
 
     setPatient(patientData);
 
-    // Log audit view
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      await supabase.from("audit_logs").insert({
-        user_id: authUser.id,
-        patient_id: patientData.id,
-        action: "view_patient",
-        timestamp: new Date().toISOString(),
-      });
+    // Log audit view — only on initial load, not on subsequent refreshes
+    if (!auditLoggedRef.current) {
+      auditLoggedRef.current = true;
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("audit_logs").insert({
+          user_id: authUser.id,
+          patient_id: patientData.id,
+          action: "view_patient",
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
 
     // Load data needed for OverviewTab + patient header upfront.
@@ -156,9 +208,13 @@ function PatientPageInner() {
   }
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  function handleExportPDF()  { if (patient) window.open(`/api/export-pdf?patientId=${patient.id}`, "_blank"); }
-  function handleShowQR()     { if (patient) window.open(`/api/qr?npi=${patient.npi}`, "_blank"); }
-  function handleLettreRef()  { if (patient) window.open(`/api/lettre-reference?patientId=${patient.id}`, "_blank"); }
+  function handleOpenAPI(url: string) {
+    const win = window.open(url, "_blank");
+    if (!win) toast({ variant: "destructive", title: "Erreur", description: "Impossible d'ouvrir la fenêtre. Vérifiez les blocages de popups." });
+  }
+  function handleExportPDF() { if (patient) handleOpenAPI(`/api/export-pdf?patientId=${patient.id}`); }
+  function handleShowQR()    { if (patient) handleOpenAPI(`/api/qr?npi=${patient.npi}`); }
+  function handleLettreRef() { if (patient) handleOpenAPI(`/api/lettre-reference?patientId=${patient.id}`); }
 
   async function handleBreakGlass() {
     if (!patient || !btgReason.trim() || !user) return;
@@ -182,41 +238,7 @@ function PatientPageInner() {
   }
 
   // ─── Loading skeleton ──────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex flex-col min-h-full bg-muted/20">
-        <Header />
-        <div className="px-6 py-2.5 border-b bg-card flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <div className="bg-card border-b px-6 py-4 shadow-sm">
-          <div className="flex gap-5 items-start">
-            <Skeleton className="h-20 w-20 rounded-full shrink-0" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-7 w-56" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-96" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-8 w-24 rounded-md" />
-              <Skeleton className="h-8 w-24 rounded-md" />
-            </div>
-          </div>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="overflow-x-auto">
-            <div className="flex gap-1 min-w-max">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-28 rounded-md shrink-0" />
-              ))}
-            </div>
-          </div>
-          <Skeleton className="h-64 w-full rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton />;
 
   if (!patient) return null;
 
@@ -297,8 +319,11 @@ function PatientPageInner() {
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
       <div className="flex-1 p-4 sm:p-6 pt-4 sm:pt-5">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          {/* Horizontally scrollable tab bar */}
-          <div className="overflow-x-auto -mx-1 px-1 pb-0.5 mb-5">
+          {/* Horizontally scrollable tab bar with fade indicators */}
+          <div className="relative mb-5">
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-muted/20 to-transparent z-10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-muted/20 to-transparent z-10" />
+          <div className="overflow-x-auto -mx-1 px-1 pb-0.5">
             <TabsList className="bg-card border shadow-sm h-auto gap-0.5 p-1 flex-nowrap min-w-max w-full">
               <TabsTrigger value="overview" className={TRIGGER_CLS}>
                 <LayoutDashboard className="h-3.5 w-3.5" />
@@ -354,6 +379,7 @@ function PatientPageInner() {
                 </TabsTrigger>
               )}
             </TabsList>
+          </div>
           </div>
 
           <TabsContent value="overview">
@@ -420,7 +446,7 @@ function PatientPageInner() {
 // ─── Export wrapped in Suspense (required for useSearchParams in Next.js 14+) ─
 export default function PatientPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageSkeleton />}>
       <PatientPageInner />
     </Suspense>
   );
