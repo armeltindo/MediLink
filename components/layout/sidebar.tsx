@@ -141,11 +141,12 @@ export function Sidebar() {
                 <nav className="space-y-0.5">
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
+                    const href = item.href as string;
                     const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/dashboard" &&
-                        item.href !== "/patients/nouveau" &&
-                        pathname.startsWith(item.href + "/"));
+                      pathname === href ||
+                      (href !== "/dashboard" &&
+                        href !== "/patients/nouveau" &&
+                        pathname.startsWith(href + "/"));
                     const alertCount = ALERT_HREFS.has(item.href) ? getAlertBadge(item.href) : 0;
 
                     return (
