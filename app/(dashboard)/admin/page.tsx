@@ -19,12 +19,30 @@ import {
   Users, Stethoscope, BedDouble, Building2,
   Download, TrendingUp, Activity, UserPlus, Shield,
   MapPin, Phone, Mail, Loader2, UserCheck, UserX, Syringe, Settings2, ExternalLink,
+  Search, BarChart2,
 } from "lucide-react";
 import { getRoleBadge } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 
 const COLORS = ["#0D7A5F", "#0EA5E9", "#F59E0B", "#DC2626", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
+
+const ROLE_AVATAR: Record<string, string> = {
+  super_admin: "bg-rose-100 text-rose-600",
+  admin_etablissement: "bg-purple-100 text-purple-600",
+  medecin: "bg-emerald-100 text-emerald-700",
+  infirmier: "bg-blue-100 text-blue-600",
+  pharmacien: "bg-amber-100 text-amber-700",
+  laborantin: "bg-teal-100 text-teal-600",
+};
+
+const TYPE_ETAB_BADGE: Record<string, string> = {
+  CHU: "bg-rose-100 text-rose-700",
+  CSP: "bg-emerald-100 text-emerald-700",
+  hopital: "bg-blue-100 text-blue-700",
+  clinique: "bg-purple-100 text-purple-700",
+  cabinet: "bg-amber-100 text-amber-700",
+};
 
 interface UserRow {
   id: string;
@@ -231,132 +249,190 @@ export default function AdminPage() {
     !userSearch || `${u.prenom} ${u.nom} ${u.role} ${u.specialite || ""}`.toLowerCase().includes(userSearch.toLowerCase())
   );
 
+  const kpiCards = [
+    { title: "Patients enregistrés", value: stats.totalPatients, icon: Users, iconBg: "bg-emerald-100", iconColor: "text-emerald-600", borderColor: "border-l-emerald-500" },
+    { title: "Consultations", value: stats.totalConsultations, icon: Stethoscope, iconBg: "bg-blue-100", iconColor: "text-blue-600", borderColor: "border-l-blue-500" },
+    { title: "Hospitalisations", value: stats.totalHospitalisations, icon: BedDouble, iconBg: "bg-purple-100", iconColor: "text-purple-600", borderColor: "border-l-purple-500" },
+    { title: "En cours", value: stats.hospitalisationsEnCours, icon: BedDouble, iconBg: "bg-red-100", iconColor: "text-red-500", borderColor: "border-l-red-500" },
+    { title: "Établissements", value: stats.totalEtablissements, icon: Building2, iconBg: "bg-orange-100", iconColor: "text-orange-600", borderColor: "border-l-orange-500" },
+  ];
+
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-slate-50/40">
       <Header title="Administration" />
-      <div className="p-6 space-y-6">
+
+      {/* ── Admin identity strip ── */}
+      <div className="bg-white border-b px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg bg-slate-100 border border-slate-200">
+            <Shield className="h-4 w-4 text-slate-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium leading-none">
+              {user?.role === "super_admin" ? "Super Administrateur" : "Administrateur établissement"}
+              {(user?.prenom || user?.nom) && (
+                <span className="text-muted-foreground font-normal"> — {user?.prenom} {user?.nom}</span>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Gestion des utilisateurs, établissements et statistiques</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 text-xs h-8">
+          <Download className="h-3.5 w-3.5" />
+          Exporter CSV patients
+        </Button>
+      </div>
+
+      <div className="p-6 space-y-5">
         <Tabs defaultValue="stats">
-          <TabsList>
-            <TabsTrigger value="stats">Statistiques</TabsTrigger>
-            <TabsTrigger value="users" onClick={() => { if (users.length === 0) loadUsers(); }}>
+          <TabsList className="h-10 gap-0.5 bg-slate-100/80">
+            <TabsTrigger value="stats" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
+              <BarChart2 className="h-3.5 w-3.5" />
+              Statistiques
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-1.5 text-sm data-[state=active]:text-medical-green" onClick={() => { if (users.length === 0) loadUsers(); }}>
+              <Users className="h-3.5 w-3.5" />
               Utilisateurs
             </TabsTrigger>
-            <TabsTrigger value="etablissements">Établissements</TabsTrigger>
-            <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            <TabsTrigger value="etablissements" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
+              <Building2 className="h-3.5 w-3.5" />
+              Établissements
+            </TabsTrigger>
+            <TabsTrigger value="configuration" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
+              <Settings2 className="h-3.5 w-3.5" />
+              Configuration
+            </TabsTrigger>
           </TabsList>
 
           {/* ── STATS TAB ── */}
-          <TabsContent value="stats" className="space-y-6 mt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-serif font-bold">Statistiques établissement</h2>
-              <Button variant="outline" onClick={exportCSV}>
-                <Download className="h-4 w-4 mr-2" />
-                Exporter CSV patients
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              {[
-                { title: "Patients enregistrés", value: stats.totalPatients, icon: Users, color: "text-medical-green" },
-                { title: "Consultations totales", value: stats.totalConsultations, icon: Stethoscope, color: "text-medical-blue" },
-                { title: "Hospitalisations totales", value: stats.totalHospitalisations, icon: BedDouble, color: "text-purple-600" },
-                { title: "Hospitalisations en cours", value: stats.hospitalisationsEnCours, icon: BedDouble, color: "text-red-500" },
-                { title: "Établissements", value: stats.totalEtablissements, icon: Building2, color: "text-orange-600" },
-              ].map(({ title, value, icon: Icon, color }) => (
-                <Card key={title}>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {loading ? <Skeleton className="h-8 w-16 mb-1" /> : <p className="text-2xl font-bold">{value.toLocaleString()}</p>}
-                        <p className="text-sm text-muted-foreground">{title}</p>
+          <TabsContent value="stats" className="space-y-5 mt-5">
+            {/* KPI cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {kpiCards.map(({ title, value, icon: Icon, iconBg, iconColor, borderColor }) => (
+                <Card key={title} className={`border-l-4 ${borderColor} shadow-sm`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        {loading
+                          ? <Skeleton className="h-7 w-14 mb-1" />
+                          : <p className="text-2xl font-bold tracking-tight">{value.toLocaleString()}</p>
+                        }
+                        <p className="text-xs text-muted-foreground leading-snug mt-0.5">{title}</p>
                       </div>
-                      <Icon className={`h-8 w-8 ${color}`} />
+                      <div className={`p-2 rounded-lg shrink-0 ${iconBg}`}>
+                        <Icon className={`h-4 w-4 ${iconColor}`} />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-medical-green" />
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2 pt-4 px-5">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <div className="p-1 rounded bg-emerald-100"><TrendingUp className="h-3.5 w-3.5 text-emerald-600" /></div>
                     Top 10 diagnostics CIM-10
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {loading ? <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
-                  : stats.topDiagnostics.length === 0 ? <p className="text-sm text-muted-foreground">Aucune donnée disponible</p>
-                  : (
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={stats.topDiagnostics} layout="vertical" margin={{ left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="code" width={60} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#0D7A5F" name="Consultations" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
+                <CardContent className="px-5 pb-4">
+                  {loading
+                    ? <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-7 w-full" />)}</div>
+                    : stats.topDiagnostics.length === 0
+                      ? <p className="text-sm text-muted-foreground py-8 text-center">Aucune donnée disponible</p>
+                      : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={stats.topDiagnostics} layout="vertical" margin={{ left: 20, right: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis type="number" tick={{ fontSize: 11 }} />
+                            <YAxis type="category" dataKey="code" width={60} tick={{ fontSize: 11 }} />
+                            <Tooltip contentStyle={{ fontSize: 12 }} />
+                            <Bar dataKey="count" fill="#0D7A5F" name="Consultations" radius={[0, 3, 3, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )
+                  }
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-medical-blue" />
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2 pt-4 px-5">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <div className="p-1 rounded bg-blue-100"><Activity className="h-3.5 w-3.5 text-blue-600" /></div>
                     Répartition par sexe
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {loading ? <Skeleton className="h-48 w-full" /> : (
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie data={stats.repartitionSexe} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                          {stats.repartitionSexe.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                        </Pie>
-                        <Legend /><Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
+                <CardContent className="px-5 pb-4">
+                  {loading
+                    ? <Skeleton className="h-48 w-full" />
+                    : (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={stats.repartitionSexe}
+                            cx="50%" cy="50%"
+                            innerRadius={50} outerRadius={80}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                            labelLine={false}
+                          >
+                            {stats.repartitionSexe.map((_, index) => (
+                              <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Tooltip contentStyle={{ fontSize: 12 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )
+                  }
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-4 w-4 text-purple-600" />
+              <Card className="lg:col-span-2 shadow-sm">
+                <CardHeader className="pb-2 pt-4 px-5">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <div className="p-1 rounded bg-purple-100"><Users className="h-3.5 w-3.5 text-purple-600" /></div>
                     Activité par médecin (consultations)
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {loading ? <div className="space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
-                  : stats.activiteMedecins.length === 0 ? <p className="text-sm text-muted-foreground">Aucune donnée disponible</p>
-                  : (
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={stats.activiteMedecins} layout="vertical" margin={{ left: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="nom" width={120} tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Bar dataKey="consultations" fill="#0EA5E9" name="Consultations" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
+                <CardContent className="px-5 pb-4">
+                  {loading
+                    ? <div className="space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-7 w-full" />)}</div>
+                    : stats.activiteMedecins.length === 0
+                      ? <p className="text-sm text-muted-foreground py-8 text-center">Aucune donnée disponible</p>
+                      : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={stats.activiteMedecins} layout="vertical" margin={{ left: 10, right: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis type="number" tick={{ fontSize: 11 }} />
+                            <YAxis type="category" dataKey="nom" width={130} tick={{ fontSize: 10 }} />
+                            <Tooltip contentStyle={{ fontSize: 12 }} />
+                            <Bar dataKey="consultations" fill="#0EA5E9" name="Consultations" radius={[0, 3, 3, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )
+                  }
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
           {/* ── USERS TAB ── */}
-          <TabsContent value="users" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-serif font-bold">Gestion des utilisateurs</h2>
+          <TabsContent value="users" className="space-y-4 mt-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Gestion des utilisateurs</h2>
+                {!usersLoading && users.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{users.length} profil{users.length > 1 ? "s" : ""} enregistré{users.length > 1 ? "s" : ""}</p>
+                )}
+              </div>
               <Dialog open={newUserOpen} onOpenChange={setNewUserOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="medical">
-                    <UserPlus className="h-4 w-4 mr-2" />
+                  <Button variant="medical" size="sm" className="gap-1.5">
+                    <UserPlus className="h-4 w-4" />
                     Ajouter un profil
                   </Button>
                 </DialogTrigger>
@@ -440,59 +516,60 @@ export default function AdminPage() {
               </Dialog>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-md">
+            {/* Search bar */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Rechercher par nom, rôle, spécialité..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="pl-4"
+                className="pl-9"
               />
             </div>
 
             {usersLoading ? (
-              <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+              <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-[60px] w-full rounded-lg" />)}</div>
             ) : (
-              <Card>
+              <Card className="shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                   <div className="divide-y">
                     {filteredUsers.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <Shield className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                        <p>Aucun utilisateur trouvé</p>
+                      <div className="text-center py-14 text-muted-foreground">
+                        <Shield className="h-9 w-9 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">Aucun utilisateur trouvé</p>
                       </div>
                     ) : filteredUsers.map((u) => {
                       const roleBadge = getRoleBadge(u.role);
                       const isInactive = !!u.deleted_at;
+                      const avatarClass = ROLE_AVATAR[u.role] ?? "bg-slate-100 text-slate-600";
                       return (
-                        <div key={u.id} className={`flex items-center gap-4 px-4 py-3 ${isInactive ? "opacity-50" : ""}`}>
-                          <div className="h-10 w-10 rounded-full bg-medical-green/10 flex items-center justify-center shrink-0">
-                            <span className="text-medical-green font-semibold text-sm">
-                              {u.prenom?.[0]}{u.nom?.[0]}
-                            </span>
+                        <div key={u.id} className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50/60 ${isInactive ? "opacity-50" : ""}`}>
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${avatarClass}`}>
+                            {u.prenom?.[0]?.toUpperCase()}{u.nom?.[0]?.toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium text-sm">{u.titre ? `${u.titre} ` : ""}{u.prenom} {u.nom}</span>
-                              <Badge className={`text-xs px-1.5 py-0 ${roleBadge.color}`} variant="outline">
+                              <Badge className={`text-xs px-1.5 py-0 h-4 ${roleBadge.color}`} variant="outline">
                                 {roleBadge.label}
                               </Badge>
-                              {isInactive && <Badge variant="danger" className="text-xs">Désactivé</Badge>}
+                              {isInactive && <Badge variant="danger" className="text-xs h-4">Désactivé</Badge>}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {u.specialite && `${u.specialite} — `}
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {u.specialite && <span className="font-medium text-foreground/60">{u.specialite} — </span>}
                               {(u.etablissements as { nom: string } | null)?.nom || "Aucun établissement"}
-                              {u.numero_ordre && ` — N° ${u.numero_ordre}`}
+                              {u.numero_ordre && ` · N° ${u.numero_ordre}`}
                             </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleToggleUser(u.id, u.deleted_at)}
-                            className={isInactive ? "text-green-600 hover:text-green-700" : "text-red-500 hover:text-red-600"}
+                            className={`h-8 px-2.5 text-xs gap-1.5 ${isInactive ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" : "text-red-500 hover:bg-red-50 hover:text-red-600"}`}
                             title={isInactive ? "Réactiver le compte" : "Désactiver le compte"}
                           >
-                            {isInactive ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
+                            {isInactive ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
+                            <span className="hidden sm:inline">{isInactive ? "Réactiver" : "Désactiver"}</span>
                           </Button>
                         </div>
                       );
@@ -504,14 +581,19 @@ export default function AdminPage() {
           </TabsContent>
 
           {/* ── ETABLISSEMENTS TAB ── */}
-          <TabsContent value="etablissements" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-serif font-bold">Établissements de santé</h2>
+          <TabsContent value="etablissements" className="space-y-4 mt-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Établissements de santé</h2>
+                {etabRows.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{etabRows.length} établissement{etabRows.length > 1 ? "s" : ""}</p>
+                )}
+              </div>
               {user?.role === "super_admin" && (
                 <Dialog open={newEtabOpen} onOpenChange={setNewEtabOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="medical">
-                      <Building2 className="h-4 w-4 mr-2" />
+                    <Button variant="medical" size="sm" className="gap-1.5">
+                      <Building2 className="h-4 w-4" />
                       Nouvel établissement
                     </Button>
                   </DialogTrigger>
@@ -574,38 +656,40 @@ export default function AdminPage() {
 
             {etabLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1,2,3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
+                {[1,2,3].map((i) => <Skeleton key={i} className="h-36 w-full rounded-lg" />)}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {etabRows.map((e) => (
-                  <Card key={e.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-2">
+                  <Card key={e.id} className="shadow-sm hover:shadow-md transition-shadow group">
+                    <CardHeader className="pb-2 pt-4 px-4">
                       <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-medical-green/10 flex items-center justify-center shrink-0">
+                        <div className="h-10 w-10 rounded-lg bg-medical-green/10 flex items-center justify-center shrink-0 group-hover:bg-medical-green/20 transition-colors">
                           <Building2 className="h-5 w-5 text-medical-green" />
                         </div>
-                        <div>
-                          <CardTitle className="text-base">{e.nom}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-0.5">{typeEtabLabels[e.type] || e.type}</p>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-sm font-semibold leading-snug">{e.nom}</CardTitle>
+                          <span className={`inline-block mt-1 text-xs font-medium px-1.5 py-0.5 rounded ${TYPE_ETAB_BADGE[e.type] ?? "bg-slate-100 text-slate-600"}`}>
+                            {typeEtabLabels[e.type] || e.type}
+                          </span>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-1.5">
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <CardContent className="px-4 pb-4 space-y-1.5">
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
                         <span>{e.ville}{e.region ? `, ${e.region}` : ""}</span>
                       </div>
                       {e.telephone && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5 shrink-0" />
-                          <a href={`tel:${e.telephone}`} className="hover:text-foreground">{e.telephone}</a>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <a href={`tel:${e.telephone}`} className="hover:text-foreground transition-colors">{e.telephone}</a>
                         </div>
                       )}
                       {e.email && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5 shrink-0" />
-                          <a href={`mailto:${e.email}`} className="hover:text-foreground truncate">{e.email}</a>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <a href={`mailto:${e.email}`} className="hover:text-foreground transition-colors truncate">{e.email}</a>
                         </div>
                       )}
                     </CardContent>
@@ -613,8 +697,8 @@ export default function AdminPage() {
                 ))}
                 {etabRows.length === 0 && (
                   <div className="col-span-full text-center py-16 text-muted-foreground">
-                    <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                    <p>Aucun établissement enregistré</p>
+                    <Building2 className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">Aucun établissement enregistré</p>
                   </div>
                 )}
               </div>
@@ -622,45 +706,51 @@ export default function AdminPage() {
           </TabsContent>
 
           {/* ── CONFIGURATION TAB ── */}
-          <TabsContent value="configuration" className="space-y-4 mt-4">
-            <h3 className="text-base font-semibold">Configuration système</h3>
+          <TabsContent value="configuration" className="space-y-5 mt-5">
+            <div>
+              <h2 className="text-lg font-semibold">Configuration système</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Paramètres médicaux et cliniques de la plateforme</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* PEV Configuration */}
-              <Card className="hover:shadow-md transition-shadow">
+              {/* PEV */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-emerald-500">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="p-2.5 rounded-lg bg-medical-green-light">
-                      <Syringe className="h-5 w-5 text-medical-green" />
+                    <div className="p-2.5 rounded-lg bg-emerald-100 shrink-0">
+                      <Syringe className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-sm">Calendrier vaccinal PEV</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                         Configurer le Programme Élargi de Vaccination — ajouter, modifier ou désactiver des vaccins selon le programme national.
                       </p>
-                      <Button variant="outline" size="sm" className="mt-3 h-7 text-xs" asChild>
+                      <Button variant="outline" size="sm" className="mt-3 h-7 text-xs gap-1.5" asChild>
                         <Link href="/admin/configuration/pev">
-                          <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                          <Settings2 className="h-3.5 w-3.5" />
                           Gérer le calendrier
-                          <ExternalLink className="h-3 w-3 ml-1.5" />
+                          <ExternalLink className="h-3 w-3" />
                         </Link>
                       </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
               {/* Seuils d'alerte */}
-              <Card className="hover:shadow-md transition-shadow opacity-60">
+              <Card className="shadow-sm border-l-4 border-l-orange-300 opacity-60">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="p-2.5 rounded-lg bg-orange-100">
+                    <div className="p-2.5 rounded-lg bg-orange-100 shrink-0">
                       <Activity className="h-5 w-5 text-orange-500" />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm">Seuils d&apos;alerte constantes</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-sm">Seuils d&apos;alerte constantes</h4>
+                        <Badge variant="outline" className="text-xs h-4 px-1.5">Bientôt</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                         Configurer les valeurs limites pour TA, FC, SpO₂ et température déclenchant les alertes cliniques.
                       </p>
-                      <Badge variant="outline" className="mt-3 text-xs">Bientôt disponible</Badge>
                     </div>
                   </div>
                 </CardContent>
