@@ -75,7 +75,7 @@ function RDVCard({ rdv, canUpdate, onConfirmAction }: {
   canUpdate: boolean;
   onConfirmAction: (action: { id: string; statut: string; label: string }) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const statut = STATUT_CONFIG[rdv.statut] ?? { label: rdv.statut, badge: "bg-slate-100 text-slate-600 border-slate-200", border: "border-l-slate-300", icon: CalendarClock };
   const type   = TYPE_CONFIG[rdv.type_rdv]  ?? TYPE_CONFIG.autre;

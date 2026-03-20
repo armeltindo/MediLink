@@ -194,7 +194,7 @@ function HospitalisationCard({
   patient: Patient;
   user: { id: string; role: string } | null;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [showSoins, setShowSoins] = useState(false);
   const [soins, setSoins] = useState<SoinInfirmier[]>([]);
   const [loadingSoins, setLoadingSoins] = useState(false);

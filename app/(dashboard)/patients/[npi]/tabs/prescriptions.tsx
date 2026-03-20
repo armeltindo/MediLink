@@ -434,7 +434,7 @@ function PrescriptionRow({ p, canDispense, onDispense }: {
   canDispense: boolean;
   onDispense: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const status = statusConfig[p.statut];
 
   return (
@@ -488,7 +488,7 @@ function PrescriptionRow({ p, canDispense, onDispense }: {
 // ─── History Row ──────────────────────────────────────────────────────────────
 
 function HistoryRow({ p }: { p: Prescription }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const status = statusConfig[p.statut];
 
   return (
