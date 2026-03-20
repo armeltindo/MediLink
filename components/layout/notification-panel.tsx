@@ -14,7 +14,7 @@ interface AuditLog {
   details: string | null;
   timestamp: string;
   patient_id: string | null;
-  patients?: { nom: string; prenom: string; npi: string } | null;
+  patients?: { nom: string; prenom: string; npi: string } | { nom: string; prenom: string; npi: string }[] | null;
 }
 
 interface Notif {
@@ -55,7 +55,7 @@ function relativeTime(iso: string) {
 
 function parseNotif(log: AuditLog, lastSeenAt: number): Notif {
   const unread = new Date(log.timestamp).getTime() > lastSeenAt;
-  const patient = log.patients;
+  const patient = Array.isArray(log.patients) ? log.patients[0] ?? null : log.patients ?? null;
   const patientLabel = patient ? `${patient.prenom} ${patient.nom}` : null;
 
   let details: Record<string, unknown> = {};
