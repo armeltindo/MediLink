@@ -1,12 +1,13 @@
 "use client";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
-import { Search, Bell, Menu, X, ChevronRight } from "lucide-react";
+import { Search, Menu, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
 import { getRoleBadge } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationPanel } from "@/components/layout/notification-panel";
 
 // ─── Breadcrumb label map ─────────────────────────────────────────────────────
 
@@ -134,14 +135,7 @@ export function Header({ title }: { title?: string }) {
       <div className="flex items-center gap-1.5 shrink-0">
 
         {/* Notification bell */}
-        <button
-          className="relative p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-          title="Notifications"
-        >
-          <Bell className="h-4.5 w-4.5" style={{ width: "1.05rem", height: "1.05rem" }} />
-          {/* Dot indicator */}
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
-        </button>
+        {user && <NotificationPanel user={user} />}
 
         {/* Divider */}
         <span className="h-5 w-px bg-slate-200 mx-1" />
