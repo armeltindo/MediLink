@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/utils";
 import {
   FlaskConical, Search, X, ChevronRight, User, CalendarDays,
   AlertTriangle, Clock, CheckCircle2, FileText, Stethoscope,
-  Hash, ClipboardList, CalendarCheck,
+  ClipboardList, CalendarCheck,
 } from "lucide-react";
 
 export interface AnalyseRow {
