@@ -127,7 +127,7 @@ export function Sidebar() {
         <div className="flex-1 overflow-y-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {NAV_GROUPS.map((group, gi) => {
             const visibleItems = group.items.filter(item =>
-              !item.roles || (user && item.roles.includes(user.role))
+              !item.roles || (user && (item.roles as readonly string[]).includes(user.role))
             );
             if (visibleItems.length === 0) return null;
 
