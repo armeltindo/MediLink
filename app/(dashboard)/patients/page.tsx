@@ -180,7 +180,7 @@ function PatientsPageInner() {
     }
 
     const { data, count } = await req;
-    setPatients(data || []);
+    setPatients((data || []) as Patient[]);
     setTotalCount(count || 0);
 
     if (data && data.length > 0) {
