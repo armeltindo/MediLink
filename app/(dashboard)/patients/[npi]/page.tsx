@@ -7,11 +7,11 @@ import { Header } from "@/components/layout/header";
 import Link from "next/link";
 import {
   ChevronLeft, LayoutDashboard, Stethoscope, Pill, FlaskConical,
-  Syringe, Building2, CalendarDays, FolderOpen, ShieldCheck, ShieldAlert, Loader2,
+  Syringe, BedDouble, CalendarDays, FolderOpen, ShieldCheck, ShieldAlert, Loader2,
 } from "lucide-react";
 import { PatientHeader } from "@/components/patient/patient-header";
 import { AIAlertsBanner } from "@/components/patient/ai-alerts-banner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
+import { cn } from "@/lib/utils";
 import { OverviewTab } from "./tabs/overview";
 import { ConsultationsTab } from "./tabs/consultations";
 import { PrescriptionsTab } from "./tabs/prescriptions";
@@ -29,28 +30,96 @@ import { RendezVousTab } from "./tabs/rendez-vous";
 import { DocumentsTab } from "./tabs/documents";
 import { AuditTab } from "./tabs/audit";
 
-// ─── Tab count badge ──────────────────────────────────────────────────────────
-function TabCount({ value, active }: { value: number | undefined; active?: boolean }) {
-  if (!value) return null;
-  return (
-    <span className={`ml-0.5 rounded px-1 text-[10px] font-medium tabular-nums ${
-      active
-        ? "bg-medical-green/15 text-medical-green"
-        : "bg-muted-foreground/20 text-muted-foreground"
-    }`}>
-      {value > 99 ? "99+" : value}
-    </span>
-  );
-}
-
-// ─── Valid tabs ───────────────────────────────────────────────────────────────
-const VALID_TABS = [
-  "overview", "consultations", "prescriptions", "analyses",
-  "vaccinations", "hospitalisations", "rendez-vous", "documents", "audit",
+// ─── Tab definitions ──────────────────────────────────────────────────────────
+const TAB_DEFS = [
+  {
+    id: "overview",
+    label: "Vue d'ensemble",
+    icon: LayoutDashboard,
+    activeText: "text-slate-800",
+    activeBorder: "border-slate-700",
+    activeBadge: "bg-slate-800 text-white",
+    activeIcon: "text-slate-700",
+  },
+  {
+    id: "consultations",
+    label: "Consultations",
+    icon: Stethoscope,
+    activeText: "text-blue-700",
+    activeBorder: "border-blue-600",
+    activeBadge: "bg-blue-600 text-white",
+    activeIcon: "text-blue-600",
+  },
+  {
+    id: "prescriptions",
+    label: "Prescriptions",
+    icon: Pill,
+    activeText: "text-amber-700",
+    activeBorder: "border-amber-500",
+    activeBadge: "bg-amber-500 text-white",
+    activeIcon: "text-amber-600",
+  },
+  {
+    id: "analyses",
+    label: "Analyses",
+    icon: FlaskConical,
+    activeText: "text-purple-700",
+    activeBorder: "border-purple-600",
+    activeBadge: "bg-purple-600 text-white",
+    activeIcon: "text-purple-600",
+  },
+  {
+    id: "vaccinations",
+    label: "Vaccinations",
+    icon: Syringe,
+    activeText: "text-emerald-700",
+    activeBorder: "border-emerald-600",
+    activeBadge: "bg-emerald-600 text-white",
+    activeIcon: "text-emerald-600",
+  },
+  {
+    id: "hospitalisations",
+    label: "Hospitalisations",
+    icon: BedDouble,
+    activeText: "text-violet-700",
+    activeBorder: "border-violet-600",
+    activeBadge: "bg-violet-600 text-white",
+    activeIcon: "text-violet-600",
+  },
+  {
+    id: "rendez-vous",
+    label: "Rendez-vous",
+    icon: CalendarDays,
+    activeText: "text-teal-700",
+    activeBorder: "border-teal-600",
+    activeBadge: "bg-teal-600 text-white",
+    activeIcon: "text-teal-600",
+  },
+  {
+    id: "documents",
+    label: "Documents",
+    icon: FolderOpen,
+    activeText: "text-orange-700",
+    activeBorder: "border-orange-500",
+    activeBadge: "bg-orange-500 text-white",
+    activeIcon: "text-orange-600",
+  },
+  {
+    id: "audit",
+    label: "Audit",
+    icon: ShieldCheck,
+    activeText: "text-red-700",
+    activeBorder: "border-red-600",
+    activeBadge: "bg-red-600 text-white",
+    activeIcon: "text-red-600",
+    adminOnly: true,
+  },
 ] as const;
-type TabId = typeof VALID_TABS[number];
 
-// ─── Loading skeleton (shared by page + Suspense fallback) ────────────────────
+type TabId = typeof TAB_DEFS[number]["id"];
+const VALID_TABS = TAB_DEFS.map((t) => t.id) as unknown as readonly string[];
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
 function PageSkeleton() {
   return (
     <div className="flex flex-col min-h-full bg-muted/20">
@@ -73,30 +142,21 @@ function PageSkeleton() {
           </div>
         </div>
       </div>
-      <div className="p-6 space-y-4">
-        <div className="overflow-x-auto">
-          <div className="flex gap-1 min-w-max">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-28 rounded-md shrink-0" />
-            ))}
-          </div>
+      <div className="border-b bg-white">
+        <div className="flex gap-0 px-4 overflow-x-auto">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-32 rounded-none shrink-0" />
+          ))}
         </div>
+      </div>
+      <div className="p-6 space-y-4">
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     </div>
   );
 }
 
-// ─── Active tab trigger class helper ─────────────────────────────────────────
-const TRIGGER_CLS = [
-  "gap-1.5 text-xs shrink-0 relative transition-colors",
-  "data-[state=active]:text-medical-green",
-  "data-[state=active]:bg-medical-green/8",
-  "data-[state=active]:shadow-none",
-  "data-[state=active]:ring-1 data-[state=active]:ring-medical-green/25",
-].join(" ");
-
-// ─── Inner page (needs useSearchParams, wrapped in Suspense below) ────────────
+// ─── Inner page ───────────────────────────────────────────────────────────────
 function PatientPageInner() {
   const { npi } = useParams<{ npi: string }>();
   const router = useRouter();
@@ -128,14 +188,12 @@ function PatientPageInner() {
     loadPatient(decodeURIComponent(npi));
   }, [npi]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Tab navigation (updates URL without full reload) ──────────────────────
   function handleTabChange(tab: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.replace(`/patients/${npi}?${params.toString()}`, { scroll: false });
   }
 
-  // ─── Data loading ──────────────────────────────────────────────────────────
   async function loadPatient(npiValue: string) {
     setLoading(true);
 
@@ -153,7 +211,6 @@ function PatientPageInner() {
 
     setPatient(patientData);
 
-    // Log audit view — only on initial load, not on subsequent refreshes
     if (!auditLoggedRef.current) {
       auditLoggedRef.current = true;
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -167,8 +224,6 @@ function PatientPageInner() {
       }
     }
 
-    // Load data needed for OverviewTab + patient header upfront.
-    // Other tabs (analyses, vaccinations…) fetch lazily when first opened.
     const [
       allergiesRes, antecedentsRes, familliauxRes, habitudesRes,
       consultationsRes, prescriptionsRes,
@@ -189,7 +244,6 @@ function PatientPageInner() {
     setPrescriptions(prescriptionsRes.data || []);
     setLoading(false);
 
-    // Fetch tab counts in background (non-blocking)
     Promise.all([
       supabase.from("analyses_prescrites").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id),
       supabase.from("vaccinations").select("id", { count: "exact", head: true }).eq("patient_id", patientData.id),
@@ -207,7 +261,6 @@ function PatientPageInner() {
     });
   }
 
-  // ─── Actions ───────────────────────────────────────────────────────────────
   function handleOpenAPI(url: string) {
     const win = window.open(url, "_blank");
     if (!win) toast({ variant: "destructive", title: "Erreur", description: "Impossible d'ouvrir la fenêtre. Vérifiez les blocages de popups." });
@@ -237,23 +290,27 @@ function PatientPageInner() {
     }
   }
 
-  // ─── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) return <PageSkeleton />;
-
   if (!patient) return null;
 
   const isAdmin = user?.role === "super_admin" || user?.role === "admin_etablissement";
 
+  // Resolve count per tab
+  function getCount(tabId: string): number | undefined {
+    if (tabId === "consultations") return consultations.length || undefined;
+    if (tabId === "prescriptions") return prescriptions.length || undefined;
+    return tabCounts[tabId] || undefined;
+  }
+
+  const visibleTabs = TAB_DEFS.filter((t) => !("adminOnly" in t && t.adminOnly) || isAdmin);
+
   return (
-    <div className="flex flex-col min-h-full bg-muted/20">
+    <div className="flex flex-col min-h-full bg-slate-50/60">
       <Header />
 
       {/* Breadcrumb */}
-      <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1.5 border-b bg-card">
-        <Link
-          href="/patients"
-          className="flex items-center gap-1 hover:text-foreground transition-colors"
-        >
+      <nav className="px-6 py-2 text-sm text-muted-foreground flex items-center gap-1.5 border-b bg-white">
+        <Link href="/patients" className="flex items-center gap-1 hover:text-foreground transition-colors">
           <ChevronLeft className="h-3.5 w-3.5" />
           Patients
         </Link>
@@ -276,10 +333,9 @@ function PatientPageInner() {
         onPatientUpdate={(updated) => setPatient(updated)}
       />
 
-      {/* IA Alerts */}
       <AIAlertsBanner patientId={patient.id} />
 
-      {/* Break-the-glass */}
+      {/* Break-the-glass dialog */}
       <Dialog open={btgOpen} onOpenChange={setBtgOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -301,7 +357,7 @@ function PatientPageInner() {
                 value={btgReason}
                 onChange={(e) => setBtgReason(e.target.value)}
                 rows={3}
-                placeholder="Expliquez la raison de cet accès d'urgence (patient critique, urgence vitale, etc.)..."
+                placeholder="Expliquez la raison de cet accès d'urgence..."
                 className="resize-none"
               />
             </div>
@@ -316,134 +372,120 @@ function PatientPageInner() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 p-4 sm:p-6 pt-4 sm:pt-5">
+      {/* ── Tab navigation ──────────────────────────────────────────────────── */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <nav className="flex min-w-max">
+            {visibleTabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
+              const count = getCount(tab.id);
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-3.5 text-sm font-medium transition-all duration-150 whitespace-nowrap border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-medical-green",
+                    isActive
+                      ? [tab.activeText, tab.activeBorder]
+                      : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/80"
+                  )}
+                >
+                  <Icon className={cn(
+                    "h-4 w-4 shrink-0 transition-colors",
+                    isActive ? tab.activeIcon : "text-slate-400"
+                  )} />
+
+                  <span className="leading-none">{tab.label}</span>
+
+                  {count !== undefined && count > 0 && (
+                    <span className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none transition-colors",
+                      isActive
+                        ? tab.activeBadge
+                        : "bg-slate-100 text-slate-500"
+                    )}>
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* ── Tab content ─────────────────────────────────────────────────────── */}
+      <div className="flex-1">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          {/* Horizontally scrollable tab bar with fade indicators */}
-          <div className="relative mb-5">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-muted/20 to-transparent z-10" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-muted/20 to-transparent z-10" />
-          <div className="overflow-x-auto -mx-1 px-1 pb-0.5">
-            <TabsList className="bg-card border shadow-sm h-auto gap-0.5 p-1 flex-nowrap min-w-max w-full">
-              <TabsTrigger value="overview" className={TRIGGER_CLS}>
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                Vue d&apos;ensemble
-              </TabsTrigger>
+          <div className="p-4 sm:p-6">
 
-              <TabsTrigger value="consultations" className={TRIGGER_CLS}>
-                <Stethoscope className="h-3.5 w-3.5" />
-                Consultations
-                <TabCount value={consultations.length} active={activeTab === "consultations"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="prescriptions" className={TRIGGER_CLS}>
-                <Pill className="h-3.5 w-3.5" />
-                Prescriptions
-                <TabCount value={prescriptions.length} active={activeTab === "prescriptions"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="analyses" className={TRIGGER_CLS}>
-                <FlaskConical className="h-3.5 w-3.5" />
-                Analyses
-                <TabCount value={tabCounts.analyses} active={activeTab === "analyses"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="vaccinations" className={TRIGGER_CLS}>
-                <Syringe className="h-3.5 w-3.5" />
-                Vaccins
-                <TabCount value={tabCounts.vaccinations} active={activeTab === "vaccinations"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="hospitalisations" className={TRIGGER_CLS}>
-                <Building2 className="h-3.5 w-3.5" />
-                Hospitalisations
-                <TabCount value={tabCounts.hospitalisations} active={activeTab === "hospitalisations"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="rendez-vous" className={TRIGGER_CLS}>
-                <CalendarDays className="h-3.5 w-3.5" />
-                Rendez-vous
-                <TabCount value={tabCounts["rendez-vous"]} active={activeTab === "rendez-vous"} />
-              </TabsTrigger>
-
-              <TabsTrigger value="documents" className={TRIGGER_CLS}>
-                <FolderOpen className="h-3.5 w-3.5" />
-                Documents
-                <TabCount value={tabCounts.documents} active={activeTab === "documents"} />
-              </TabsTrigger>
-
-              {isAdmin && (
-                <TabsTrigger value="audit" className={TRIGGER_CLS}>
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Audit
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </div>
-          </div>
-
-          <TabsContent value="overview">
-            <OverviewTab
-              patient={patient}
-              allergies={allergies}
-              antecedents={antecedents}
-              antecedentsFamiliaux={antecedentsFamiliaux}
-              habitudes={habitudes}
-              consultations={consultations}
-              prescriptions={prescriptions}
-              onRefresh={() => loadPatient(patient.npi)}
-              navigateToTab={handleTabChange}
-            />
-          </TabsContent>
-
-          <TabsContent value="consultations">
-            <ConsultationsTab
-              patient={patient}
-              consultations={consultations}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
-          </TabsContent>
-
-          <TabsContent value="prescriptions">
-            <PrescriptionsTab
-              patient={patient}
-              allergies={allergies}
-              onRefresh={() => loadPatient(patient.npi)}
-            />
-          </TabsContent>
-
-          <TabsContent value="analyses">
-            <AnalysesTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
-          </TabsContent>
-
-          <TabsContent value="vaccinations">
-            <VaccinationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
-          </TabsContent>
-
-          <TabsContent value="hospitalisations">
-            <HospitalisationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
-          </TabsContent>
-
-          <TabsContent value="rendez-vous">
-            <RendezVousTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
-          </TabsContent>
-
-          <TabsContent value="documents">
-            <DocumentsTab patient={patient} />
-          </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="audit">
-              <AuditTab patient={patient} />
+            <TabsContent value="overview" className="mt-0">
+              <OverviewTab
+                patient={patient}
+                allergies={allergies}
+                antecedents={antecedents}
+                antecedentsFamiliaux={antecedentsFamiliaux}
+                habitudes={habitudes}
+                consultations={consultations}
+                prescriptions={prescriptions}
+                onRefresh={() => loadPatient(patient.npi)}
+                navigateToTab={handleTabChange}
+              />
             </TabsContent>
-          )}
+
+            <TabsContent value="consultations" className="mt-0">
+              <ConsultationsTab
+                patient={patient}
+                consultations={consultations}
+                onRefresh={() => loadPatient(patient.npi)}
+              />
+            </TabsContent>
+
+            <TabsContent value="prescriptions" className="mt-0">
+              <PrescriptionsTab
+                patient={patient}
+                allergies={allergies}
+                onRefresh={() => loadPatient(patient.npi)}
+              />
+            </TabsContent>
+
+            <TabsContent value="analyses" className="mt-0">
+              <AnalysesTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+            </TabsContent>
+
+            <TabsContent value="vaccinations" className="mt-0">
+              <VaccinationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+            </TabsContent>
+
+            <TabsContent value="hospitalisations" className="mt-0">
+              <HospitalisationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+            </TabsContent>
+
+            <TabsContent value="rendez-vous" className="mt-0">
+              <RendezVousTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+            </TabsContent>
+
+            <TabsContent value="documents" className="mt-0">
+              <DocumentsTab patient={patient} />
+            </TabsContent>
+
+            {isAdmin && (
+              <TabsContent value="audit" className="mt-0">
+                <AuditTab patient={patient} />
+              </TabsContent>
+            )}
+
+          </div>
         </Tabs>
       </div>
     </div>
   );
 }
 
-// ─── Export wrapped in Suspense (required for useSearchParams in Next.js 14+) ─
+// ─── Export wrapped in Suspense ───────────────────────────────────────────────
 export default function PatientPage() {
   return (
     <Suspense fallback={<PageSkeleton />}>
