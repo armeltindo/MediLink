@@ -46,7 +46,7 @@ const patientSchema = z.object({
   assurance_taux: z.coerce.number().min(0).max(100).optional(),
   // Coordonnées
   telephone: z.string().optional(),
-  email: z.string().optional(),
+  email: z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Adresse email invalide" }),
   adresse_quartier: z.string().optional(),
   adresse_commune: z.string().optional(),
   adresse_departement: z.string().optional(),
@@ -85,16 +85,16 @@ const BLOOD_BG: Record<string, string> = {
   A: "bg-red-500", B: "bg-orange-500", AB: "bg-purple-600", O: "bg-blue-500",
 };
 
-const TODAY = new Date().toISOString().split("T")[0];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NouveauPatientPage() {
   const router = useRouter();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // Computed at render to stay accurate if the page stays open past midnight
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const [loading, setLoading]           = useState(false);
-  const [npi]                           = useState(() => generateNPI());
+  const [npi, setNpi]                   = useState(() => generateNPI());
   const [npiCopied, setNpiCopied]       = useState(false);
   const [photoFile, setPhotoFile]       = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -203,17 +203,31 @@ export default function NouveauPatientPage() {
     return () => clearTimeout(timer);
   }, [watchedNom, watchedPrenom]);
 
+  // Fields managed via setValue (Select) have no direct id; fall back to their section
+  const FIELD_TO_SECTION: Record<string, string> = {
+    situation_matrimoniale: "section-identite", niveau_etudes: "section-identite",
+    langue_preferee: "section-identite", sexe: "section-identite",
+    groupe_sanguin: "section-biologie",   rhesus: "section-biologie",
+    contact_urgence_lien: "section-contact", tuteur_lien: "section-medical",
+  };
+
   const scrollToFirstError = useCallback((errs: Record<string, unknown>) => {
     const firstKey = Object.keys(errs)[0];
     if (!firstKey) return;
-    const el = document.getElementById(firstKey);
+    const el = document.getElementById(firstKey) ?? document.getElementById(FIELD_TO_SECTION[firstKey] ?? "");
     if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); (el as HTMLElement).focus?.(); }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Photo ─────────────────────────────────────────────────────────────────
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ variant: "destructive", title: "Type de fichier non supporté", description: "Formats acceptés : JPG, PNG, WEBP." });
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast({ variant: "destructive", title: "Fichier trop volumineux", description: "Max 5 Mo." });
       return;
@@ -274,7 +288,18 @@ export default function NouveauPatientPage() {
       toast({ title: "Patient enregistré", description: `${data.prenom} ${data.nom} — ${npi}` });
       router.push(`/patients/${npi}`);
     } catch (err: unknown) {
-      toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
+      // Handle NPI unique-constraint collision (PostgreSQL code 23505)
+      const pgErr = err as { code?: string };
+      if (pgErr.code === "23505") {
+        setNpi(generateNPI());
+        toast({
+          variant: "destructive",
+          title: "Identifiant en conflit",
+          description: "Un nouveau NPI a été généré automatiquement. Veuillez soumettre à nouveau.",
+        });
+      } else {
+        toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
+      }
     } finally {
       setLoading(false);
     }
@@ -471,7 +496,7 @@ export default function NouveauPatientPage() {
                       <Input
                         id="date_naissance"
                         type="date"
-                        max={TODAY}
+                        max={today}
                         {...register("date_naissance")}
                         className={cn("pr-16", errors.date_naissance && "border-destructive")}
                       />
@@ -611,6 +636,7 @@ export default function NouveauPatientPage() {
                       Adresse email
                     </Label>
                     <Input id="email" type="email" {...register("email")} placeholder="patient@exemple.com" autoComplete="email" />
+                    {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                   </div>
                 </div>
 
@@ -674,7 +700,11 @@ export default function NouveauPatientPage() {
                       <button
                         key={g}
                         type="button"
-                        onClick={() => setValue("groupe_sanguin", groupeSanguin === g ? "" : g)}
+                        onClick={() => {
+                          const next = groupeSanguin === g ? "" : g;
+                          setValue("groupe_sanguin", next);
+                          if (!next) setValue("rhesus", "");
+                        }}
                         className={cn(
                           "w-14 h-11 rounded-xl border-2 text-sm font-bold transition-all",
                           groupeSanguin === g
@@ -688,7 +718,7 @@ export default function NouveauPatientPage() {
                     {groupeSanguin && (
                       <button
                         type="button"
-                        onClick={() => setValue("groupe_sanguin", "")}
+                        onClick={() => { setValue("groupe_sanguin", ""); setValue("rhesus", ""); }}
                         className="h-11 px-3 text-xs text-muted-foreground hover:text-destructive transition-colors"
                         title="Effacer"
                       >

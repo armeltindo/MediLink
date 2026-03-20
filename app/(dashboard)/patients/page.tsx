@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Patient } from "@/types";
 import { formatDate, formatAge, getBloodGroupColor, cn } from "@/lib/utils";
@@ -61,6 +61,32 @@ function formatRelativeDate(iso: string): string {
   return formatDate(iso);
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Sanitize search input to prevent PostgREST .or() query injection */
+function sanitizeSearch(q: string): string {
+  return q.replace(/[,()'"%]/g, " ").trim();
+}
+
+// ─── Pill button helper (outside component to avoid remount on each render) ───
+
+function PillButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-3 py-1 text-xs rounded-full border font-medium transition-all",
+        active
+          ? "bg-medical-green text-white border-medical-green shadow-sm"
+          : "border-border text-muted-foreground hover:border-medical-green/60 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
 function PatientRowSkeleton() {
@@ -76,10 +102,28 @@ function PatientRowSkeleton() {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+function PatientsPageSkeleton() {
+  return (
+    <div className="flex flex-col min-h-full bg-muted/20">
+      <Header title="Patients" />
+      <div className="p-4 sm:p-6 space-y-4 flex-1 max-w-7xl mx-auto w-full">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 flex-1 max-w-xl rounded-md" />
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => <PatientRowSkeleton key={i} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-export default function PatientsPage() {
+// ─── Page (inner — uses useSearchParams, must be inside Suspense) ─────────────
+
+function PatientsPageInner() {
   const searchParams  = useSearchParams();
+  const router        = useRouter();
   const { user }      = useUser();
   const searchTimer   = useRef<ReturnType<typeof setTimeout>>();
 
@@ -106,12 +150,18 @@ export default function PatientsPage() {
 
     let req = supabase
       .from("patients")
-      .select("*", { count: "exact" })
+      .select(
+        "id, npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, contact_urgence_tel, created_at, photo_url",
+        { count: "exact" },
+      )
       .is("deleted_at", null)
       .order(column, { ascending })
       .range(p * ps, p * ps + ps - 1);
 
-    if (q.trim()) req = req.or(`npi.ilike.%${q}%,nom.ilike.%${q}%,prenom.ilike.%${q}%`);
+    if (q.trim()) {
+      const safe = sanitizeSearch(q);
+      req = req.or(`npi.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%`);
+    }
     if (f.sexe)           req = req.eq("sexe", f.sexe);
     if (f.groupe_sanguin) req = req.eq("groupe_sanguin", f.groupe_sanguin);
 
@@ -155,7 +205,16 @@ export default function PatientsPage() {
     fetchPatients(query, filters, page, pageSize, sort);
   }, [page, pageSize, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => () => clearTimeout(searchTimer.current), []);
+
   // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  function syncQueryToURL(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set("q", value); else params.delete("q");
+    router.replace(`/patients?${params.toString()}`, { scroll: false });
+  }
 
   /** Debounced search-as-you-type (350 ms) */
   function handleQueryChange(value: string) {
@@ -164,6 +223,7 @@ export default function PatientsPage() {
     searchTimer.current = setTimeout(() => {
       setPage(0);
       fetchPatients(value, filters, 0, pageSize, sort);
+      syncQueryToURL(value);
     }, 350);
   }
 
@@ -172,6 +232,7 @@ export default function PatientsPage() {
     clearTimeout(searchTimer.current);
     setPage(0);
     fetchPatients(query, filters, 0, pageSize, sort);
+    syncQueryToURL(query);
   }
 
   /** Apply new filters immediately (avoids stale-closure bug) */
@@ -195,24 +256,6 @@ export default function PatientsPage() {
   const hasActiveFilters   = !!(filters.sexe || filters.groupe_sanguin || filters.age_min || filters.age_max);
   const activeFilterCount  = [filters.sexe, filters.groupe_sanguin, filters.age_min || filters.age_max].filter(Boolean).length;
   const totalPages         = Math.ceil(totalCount / pageSize);
-
-  // ─── Pill button helper ──────────────────────────────────────────────────────
-  function PillButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "px-3 py-1 text-xs rounded-full border font-medium transition-all",
-          active
-            ? "bg-medical-green text-white border-medical-green shadow-sm"
-            : "border-border text-muted-foreground hover:border-medical-green/60 hover:text-foreground",
-        )}
-      >
-        {children}
-      </button>
-    );
-  }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -456,7 +499,7 @@ export default function PatientsPage() {
         {/* ── Patient list ──────────────────────────────────────────── */}
         <div className="space-y-2">
           {loading
-            ? Array.from({ length: 8 }).map((_, i) => <PatientRowSkeleton key={i} />)
+            ? Array.from({ length: Math.min(pageSize, 10) }).map((_, i) => <PatientRowSkeleton key={i} />)
             : patients.map((patient) => {
                 const isMale       = patient.sexe === "M";
                 const allergyCount = allergiesCount[patient.id] ?? 0;
@@ -636,5 +679,14 @@ export default function PatientsPage() {
 
       </div>
     </div>
+  );
+}
+
+// ─── Export wrapped in Suspense (required for useSearchParams in Next.js 14+) ─
+export default function PatientsPage() {
+  return (
+    <Suspense fallback={<PatientsPageSkeleton />}>
+      <PatientsPageInner />
+    </Suspense>
   );
 }
