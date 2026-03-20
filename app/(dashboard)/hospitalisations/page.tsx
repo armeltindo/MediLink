@@ -2,30 +2,12 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/utils";
-import { BedDouble, Clock, CalendarCheck, CalendarX, User, Stethoscope, ArrowRight, Activity } from "lucide-react";
-
-interface HospitalisationRow {
-  id: string;
-  motif: string;
-  date_entree: string;
-  date_sortie: string | null;
-  service: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
-}
+import { BedDouble, Clock, CalendarCheck, Activity } from "lucide-react";
+import { HospitalisationsList, type HospitalisationRow } from "./hospitalisations-list";
 
 function getDurationDays(entree: string, sortie: string | null): number {
   const end = sortie ? new Date(sortie) : new Date();
   return Math.max(0, Math.floor((end.getTime() - new Date(entree).getTime()) / (1000 * 60 * 60 * 24)));
-}
-
-function formatDuration(days: number): string {
-  if (days === 0) return "< 1 jour";
-  return `${days} jour${days > 1 ? "s" : ""}`;
-}
-
-function getInitials(prenom: string, nom: string): string {
-  return `${prenom?.[0] ?? ""}${nom?.[0] ?? ""}`.toUpperCase();
 }
 
 export default async function HospitalisationsPage({
@@ -42,7 +24,7 @@ export default async function HospitalisationsPage({
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from("hospitalisations")
-      .select("id, motif, date_entree, date_sortie, service, patients(npi, nom, prenom)")
+      .select("id, motif, date_entree, date_sortie, service, resume_sejour, mode_sortie, patients(npi, nom, prenom), etablissements(nom)")
       .is("deleted_at", null)
       .order("date_entree", { ascending: false })
       .limit(100);
@@ -152,101 +134,7 @@ export default async function HospitalisationsPage({
         )}
 
         {/* ── List ── */}
-        <div className="space-y-2">
-          {rows.map((h) => {
-            const isActive = !h.date_sortie;
-            const days = getDurationDays(h.date_entree, h.date_sortie);
-            return (
-              <Link key={h.id} href={h.patients ? `/patients/${h.patients.npi}` : "#"} className="block group">
-                <Card className={`border-l-4 shadow-sm transition-all group-hover:shadow-md group-hover:translate-x-0.5 ${
-                  isActive ? "border-l-emerald-500" : "border-l-slate-300"
-                }`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    {/* Patient avatar */}
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${
-                      isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {h.patients
-                        ? getInitials(h.patients.prenom, h.patients.nom)
-                        : <User className="h-4 w-4" />
-                      }
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      {/* Row 1 : name + badges */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm group-hover:text-medical-green transition-colors">
-                          {h.patients ? `${h.patients.prenom} ${h.patients.nom}` : "—"}
-                        </span>
-
-                        {isActive ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            En cours
-                          </span>
-                        ) : (
-                          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                            Sorti
-                          </span>
-                        )}
-
-                        {h.service && (
-                          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 flex items-center gap-1">
-                            <Stethoscope className="h-3 w-3" />
-                            {h.service}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Row 2 : motif */}
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{h.motif}</p>
-
-                      {/* Row 3 : dates + duration */}
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <CalendarCheck className="h-3 w-3 text-slate-400" />
-                          Entrée {formatDate(h.date_entree)}
-                        </span>
-                        {h.date_sortie && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <CalendarX className="h-3 w-3 text-slate-400" />
-                            Sortie {formatDate(h.date_sortie)}
-                          </span>
-                        )}
-                        <span className={`text-xs font-medium flex items-center gap-1 ${isActive ? "text-emerald-600" : "text-muted-foreground"}`}>
-                          <Clock className="h-3 w-3" />
-                          {formatDuration(days)}{isActive ? " (en cours)" : ""}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-
-          {rows.length === 0 && (
-            <div className="text-center py-20 text-muted-foreground">
-              <div className="mx-auto h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <BedDouble className="h-7 w-7 opacity-30" />
-              </div>
-              <p className="font-medium text-sm">
-                Aucune hospitalisation{filter === "current" ? " en cours" : ""}
-              </p>
-              {filter === "current" && (
-                <p className="text-xs mt-1.5">
-                  <Link href="/hospitalisations?filter=all" className="text-medical-green underline underline-offset-2">
-                    Voir l&apos;historique complet
-                  </Link>
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+        <HospitalisationsList rows={rows} filter={filter} />
       </div>
     </div>
   );
