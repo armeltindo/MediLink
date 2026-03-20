@@ -12,36 +12,36 @@ const TEXT_SIZES = { sm: 16, md: 20, lg: 26 };
 const SUB_SIZES  = { sm: 9,  md: 11, lg: 13 };
 
 export function Logo({ variant = "full", theme = "dark", size = "md", className }: LogoProps) {
-  const iconPx   = ICON_SIZES[size];
-  const textPx   = TEXT_SIZES[size];
-  const subPx    = SUB_SIZES[size];
+  const iconPx    = ICON_SIZES[size];
+  const textPx    = TEXT_SIZES[size];
+  const subPx     = SUB_SIZES[size];
   const textColor = theme === "dark" ? "#ffffff" : "#1E293B";
   const subColor  = theme === "dark" ? "rgba(255,255,255,0.55)" : "#64748B";
   const radius    = Math.round(iconPx * 0.22);
-  const heartPx   = Math.round(iconPx * 0.58);
 
   return (
     <div
       className={className}
       style={{ display: "flex", alignItems: "center", gap: Math.round(iconPx * 0.28) }}
     >
-      {/* Icon */}
+      {/* Icon — bouclier caducée */}
       <div
         style={{
           width: iconPx,
           height: iconPx,
           borderRadius: radius,
-          background: "#0D7A5F",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          overflow: "hidden",
           flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(13,122,95,0.35)",
+          boxShadow: "0 2px 10px rgba(30,58,95,0.40)",
         }}
       >
-        <svg viewBox="0 0 24 24" width={heartPx} height={heartPx} fill="white">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
+        <img
+          src="/logo-icon.svg"
+          width={iconPx}
+          height={iconPx}
+          alt="MediLink"
+          style={{ display: "block" }}
+        />
       </div>
 
       {/* Text */}

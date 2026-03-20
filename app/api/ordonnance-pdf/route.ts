@@ -70,9 +70,8 @@ export async function GET(request: NextRequest) {
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0D7A5F; padding-bottom: 16px; margin-bottom: 20px; }
     .sender h2 { color: #0D7A5F; font-size: 14pt; margin-bottom: 2px; }
     .sender p { font-size: 9.5pt; color: #475569; }
-    .logo-area { text-align: right; }
-    .logo { color: #0D7A5F; font-size: 22pt; font-weight: bold; letter-spacing: -1px; }
-    .logo span { color: #94A3B8; font-size: 9pt; font-weight: normal; display: block; }
+    .logo-area { text-align: right; display: flex; justify-content: flex-end; }
+    .logo-svg { display: block; }
 
     .ordonnance-title { text-align: center; margin: 20px 0; }
     .ordonnance-title h1 { font-size: 16pt; color: #0D7A5F; letter-spacing: 2px; text-transform: uppercase; border: 2px solid #0D7A5F; display: inline-block; padding: 6px 24px; border-radius: 4px; }
@@ -130,7 +129,23 @@ export async function GET(request: NextRequest) {
       ${etabRegion ? `<p style="font-size:8.5pt;">${etabRegion}</p>` : ""}
     </div>
     <div class="logo-area">
-      <div class="logo">MediLink<span>Dossier Médical Électronique</span></div>
+      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 44" height="44">
+        <path d="M22 4 L38 10 L38 24 Q38 33 22 39 Q6 33 6 24 L6 10 Z" fill="#1E3A5F"/>
+        <polyline points="6,24 10,24 12,18 14,30 16,21 18,24 22,24" fill="none" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="28" cy="15" r="1.3" fill="#60A5FA" opacity="0.8"/><circle cx="33" cy="11" r="1.1" fill="#60A5FA" opacity="0.7"/>
+        <circle cx="37" cy="17" r="1.1" fill="#60A5FA" opacity="0.7"/><circle cx="34" cy="23" r="1.3" fill="#60A5FA" opacity="0.8"/>
+        <line x1="28" y1="15" x2="33" y2="11" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="33" y1="11" x2="37" y2="17" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="37" y1="17" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="28" y1="15" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.4"/>
+        <line x1="22" y1="10" x2="22" y2="35" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M22 12 Q17 9 16 12 Q17 15 22 14 Z" fill="white" opacity="0.9"/>
+        <path d="M22 12 Q27 9 28 12 Q27 15 22 14 Z" fill="white" opacity="0.9"/>
+        <path d="M22 17 Q19 20 22 23 Q25 26 22 29 Q19 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M22 17 Q25 20 22 23 Q19 26 22 29 Q25 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        <text x="50" y="27" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#1E293B">MediLink</text>
+        <text x="51" y="38" font-family="Arial,sans-serif" font-size="9" fill="#64748B" letter-spacing="0.5">DME Unifié · Bénin</text>
+      </svg>
     </div>
   </div>
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
-  Loader2, Heart, Shield, Globe, Eye, EyeOff,
+  Loader2, Shield, Globe, Eye, EyeOff,
   Lock, Users, ChevronRight, Activity,
 } from "lucide-react";
 
@@ -72,9 +72,11 @@ export default function LoginPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-2.5 border border-white/20 shadow-inner">
-              <Heart className="h-7 w-7 text-white" fill="currentColor" />
-            </div>
+            <img
+              src="/logo-icon.svg"
+              alt="MediLink"
+              className="h-14 w-14 rounded-2xl shadow-lg ring-1 ring-white/20"
+            />
             <div>
               <h1 className="text-2xl font-serif font-bold tracking-tight">MediLink</h1>
               <p className="text-white/50 text-[11px] uppercase tracking-widest font-medium">DME Unifié · Bénin</p>
@@ -141,9 +143,11 @@ export default function LoginPage() {
 
           {/* Mobile-only logo */}
           <div className="lg:hidden flex flex-col items-center gap-3 pb-2">
-            <div className="bg-medical-green rounded-2xl p-3 shadow-lg">
-              <Heart className="h-8 w-8 text-white" fill="currentColor" />
-            </div>
+            <img
+              src="/logo-icon.svg"
+              alt="MediLink"
+              className="h-16 w-16 rounded-2xl shadow-lg"
+            />
             <div className="text-center">
               <h1 className="text-2xl font-serif font-bold">MediLink</h1>
               <p className="text-muted-foreground text-xs mt-0.5">Dossier Médical Électronique Unifié</p>

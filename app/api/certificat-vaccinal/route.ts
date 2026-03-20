@@ -37,8 +37,7 @@ export async function POST(request: NextRequest) {
     body { font-family: Inter, Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; }
     .page { max-width: 800px; margin: 0 auto; padding: 40px; }
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 3px solid #0D7A5F; padding-bottom: 20px; }
-    .logo { font-size: 24px; font-weight: 700; color: #0D7A5F; }
-    .logo span { font-weight: 300; }
+    .logo-svg { display: block; }
     .ministry { text-align: right; font-size: 10px; color: #666; }
     .title { text-align: center; margin: 24px 0 20px; }
     .title h1 { font-size: 18px; font-weight: 700; color: #0D7A5F; letter-spacing: 0.5px; }
@@ -64,7 +63,23 @@ export async function POST(request: NextRequest) {
 <div class="page">
   <div class="header">
     <div>
-      <div class="logo">Medi<span>Link</span></div>
+      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 44" height="44">
+        <path d="M22 4 L38 10 L38 24 Q38 33 22 39 Q6 33 6 24 L6 10 Z" fill="#1E3A5F"/>
+        <polyline points="6,24 10,24 12,18 14,30 16,21 18,24 22,24" fill="none" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="28" cy="15" r="1.3" fill="#60A5FA" opacity="0.8"/><circle cx="33" cy="11" r="1.1" fill="#60A5FA" opacity="0.7"/>
+        <circle cx="37" cy="17" r="1.1" fill="#60A5FA" opacity="0.7"/><circle cx="34" cy="23" r="1.3" fill="#60A5FA" opacity="0.8"/>
+        <line x1="28" y1="15" x2="33" y2="11" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="33" y1="11" x2="37" y2="17" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="37" y1="17" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
+        <line x1="28" y1="15" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.4"/>
+        <line x1="22" y1="10" x2="22" y2="35" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M22 12 Q17 9 16 12 Q17 15 22 14 Z" fill="white" opacity="0.9"/>
+        <path d="M22 12 Q27 9 28 12 Q27 15 22 14 Z" fill="white" opacity="0.9"/>
+        <path d="M22 17 Q19 20 22 23 Q25 26 22 29 Q19 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M22 17 Q25 20 22 23 Q19 26 22 29 Q25 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        <text x="50" y="27" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#1E293B">MediLink</text>
+        <text x="51" y="38" font-family="Arial,sans-serif" font-size="9" fill="#64748B" letter-spacing="0.5">DME Unifié · Bénin</text>
+      </svg>
       <p style="font-size:10px;color:#666;">Dossier Médical Électronique Unifié</p>
       <p style="font-size:10px;color:#666;">${etablissement || "République du Bénin"}</p>
     </div>
