@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -19,9 +19,9 @@ import {
   Users, Stethoscope, BedDouble, Building2,
   Download, TrendingUp, Activity, UserPlus, Shield,
   MapPin, Phone, Mail, Loader2, UserCheck, UserX, Syringe, Settings2, ExternalLink,
-  Search, BarChart2,
+  Search, BarChart2, Pill, FlaskConical, X,
 } from "lucide-react";
-import { getRoleBadge } from "@/lib/utils";
+import { getRoleBadge, cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 
@@ -62,6 +62,15 @@ interface UserRow {
 
 const PARAMEDICAL_ROLES = ["medecin", "infirmier", "laborantin", "pharmacien"];
 const MULTI_ETAB_ROLES = ["medecin", "infirmier", "laborantin"];
+
+const ROLE_DEFS = [
+  { id: "medecin",             label: "Médecin",        icon: Stethoscope,  iconColor: "text-emerald-600", iconBg: "bg-emerald-100", activeBorder: "border-emerald-500", activeBg: "bg-emerald-50/60" },
+  { id: "infirmier",           label: "Infirmier(e)",   icon: Syringe,      iconColor: "text-blue-600",    iconBg: "bg-blue-100",    activeBorder: "border-blue-500",    activeBg: "bg-blue-50/60"    },
+  { id: "pharmacien",          label: "Pharmacien(ne)", icon: Pill,         iconColor: "text-amber-600",   iconBg: "bg-amber-100",   activeBorder: "border-amber-500",   activeBg: "bg-amber-50/60"   },
+  { id: "laborantin",          label: "Laborantin(e)",  icon: FlaskConical, iconColor: "text-teal-600",    iconBg: "bg-teal-100",    activeBorder: "border-teal-500",    activeBg: "bg-teal-50/60"    },
+  { id: "admin_etablissement", label: "Admin établ.",   icon: Building2,    iconColor: "text-purple-600",  iconBg: "bg-purple-100",  activeBorder: "border-purple-500",  activeBg: "bg-purple-50/60"  },
+];
+const SUPER_ADMIN_ROLE = { id: "super_admin", label: "Super Admin", icon: Shield, iconColor: "text-rose-600", iconBg: "bg-rose-100", activeBorder: "border-rose-500", activeBg: "bg-rose-50/60" };
 
 interface EtablissementRow {
   id: string;
@@ -110,6 +119,7 @@ export default function AdminPage() {
     nom: "", prenom: "", role: "", specialite: "",
     telephone: "", etablissement_id: "", etablissement_ids: [] as string[], numero_ordre: "", titre: "",
   });
+  const [etabSearch, setEtabSearch] = useState("");
 
   // Etablissements state
   const [etabRows, setEtabRows] = useState<EtablissementRow[]>([]);
@@ -168,6 +178,7 @@ export default function AdminPage() {
       toast({ title: "Profil utilisateur créé", description: `${newUserForm.prenom} ${newUserForm.nom}` });
       setNewUserOpen(false);
       setNewUserForm({ nom: "", prenom: "", role: "", specialite: "", telephone: "", etablissement_id: "", etablissement_ids: [], numero_ordre: "", titre: "" });
+      setEtabSearch("");
       loadUsers();
     } catch (err: unknown) {
       toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
@@ -446,131 +457,248 @@ export default function AdminPage() {
                     Ajouter un profil
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Nouveau profil utilisateur</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2.5 text-base">
+                      <div className="p-2 rounded-lg bg-medical-green/10 shrink-0">
+                        <UserPlus className="h-4 w-4 text-medical-green" />
+                      </div>
+                      Nouveau profil utilisateur
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                      Créez le profil d&apos;un nouveau membre de l&apos;équipe médicale.
+                    </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleNewUser} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>Prénom *</Label>
-                        <Input value={newUserForm.prenom} onChange={(e) => setNewUserForm({ ...newUserForm, prenom: e.target.value })} required placeholder="Jean" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Nom *</Label>
-                        <Input value={newUserForm.nom} onChange={(e) => setNewUserForm({ ...newUserForm, nom: e.target.value })} required placeholder="DUPONT" className="uppercase" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Titre</Label>
-                        <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, titre: v })}>
-                          <SelectTrigger><SelectValue placeholder="Titre..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Dr.">Dr.</SelectItem>
-                            <SelectItem value="Pr.">Pr.</SelectItem>
-                            <SelectItem value="M.">M.</SelectItem>
-                            <SelectItem value="Mme">Mme</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Rôle *</Label>
-                        <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, role: v, etablissement_id: "", etablissement_ids: [] })} required>
-                          <SelectTrigger><SelectValue placeholder="Rôle..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="medecin">Médecin</SelectItem>
-                            <SelectItem value="infirmier">Infirmier(e)</SelectItem>
-                            <SelectItem value="pharmacien">Pharmacien(ne)</SelectItem>
-                            <SelectItem value="laborantin">Laborantin(e)</SelectItem>
-                            <SelectItem value="admin_etablissement">Admin établissement</SelectItem>
-                            {user?.role === "super_admin" && <SelectItem value="super_admin">Super admin</SelectItem>}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Spécialité</Label>
-                        <Input value={newUserForm.specialite} onChange={(e) => setNewUserForm({ ...newUserForm, specialite: e.target.value })} placeholder="Cardiologie, Pédiatrie..." />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>N° Ordre médical</Label>
-                        <Input value={newUserForm.numero_ordre} onChange={(e) => setNewUserForm({ ...newUserForm, numero_ordre: e.target.value })} placeholder="BJ-2024-001" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Téléphone</Label>
-                        <Input value={newUserForm.telephone} onChange={(e) => setNewUserForm({ ...newUserForm, telephone: e.target.value })} placeholder="+229 97 00 00 00" />
-                      </div>
-                      {/* Establishment field — varies by role */}
-                      {newUserForm.role && !PARAMEDICAL_ROLES.includes(newUserForm.role) && (
-                        <div className="space-y-1">
-                          <Label>Établissement</Label>
-                          <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_id: v })}>
-                            <SelectTrigger><SelectValue placeholder="Établissement..." /></SelectTrigger>
+
+                  <form onSubmit={handleNewUser} className="space-y-5 pt-1">
+
+                    {/* ── Section 1 : Identité ─────────────────────────────── */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Identité</p>
+                      <div className="grid grid-cols-6 gap-3">
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-xs">Titre</Label>
+                          <Select value={newUserForm.titre} onValueChange={(v) => setNewUserForm({ ...newUserForm, titre: v })}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
                             <SelectContent>
-                              {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                              <SelectItem value="Dr.">Dr.</SelectItem>
+                              <SelectItem value="Pr.">Pr.</SelectItem>
+                              <SelectItem value="M.">M.</SelectItem>
+                              <SelectItem value="Mme">Mme</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                      )}
-                      {newUserForm.role === "pharmacien" && (
-                        <div className="space-y-1">
-                          <Label>Pharmacie / Établissement <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
-                          <Select
-                            value={newUserForm.etablissement_ids[0] ?? "__none__"}
-                            onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_ids: v === "__none__" ? [] : [v] })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="Aucun établissement..." /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Aucun établissement</SelectItem>
-                              {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-xs">Prénom <span className="text-red-500">*</span></Label>
+                          <Input className="h-9" value={newUserForm.prenom} onChange={(e) => setNewUserForm({ ...newUserForm, prenom: e.target.value })} required placeholder="Jean" />
                         </div>
-                      )}
-                      {MULTI_ETAB_ROLES.includes(newUserForm.role) && (
-                        <div className="space-y-1 col-span-2">
-                          <Label>Établissements rattachés <span className="text-muted-foreground font-normal">(plusieurs possibles)</span></Label>
-                          <div className="border rounded-md max-h-36 overflow-y-auto divide-y">
-                            {etablissements.length === 0 && (
-                              <p className="text-xs text-muted-foreground px-3 py-2">Aucun établissement disponible</p>
-                            )}
-                            {etablissements.map((e) => {
-                              const checked = newUserForm.etablissement_ids.includes(e.id);
-                              return (
-                                <label key={e.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors">
-                                  <input
-                                    type="checkbox"
-                                    className="accent-medical-green h-3.5 w-3.5"
-                                    checked={checked}
-                                    onChange={() => {
-                                      const ids = checked
-                                        ? newUserForm.etablissement_ids.filter((id) => id !== e.id)
-                                        : [...newUserForm.etablissement_ids, e.id];
-                                      setNewUserForm({ ...newUserForm, etablissement_ids: ids });
-                                    }}
-                                  />
-                                  <span className="text-sm">{e.nom}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                          {newUserForm.etablissement_ids.length > 0 && (
-                            <p className="text-xs text-medical-green font-medium">{newUserForm.etablissement_ids.length} établissement{newUserForm.etablissement_ids.length > 1 ? "s" : ""} sélectionné{newUserForm.etablissement_ids.length > 1 ? "s" : ""}</p>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-xs">Nom <span className="text-red-500">*</span></Label>
+                          <Input className="h-9 uppercase" value={newUserForm.nom} onChange={(e) => setNewUserForm({ ...newUserForm, nom: e.target.value })} required placeholder="DUPONT" />
+                        </div>
+                        <div className="col-span-3 space-y-1.5">
+                          <Label className="text-xs">Téléphone</Label>
+                          <Input className="h-9" value={newUserForm.telephone} onChange={(e) => setNewUserForm({ ...newUserForm, telephone: e.target.value })} placeholder="+229 97 00 00 00" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-dashed" />
+
+                    {/* ── Section 2 : Rôle & Compétences ──────────────────── */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Rôle & Compétences</p>
+
+                      {/* Role cards */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Rôle <span className="text-red-500">*</span></Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[...ROLE_DEFS, ...(user?.role === "super_admin" ? [SUPER_ADMIN_ROLE] : [])].map((def) => {
+                            const Icon = def.icon;
+                            const isSelected = newUserForm.role === def.id;
+                            return (
+                              <button
+                                key={def.id}
+                                type="button"
+                                onClick={() => setNewUserForm({ ...newUserForm, role: def.id, etablissement_id: "", etablissement_ids: [] })}
+                                className={cn(
+                                  "flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all duration-150",
+                                  isSelected
+                                    ? `${def.activeBorder} ${def.activeBg}`
+                                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                                )}
+                              >
+                                <div className={cn("p-1.5 rounded-lg shrink-0 transition-colors", isSelected ? def.iconBg : "bg-slate-100")}>
+                                  <Icon className={cn("h-3.5 w-3.5 transition-colors", isSelected ? def.iconColor : "text-slate-400")} />
+                                </div>
+                                <span className={cn("text-xs font-medium leading-tight", isSelected ? "text-slate-800" : "text-slate-500")}>
+                                  {def.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Spécialité</Label>
+                          <Input className="h-9" value={newUserForm.specialite} onChange={(e) => setNewUserForm({ ...newUserForm, specialite: e.target.value })} placeholder="Cardiologie, Pédiatrie…" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">N° Ordre médical</Label>
+                          <Input className="h-9" value={newUserForm.numero_ordre} onChange={(e) => setNewUserForm({ ...newUserForm, numero_ordre: e.target.value })} placeholder="BJ-2024-001" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── Section 3 : Rattachement ─────────────────────────── */}
+                    {newUserForm.role && (
+                      <>
+                        <div className="border-t border-dashed" />
+                        <div className="space-y-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Rattachement</p>
+
+                          {/* Admin roles: single establishment */}
+                          {!PARAMEDICAL_ROLES.includes(newUserForm.role) && (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Établissement</Label>
+                              <Select value={newUserForm.etablissement_id} onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_id: v })}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Sélectionner un établissement…" /></SelectTrigger>
+                                <SelectContent>
+                                  {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {/* Pharmacien: optional single */}
+                          {newUserForm.role === "pharmacien" && (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">
+                                Pharmacie / Établissement
+                                <span className="text-muted-foreground font-normal ml-1">(optionnel)</span>
+                              </Label>
+                              <Select
+                                value={newUserForm.etablissement_ids[0] ?? "__none__"}
+                                onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_ids: v === "__none__" ? [] : [v] })}
+                              >
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Aucun établissement" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Aucun établissement</SelectItem>
+                                  {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {/* Multi-etab roles: searchable checkbox list */}
+                          {MULTI_ETAB_ROLES.includes(newUserForm.role) && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                Établissements rattachés
+                                <span className="text-muted-foreground font-normal ml-1">(plusieurs possibles)</span>
+                              </Label>
+
+                              {/* Search */}
+                              <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                                <Input
+                                  className="h-8 pl-8 text-xs"
+                                  placeholder="Filtrer les établissements…"
+                                  value={etabSearch}
+                                  onChange={(e) => setEtabSearch(e.target.value)}
+                                />
+                              </div>
+
+                              {/* Checkbox list */}
+                              <div className="border rounded-lg divide-y max-h-44 overflow-y-auto">
+                                {etablissements
+                                  .filter((e) => !etabSearch || e.nom.toLowerCase().includes(etabSearch.toLowerCase()) || e.ville?.toLowerCase().includes(etabSearch.toLowerCase()))
+                                  .map((e) => {
+                                    const checked = newUserForm.etablissement_ids.includes(e.id);
+                                    return (
+                                      <label key={e.id} className={cn("flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors", checked ? "bg-medical-green/5" : "hover:bg-slate-50")}>
+                                        <input
+                                          type="checkbox"
+                                          className="accent-medical-green h-3.5 w-3.5 shrink-0"
+                                          checked={checked}
+                                          onChange={() => {
+                                            const ids = checked
+                                              ? newUserForm.etablissement_ids.filter((id) => id !== e.id)
+                                              : [...newUserForm.etablissement_ids, e.id];
+                                            setNewUserForm({ ...newUserForm, etablissement_ids: ids });
+                                          }}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm font-medium leading-none truncate">{e.nom}</p>
+                                          {(e.ville || e.type) && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                              {[typeEtabLabels[e.type] || e.type, e.ville].filter(Boolean).join(" · ")}
+                                            </p>
+                                          )}
+                                        </div>
+                                        {checked && (
+                                          <div className="h-4 w-4 rounded-full bg-medical-green flex items-center justify-center shrink-0">
+                                            <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                          </div>
+                                        )}
+                                      </label>
+                                    );
+                                  })}
+                                {etablissements.filter((e) => !etabSearch || e.nom.toLowerCase().includes(etabSearch.toLowerCase())).length === 0 && (
+                                  <p className="text-xs text-muted-foreground px-3 py-4 text-center">Aucun établissement trouvé</p>
+                                )}
+                              </div>
+
+                              {/* Selected tags */}
+                              {newUserForm.etablissement_ids.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {newUserForm.etablissement_ids.map((id) => {
+                                    const etab = etablissements.find((e) => e.id === id);
+                                    if (!etab) return null;
+                                    return (
+                                      <span key={id} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-medical-green/10 text-medical-green border border-medical-green/20">
+                                        {etab.nom}
+                                        <button
+                                          type="button"
+                                          onClick={() => setNewUserForm({ ...newUserForm, etablissement_ids: newUserForm.etablissement_ids.filter((eid) => eid !== id) })}
+                                          className="ml-0.5 hover:text-red-500 transition-colors"
+                                        >
+                                          <X className="h-2.5 w-2.5" />
+                                        </button>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-700">
-                        <strong>Note :</strong> Ce formulaire crée le profil. Pour créer le compte de connexion,
-                        utilisez la console Supabase Auth pour inviter l&apos;utilisateur par email.
+                      </>
+                    )}
+
+                    {/* Note */}
+                    <div className="flex gap-2.5 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                      <Shield className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        <strong>Compte de connexion :</strong> Ce formulaire crée le profil utilisateur.
+                        Pour activer la connexion, invitez l&apos;utilisateur par email via la console Supabase Auth.
                       </p>
                     </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setNewUserOpen(false)}>Annuler</Button>
-                      <Button type="submit" variant="medical" disabled={newUserLoading || !newUserForm.nom || !newUserForm.prenom || !newUserForm.role}>
-                        {newUserLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button type="button" variant="outline" onClick={() => { setNewUserOpen(false); setEtabSearch(""); }}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" variant="medical" disabled={newUserLoading || !newUserForm.nom || !newUserForm.prenom || !newUserForm.role} className="gap-2">
+                        {newUserLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                         Créer le profil
                       </Button>
                     </div>
+
                   </form>
                 </DialogContent>
               </Dialog>
