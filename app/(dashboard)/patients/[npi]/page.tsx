@@ -305,7 +305,7 @@ function PatientPageInner() {
   const visibleTabs = TAB_DEFS.filter((t) => !("adminOnly" in t && t.adminOnly) || isAdmin);
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50/60 scrollbar-hidden">
+    <div className="flex flex-col min-h-full bg-slate-50/60 scrollbar-hidden overflow-x-hidden">
       <Header />
 
       {/* Breadcrumb */}
