@@ -231,7 +231,7 @@ function PatientPageInner() {
       supabase.from("allergies").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("created_at", { ascending: false }),
       supabase.from("antecedents").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_debut", { ascending: false }),
       supabase.from("antecedents_familiaux").select("*").eq("patient_id", patientData.id),
-      supabase.from("habitudes_vie").select("*").eq("patient_id", patientData.id).single(),
+      supabase.from("habitudes_vie").select("*").eq("patient_id", patientData.id).maybeSingle(),
       supabase.from("consultations").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_consultation", { ascending: false }),
       supabase.from("prescriptions").select("*").eq("patient_id", patientData.id).is("deleted_at", null).order("date_prescription", { ascending: false }),
     ]);
