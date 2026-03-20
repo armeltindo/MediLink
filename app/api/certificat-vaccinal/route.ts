@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import QRCode from "qrcode";
 
 interface VaccinRow {
   vaccin: string;
@@ -23,6 +24,12 @@ const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44"
 
 export async function POST(request: NextRequest) {
   const { patient, vaccinations, etablissement } = await request.json();
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+  const qrBase64 = await QRCode.toDataURL(
+    `${baseUrl}/patients/${patient.npi}`,
+    { width: 120, margin: 1, color: { dark: "#065F46", light: "#FFFFFF" } }
+  );
 
   const vaccinRows = (vaccinations as VaccinRow[])
     .map((v, i) => `
@@ -193,6 +200,12 @@ export async function POST(request: NextRequest) {
       ${LOGO_LIGHT}
       <p style="margin-top:6px;">Dossier Médical Électronique Unifié</p>
       ${etablissement ? `<p>${etablissement}</p>` : ""}
+    </div>
+    <div style="text-align:center;flex-shrink:0;">
+      <div style="background:white;border-radius:6px;padding:3px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+        <img src="${qrBase64}" width="70" height="70" alt="QR Patient" style="display:block;"/>
+      </div>
+      <div style="font-size:6.5pt;color:rgba(255,255,255,0.55);margin-top:3px;letter-spacing:0.3px;">Scan · Vérifier</div>
     </div>
     <div class="header-ministry">
       <strong>MINISTÈRE DE LA SANTÉ</strong>

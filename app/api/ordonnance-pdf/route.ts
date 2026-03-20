@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { formatDate, formatAge } from "@/lib/utils";
+import QRCode from "qrcode";
 
 // ── Logo SVG (fond sombre) ───────────────────────────────────────────────────
 const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
@@ -57,6 +58,12 @@ export async function GET(request: NextRequest) {
       details: JSON.stringify({ type: "ordonnance", prescription_id: prescriptionId }),
       timestamp: new Date().toISOString(),
     });
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const qrBase64 = await QRCode.toDataURL(
+      `${baseUrl}/patients/${patient.npi}`,
+      { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
+    );
 
     const datePrescription = formatDate(prescription.date_prescription);
     const dateExpiration   = prescription.date_expiration ? formatDate(prescription.date_expiration) : null;
@@ -303,7 +310,15 @@ export async function GET(request: NextRequest) {
       ${medecinSpec ? `<div class="header-spec">${medecinSpec}</div>` : ""}
       <div class="header-etab">${etabNom}${etabAdresse ? " — " + etabAdresse : ""}${etabTel ? " — Tél : " + etabTel : ""}</div>
     </div>
-    <div class="header-right">${LOGO_LIGHT}</div>
+    <div class="header-right" style="display:flex;align-items:center;gap:14px;">
+      ${LOGO_LIGHT}
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="background:white;border-radius:6px;padding:3px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+          <img src="${qrBase64}" width="70" height="70" alt="QR Patient" style="display:block;"/>
+        </div>
+        <div style="font-size:6.5pt;color:rgba(255,255,255,0.55);margin-top:3px;letter-spacing:0.3px;">Scan · Vérifier</div>
+      </div>
+    </div>
   </div>
 
   <!-- Badge type document -->

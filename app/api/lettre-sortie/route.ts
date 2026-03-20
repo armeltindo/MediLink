@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import QRCode from "qrcode";
 
 const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
   <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="white" fill-opacity="0.2"/>
@@ -13,6 +14,12 @@ const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44"
 
 export async function POST(request: NextRequest) {
   const { patient, hospitalisation, medecin, etablissement } = await request.json();
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+  const qrBase64 = await QRCode.toDataURL(
+    `${baseUrl}/patients/${patient.npi}`,
+    { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
+  );
 
   const entree = hospitalisation.date_entree
     ? new Date(hospitalisation.date_entree).toLocaleDateString("fr-FR")
@@ -242,7 +249,15 @@ export async function POST(request: NextRequest) {
       ${etablissement?.adresse ? `<div class="header-addr">${etablissement.adresse}${etablissement.ville ? ", " + etablissement.ville : ""}</div>` : ""}
       ${etablissement?.telephone ? `<div class="header-addr">Tél : ${etablissement.telephone}</div>` : ""}
     </div>
-    <div class="header-right">${LOGO_LIGHT}</div>
+    <div class="header-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      ${LOGO_LIGHT}
+      <div style="text-align:center;">
+        <div style="background:white;border-radius:6px;padding:3px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+          <img src="${qrBase64}" width="70" height="70" alt="QR Patient" style="display:block;"/>
+        </div>
+        <div style="font-size:6.5pt;color:rgba(255,255,255,0.55);margin-top:3px;letter-spacing:0.3px;">Scan · Vérifier</div>
+      </div>
+    </div>
   </div>
 
   <!-- Titre -->

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { formatDate, formatAge } from "@/lib/utils";
+import QRCode from "qrcode";
 
 const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
   <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="white" fill-opacity="0.2"/>
@@ -51,6 +52,12 @@ export async function GET(request: NextRequest) {
       details: JSON.stringify({ type: "lettre_reference" }),
       timestamp: new Date().toISOString(),
     });
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const qrBase64 = await QRCode.toDataURL(
+      `${baseUrl}/patients/${patient.npi}`,
+      { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
+    );
 
     const medecinNom   = medecin ? `${medecin.titre ? medecin.titre + " " : "Dr. "}${medecin.prenom} ${medecin.nom}` : "________________";
     const medecinSpec  = medecin?.specialite || "";
@@ -273,7 +280,15 @@ export async function GET(request: NextRequest) {
       ${etablissement?.adresse ? `<p>${etablissement.adresse}${etablissement.ville ? ", " + etablissement.ville : ""}</p>` : ""}
       ${etablissement?.telephone ? `<p>Tél : ${etablissement.telephone}</p>` : ""}
     </div>
-    <div>${LOGO_LIGHT}</div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      ${LOGO_LIGHT}
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="background:white;border-radius:6px;padding:3px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+          <img src="${qrBase64}" width="70" height="70" alt="QR Patient" style="display:block;"/>
+        </div>
+        <div style="font-size:6.5pt;color:rgba(255,255,255,0.55);margin-top:3px;letter-spacing:0.3px;">Scan · Vérifier</div>
+      </div>
+    </div>
   </div>
 
   <!-- Titre document -->
