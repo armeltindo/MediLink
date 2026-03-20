@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Fond gris clair -->
+  <rect width="200" height="200" fill="#F1F5F9" rx="28"/>
+
+  <!-- Bouclier navy -->
+  <path d="M100 20 L164 46 L164 112 Q164 156 100 182 Q36 156 36 112 L36 46 Z"
+        fill="#1E3A5F"/>
+
+  <!-- Liseré interne subtil -->
+  <path d="M100 30 L156 53 L156 112 Q156 150 100 173 Q44 150 44 112 L44 53 Z"
+        fill="none" stroke="#2D5896" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- ── Ligne ECG (côté gauche) ── -->
+  <polyline
+    points="44,108 58,108 64,88 70,128 77,96 83,108 98,108"
+    fill="none" stroke="#60A5FA" stroke-width="2.5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ── Réseau numérique (côté droit) ── -->
+  <circle cx="122" cy="82"  r="3.5" fill="#60A5FA" opacity="0.8"/>
+  <circle cx="140" cy="69"  r="3"   fill="#60A5FA" opacity="0.7"/>
+  <circle cx="152" cy="85"  r="3"   fill="#60A5FA" opacity="0.7"/>
+  <circle cx="142" cy="101" r="3.5" fill="#60A5FA" opacity="0.8"/>
+  <circle cx="126" cy="112" r="2.5" fill="#60A5FA" opacity="0.6"/>
+  <circle cx="154" cy="102" r="2.5" fill="#60A5FA" opacity="0.6"/>
+  <line x1="122" y1="82"  x2="140" y2="69"  stroke="#60A5FA" stroke-width="1.4" opacity="0.55"/>
+  <line x1="140" y1="69"  x2="152" y2="85"  stroke="#60A5FA" stroke-width="1.4" opacity="0.55"/>
+  <line x1="152" y1="85"  x2="142" y2="101" stroke="#60A5FA" stroke-width="1.4" opacity="0.55"/>
+  <line x1="122" y1="82"  x2="142" y2="101" stroke="#60A5FA" stroke-width="1.4" opacity="0.45"/>
+  <line x1="142" y1="101" x2="126" y2="112" stroke="#60A5FA" stroke-width="1.4" opacity="0.45"/>
+  <line x1="152" y1="85"  x2="154" y2="102" stroke="#60A5FA" stroke-width="1.4" opacity="0.45"/>
+
+  <!-- ── Caducée (centre) ── -->
+  <!-- Bâton -->
+  <line x1="100" y1="50" x2="100" y2="160"
+        stroke="white" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Ailettes -->
+  <path d="M100 56 Q80 46 76 58 Q80 66 100 62 Z"
+        fill="white" opacity="0.9"/>
+  <path d="M100 56 Q120 46 124 58 Q120 66 100 62 Z"
+        fill="white" opacity="0.9"/>
+
+  <!-- Globe du haut -->
+  <ellipse cx="100" cy="54" rx="7" ry="4.5"
+           fill="none" stroke="white" stroke-width="2" opacity="0.85"/>
+
+  <!-- Serpent gauche -->
+  <path d="M100 72
+           Q89 80 100 90
+           Q111 100 100 110
+           Q89 120 100 130
+           Q107 137 100 144"
+        fill="none" stroke="white" stroke-width="2.8"
+        stroke-linecap="round"/>
+
+  <!-- Serpent droit -->
+  <path d="M100 72
+           Q111 80 100 90
+           Q89 100 100 110
+           Q111 120 100 130
+           Q93 137 100 144"
+        fill="none" stroke="white" stroke-width="2.8"
+        stroke-linecap="round"/>
+
+  <!-- Têtes de serpents -->
+  <ellipse cx="96.5" cy="145" rx="4" ry="2.8"
+           transform="rotate(-25 96.5 145)" fill="white" opacity="0.9"/>
+  <ellipse cx="103.5" cy="145" rx="4" ry="2.8"
+           transform="rotate(25 103.5 145)" fill="white" opacity="0.9"/>
+
+  <!-- Pointe bâton -->
+  <circle cx="100" cy="158" r="3.5" fill="white" opacity="0.75"/>
+</svg>
