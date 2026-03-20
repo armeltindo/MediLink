@@ -101,7 +101,7 @@ export function AIAlertsBanner({ patientId }: AIAlertsBannerProps) {
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-medical-blue" />
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Alertes cliniques — Analyse IA
+            Alertes cliniques
           </span>
           {!loading && alerts.length > 0 && (
             <span className="text-xs text-muted-foreground">({alerts.length})</span>
