@@ -4,6 +4,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { formatDate, formatAge } from "@/lib/utils";
 
+// ── Logo SVG partagé (fond clair) ───────────────────────────────────────────
+const LOGO_DARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
+  <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="#1E3A5F"/>
+  <path d="M20 8 L20 30" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M20 10 Q15 8 14 11 Q15 13 20 12 Z" fill="white"/>
+  <path d="M20 10 Q25 8 26 11 Q25 13 20 12 Z" fill="white"/>
+  <path d="M20 14 Q16.5 17 20 20 Q23.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M20 14 Q23.5 17 20 20 Q16.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <text x="42" y="24" font-family="Georgia,serif" font-weight="700" font-size="17" fill="#1E3A5F">MediLink</text>
+  <text x="43" y="35" font-family="Arial,sans-serif" font-size="8" fill="#64748B" letter-spacing="0.4">DME Unifié · Bénin</text>
+</svg>`;
+
+// ── Logo SVG fond sombre ─────────────────────────────────────────────────────
+const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
+  <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="white" fill-opacity="0.2"/>
+  <path d="M20 8 L20 30" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M20 10 Q15 8 14 11 Q15 13 20 12 Z" fill="white"/>
+  <path d="M20 10 Q25 8 26 11 Q25 13 20 12 Z" fill="white"/>
+  <path d="M20 14 Q16.5 17 20 20 Q23.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M20 14 Q23.5 17 20 20 Q16.5 23 20 26" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <text x="42" y="24" font-family="Georgia,serif" font-weight="700" font-size="17" fill="white">MediLink</text>
+  <text x="43" y="35" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.65)" letter-spacing="0.4">DME Unifié · Bénin</text>
+</svg>`;
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -13,7 +37,6 @@ export async function GET(request: NextRequest) {
     const prescriptionId = request.nextUrl.searchParams.get("prescriptionId");
     if (!prescriptionId) return NextResponse.json({ error: "prescriptionId requis" }, { status: 400 });
 
-    // Charger la prescription
     const { data: prescription, error: rxErr } = await supabase
       .from("prescriptions")
       .select("*")
@@ -24,7 +47,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Prescription non trouvée" }, { status: 404 });
     }
 
-    // Charger patient + profil médecin + établissement en parallèle
     const [patientRes, profileRes] = await Promise.all([
       supabase.from("patients").select("*").eq("id", prescription.patient_id).single(),
       supabase.from("users_profiles")
@@ -40,7 +62,6 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const etablissement = (medecin as any)?.etablissements;
 
-    // Audit
     await supabase.from("audit_logs").insert({
       user_id: user.id,
       patient_id: patient.id,
@@ -50,13 +71,15 @@ export async function GET(request: NextRequest) {
     });
 
     const datePrescription = formatDate(prescription.date_prescription);
-    const dateExpiration = prescription.date_expiration ? formatDate(prescription.date_expiration) : null;
-    const agePatient = formatAge(patient.date_naissance);
-    const medecinNom = medecin ? `Dr. ${medecin.prenom} ${medecin.nom}` : "Médecin";
-    const medecinSpec = medecin?.specialite || medecin?.role || "";
-    const etabNom = etablissement?.nom || "Établissement de santé";
-    const etabAdresse = etablissement ? `${etablissement.adresse || ""}, ${etablissement.ville || ""} — Tél : ${etablissement.telephone || ""}` : "";
-    const etabRegion = etablissement?.region || "";
+    const dateExpiration   = prescription.date_expiration ? formatDate(prescription.date_expiration) : null;
+    const agePatient       = formatAge(patient.date_naissance);
+    const medecinNom       = medecin ? `${medecin.titre ? medecin.titre + " " : "Dr. "}${medecin.prenom} ${medecin.nom}` : "Médecin";
+    const medecinSpec      = medecin?.specialite || "";
+    const medecinOrdre     = medecin?.numero_ordre || "";
+    const etabNom          = etablissement?.nom || "Établissement de santé";
+    const etabAdresse      = etablissement ? [etablissement.adresse, etablissement.ville].filter(Boolean).join(", ") : "";
+    const etabTel          = etablissement?.telephone || "";
+    const refDoc           = prescriptionId.slice(0, 8).toUpperCase();
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -64,150 +87,315 @@ export async function GET(request: NextRequest) {
   <meta charset="UTF-8">
   <title>Ordonnance — ${patient.prenom} ${patient.nom}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Georgia', serif; font-size: 11pt; color: #1E293B; line-height: 1.6; padding: 40px; max-width: 800px; margin: 0 auto; }
-
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0D7A5F; padding-bottom: 16px; margin-bottom: 20px; }
-    .sender h2 { color: #0D7A5F; font-size: 14pt; margin-bottom: 2px; }
-    .sender p { font-size: 9.5pt; color: #475569; }
-    .logo-area { text-align: right; display: flex; justify-content: flex-end; }
-    .logo-svg { display: block; }
-
-    .ordonnance-title { text-align: center; margin: 20px 0; }
-    .ordonnance-title h1 { font-size: 16pt; color: #0D7A5F; letter-spacing: 2px; text-transform: uppercase; border: 2px solid #0D7A5F; display: inline-block; padding: 6px 24px; border-radius: 4px; }
-
-    .date-ref { display: flex; justify-content: space-between; font-size: 9.5pt; color: #64748B; margin-bottom: 16px; }
-
-    .patient-box { background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
-    .patient-box h3 { color: #0D7A5F; font-size: 10.5pt; margin-bottom: 6px; }
-    .patient-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 9.5pt; }
-    .patient-grid span { color: #64748B; }
-    .patient-grid strong { color: #1E293B; }
-
-    .rx-section { margin-bottom: 24px; }
-    .rx-section h3 { font-size: 11pt; color: #0D7A5F; border-bottom: 1px solid #E2E8F0; padding-bottom: 4px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .rx-section h3::before { content: "℞"; font-size: 16pt; font-weight: bold; }
-
-    .rx-item { border: 1px solid #E2E8F0; border-radius: 6px; padding: 12px 16px; margin-bottom: 10px; background: #FAFAFA; }
-    .rx-drug { font-size: 12pt; font-weight: bold; color: #0D7A5F; margin-bottom: 4px; }
-    .rx-drug .commercial { font-size: 10pt; color: #64748B; font-weight: normal; font-style: italic; }
-    .rx-details { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 9.5pt; margin-top: 6px; }
-    .rx-details .label { color: #64748B; }
-    .rx-instructions { margin-top: 6px; padding-top: 6px; border-top: 1px dotted #E2E8F0; font-size: 9pt; color: #475569; font-style: italic; }
-
-    .validity { background: #FEF9C3; border: 1px solid #FCD34D; border-radius: 6px; padding: 10px 14px; font-size: 9.5pt; margin-bottom: 24px; }
-    .validity strong { color: #92400E; }
-
-    .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
-    .sig-block { text-align: center; }
-    .sig-line { width: 220px; border-bottom: 1px solid #1E293B; height: 60px; margin-bottom: 6px; }
-    .sig-label { font-size: 9pt; color: #64748B; }
-    .sig-name { font-size: 10pt; font-weight: bold; margin-top: 2px; }
-
-    .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 7.5pt; color: #94A3B8; text-align: center; }
-
-    @media print {
-      body { padding: 20px; }
-      .no-print { display: none !important; }
+    @page { size: A4; margin: 12mm 16mm 16mm; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+      font-size: 11pt;
+      color: #1E293B;
+      background: #fff;
+      line-height: 1.55;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
     }
+
+    /* ── BANDEAU EN-TÊTE ─────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #1E3A5F 0%, #1a3550 60%, #0f2a1e 100%);
+      border-radius: 10px;
+      padding: 20px 24px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .header-left { flex: 1; }
+    .header-medecin { color: white; font-size: 14pt; font-weight: 700; font-family: Georgia, serif; margin-bottom: 2px; }
+    .header-spec { color: rgba(255,255,255,0.75); font-size: 9.5pt; margin-bottom: 6px; }
+    .header-etab { color: rgba(255,255,255,0.6); font-size: 9pt; }
+    .header-right { text-align: right; }
+
+    /* ── BADGE TYPE DOC ──────────────────────────────── */
+    .doc-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 0 0 18px;
+      padding: 10px 0;
+      border-top: 1px solid #E2E8F0;
+      border-bottom: 3px solid #0D7A5F;
+    }
+    .doc-badge-rx {
+      font-size: 22pt;
+      color: #0D7A5F;
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .doc-badge-title {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #1E3A5F;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .doc-badge-ref {
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      color: #94A3B8;
+      background: #F1F5F9;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    /* ── DATE + NPI ──────────────────────────────────── */
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 9.5pt;
+      color: #64748B;
+    }
+    .meta-row strong { color: #1E293B; }
+
+    /* ── PATIENT ─────────────────────────────────────── */
+    .patient-card {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-left: 4px solid #3B82F6;
+      border-radius: 0 8px 8px 0;
+      padding: 13px 16px;
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px 16px;
+    }
+    .patient-card-full { grid-column: 1 / -1; }
+    .field-label { font-size: 8.5pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1px; }
+    .field-value { font-size: 10.5pt; font-weight: 600; color: #1E293B; }
+    .field-value.npi { font-family: 'Courier New', monospace; color: #1E3A5F; font-size: 11pt; }
+
+    /* ── PRESCRIPTION ────────────────────────────────── */
+    .rx-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #0D7A5F;
+      border-left: 4px solid #0D7A5F;
+      padding-left: 10px;
+    }
+    .rx-header h2 { font-size: 11pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .rx-card {
+      border: 1.5px solid #E2E8F0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .rx-card-top {
+      background: linear-gradient(to right, #F0FDF4, #fff);
+      border-bottom: 1px solid #D1FAE5;
+      padding: 10px 14px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .rx-dci { font-size: 12.5pt; font-weight: 700; color: #0D7A5F; }
+    .rx-dosage { font-size: 11pt; color: #1E293B; font-weight: 600; }
+    .rx-commercial { font-size: 9.5pt; color: #64748B; font-style: italic; margin-left: auto; }
+    .rx-card-body { padding: 10px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .rx-card-body .field-label { font-size: 8pt; }
+    .rx-card-body .field-value { font-size: 10pt; }
+    .rx-instructions {
+      padding: 8px 14px;
+      background: #FFFBEB;
+      border-top: 1px dashed #FCD34D;
+      font-size: 9pt;
+      color: #78350F;
+    }
+
+    /* ── VALIDITÉ ─────────────────────────────────────── */
+    .validity {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 9.5pt;
+      color: #78350F;
+      margin-bottom: 20px;
+    }
+    .validity strong { font-size: 10pt; }
+
+    /* ── SIGNATURE ───────────────────────────────────── */
+    .sig-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 30px;
+      gap: 20px;
+    }
+    .sig-note {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 9pt;
+      color: #64748B;
+    }
+    .sig-block { text-align: center; flex: 0 0 220px; }
+    .sig-area {
+      height: 70px;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        rgba(0,0,0,0.015) 8px,
+        rgba(0,0,0,0.015) 9px
+      );
+    }
+    .sig-name { font-size: 10pt; font-weight: 700; color: #1E293B; }
+    .sig-ordre { font-size: 8pt; color: #94A3B8; font-family: 'Courier New', monospace; margin-top: 2px; }
+
+    /* ── PIED DE PAGE ────────────────────────────────── */
+    .doc-footer {
+      margin-top: 24px;
+      padding-top: 10px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+    .confidential-badge {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 7.5pt;
+      color: #64748B;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ── IMPRESSION ──────────────────────────────────── */
+    .no-print { margin-bottom: 20px; }
+    @media print { .no-print { display: none !important; } }
   </style>
 </head>
 <body>
-  <!-- Bouton impression -->
-  <div class="no-print" style="background:#F0FDF4;border:1px solid #86EFAC;padding:10px 16px;border-radius:8px;margin-bottom:20px;font-family:sans-serif;font-size:10pt;display:flex;align-items:center;justify-content:space-between;">
-    <span>📋 <strong>Ordonnance médicale</strong> — Cliquez sur Imprimer pour générer le PDF.</span>
-    <button onclick="window.print()" style="background:#0D7A5F;color:white;border:none;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:10pt;font-family:sans-serif;">🖨️ Imprimer / PDF</button>
+
+  <!-- Barre impression -->
+  <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 16px;font-family:sans-serif;font-size:10pt;">
+    <span style="color:#1E3A5F;font-weight:600;">Ordonnance médicale</span>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="background:#1E3A5F;color:white;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;font-size:10pt;font-family:sans-serif;font-weight:600;">Imprimer / Enregistrer PDF</button>
+    </div>
   </div>
 
-  <!-- En-tête médecin / établissement -->
+  <!-- En-tête gradient -->
   <div class="header">
-    <div class="sender">
-      <h2>${medecinNom}</h2>
-      ${medecinSpec ? `<p>${medecinSpec}</p>` : ""}
-      <p>${etabNom}</p>
-      ${etabAdresse ? `<p style="font-size:8.5pt;">${etabAdresse}</p>` : ""}
-      ${etabRegion ? `<p style="font-size:8.5pt;">${etabRegion}</p>` : ""}
+    <div class="header-left">
+      <div class="header-medecin">${medecinNom}</div>
+      ${medecinSpec ? `<div class="header-spec">${medecinSpec}</div>` : ""}
+      <div class="header-etab">${etabNom}${etabAdresse ? " — " + etabAdresse : ""}${etabTel ? " — Tél : " + etabTel : ""}</div>
     </div>
-    <div class="logo-area">
-      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 44" height="44">
-        <path d="M22 4 L38 10 L38 24 Q38 33 22 39 Q6 33 6 24 L6 10 Z" fill="#1E3A5F"/>
-        <polyline points="6,24 10,24 12,18 14,30 16,21 18,24 22,24" fill="none" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="28" cy="15" r="1.3" fill="#60A5FA" opacity="0.8"/><circle cx="33" cy="11" r="1.1" fill="#60A5FA" opacity="0.7"/>
-        <circle cx="37" cy="17" r="1.1" fill="#60A5FA" opacity="0.7"/><circle cx="34" cy="23" r="1.3" fill="#60A5FA" opacity="0.8"/>
-        <line x1="28" y1="15" x2="33" y2="11" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
-        <line x1="33" y1="11" x2="37" y2="17" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
-        <line x1="37" y1="17" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.5"/>
-        <line x1="28" y1="15" x2="34" y2="23" stroke="#60A5FA" stroke-width="0.8" opacity="0.4"/>
-        <line x1="22" y1="10" x2="22" y2="35" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-        <path d="M22 12 Q17 9 16 12 Q17 15 22 14 Z" fill="white" opacity="0.9"/>
-        <path d="M22 12 Q27 9 28 12 Q27 15 22 14 Z" fill="white" opacity="0.9"/>
-        <path d="M22 17 Q19 20 22 23 Q25 26 22 29 Q19 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
-        <path d="M22 17 Q25 20 22 23 Q19 26 22 29 Q25 32 22 35" fill="none" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
-        <text x="50" y="27" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#1E293B">MediLink</text>
-        <text x="51" y="38" font-family="Arial,sans-serif" font-size="9" fill="#64748B" letter-spacing="0.5">DME Unifié · Bénin</text>
-      </svg>
-    </div>
+    <div class="header-right">${LOGO_LIGHT}</div>
   </div>
 
-  <!-- Titre -->
-  <div class="ordonnance-title">
-    <h1>Ordonnance Médicale</h1>
+  <!-- Badge type document -->
+  <div class="doc-badge">
+    <span class="doc-badge-rx">&#8478;</span>
+    <span class="doc-badge-title">Ordonnance Médicale</span>
+    <span class="doc-badge-ref">Réf. ${refDoc}</span>
   </div>
 
-  <!-- Date et référence -->
-  <div class="date-ref">
-    <span>Date : <strong>${datePrescription}</strong></span>
-    <span style="font-family:monospace;font-size:8.5pt;">Réf : ${prescriptionId.slice(0, 8).toUpperCase()}</span>
+  <!-- Date -->
+  <div class="meta-row">
+    <span>Date de prescription : <strong>${datePrescription}</strong></span>
+    ${dateExpiration ? `<span>Valable jusqu'au : <strong>${dateExpiration}</strong></span>` : ""}
+    <span>NPI patient : <strong style="font-family:'Courier New',monospace;">${patient.npi}</strong></span>
   </div>
 
   <!-- Patient -->
-  <div class="patient-box">
-    <h3>Patient</h3>
-    <div class="patient-grid">
-      <div><span>Nom complet</span><br><strong>${patient.prenom} ${patient.nom}</strong></div>
-      <div><span>Date de naissance</span><br><strong>${formatDate(patient.date_naissance)} (${agePatient})</strong></div>
-      <div><span>NPI</span><br><strong style="font-family:monospace;">${patient.npi}</strong></div>
-      ${patient.groupe_sanguin ? `<div><span>Groupe sanguin</span><br><strong>${patient.groupe_sanguin}${patient.rhesus || ""}</strong></div>` : ""}
-      ${patient.sexe ? `<div><span>Sexe</span><br><strong>${patient.sexe === "M" ? "Masculin" : "Féminin"}</strong></div>` : ""}
+  <div class="patient-card">
+    <div>
+      <div class="field-label">Nom complet</div>
+      <div class="field-value">${patient.prenom} ${patient.nom.toUpperCase()}</div>
     </div>
+    <div>
+      <div class="field-label">Date de naissance</div>
+      <div class="field-value">${formatDate(patient.date_naissance)} (${agePatient})</div>
+    </div>
+    <div>
+      <div class="field-label">Identifiant NPI</div>
+      <div class="field-value npi">${patient.npi}</div>
+    </div>
+    ${patient.sexe ? `<div><div class="field-label">Sexe</div><div class="field-value">${patient.sexe === "M" ? "Masculin" : "Féminin"}</div></div>` : ""}
+    ${patient.groupe_sanguin ? `<div><div class="field-label">Groupe sanguin</div><div class="field-value">${patient.groupe_sanguin}${patient.rhesus || ""}</div></div>` : ""}
+    ${patient.assurance_organisme ? `<div><div class="field-label">Assurance</div><div class="field-value">${patient.assurance_organisme}${patient.assurance_numero ? " – " + patient.assurance_numero : ""}</div></div>` : ""}
   </div>
 
-  <!-- Prescription -->
-  <div class="rx-section">
-    <h3>Prescription</h3>
-    <div class="rx-item">
-      <div class="rx-drug">
-        ${prescription.medicament_dci}
-        ${prescription.medicament_commercial ? `<span class="commercial">– ${prescription.medicament_commercial}</span>` : ""}
-      </div>
-      <div class="rx-details">
-        <div><span class="label">Dosage</span><br>${prescription.dosage}</div>
-        ${prescription.forme ? `<div><span class="label">Forme</span><br>${prescription.forme}</div>` : ""}
-        <div><span class="label">Posologie</span><br>${prescription.posologie}</div>
-        <div><span class="label">Durée</span><br>${prescription.duree}</div>
-      </div>
-      ${prescription.instructions ? `<div class="rx-instructions">ℹ️ ${prescription.instructions}</div>` : ""}
+  <!-- Médicament prescrit -->
+  <div class="rx-header"><h2>Traitement prescrit</h2></div>
+
+  <div class="rx-card">
+    <div class="rx-card-top">
+      <span class="rx-dci">${prescription.medicament_dci}</span>
+      <span class="rx-dosage">${prescription.dosage}</span>
+      ${prescription.medicament_commercial ? `<span class="rx-commercial">(${prescription.medicament_commercial})</span>` : ""}
     </div>
+    <div class="rx-card-body">
+      ${prescription.forme ? `<div><div class="field-label">Forme</div><div class="field-value">${prescription.forme}</div></div>` : ""}
+      <div><div class="field-label">Posologie</div><div class="field-value">${prescription.posologie}</div></div>
+      <div><div class="field-label">Durée du traitement</div><div class="field-value">${prescription.duree}</div></div>
+    </div>
+    ${prescription.instructions ? `<div class="rx-instructions">Instructions : ${prescription.instructions}</div>` : ""}
   </div>
 
-  <!-- Validité -->
   ${dateExpiration ? `
   <div class="validity">
-    <strong>Validité :</strong> du ${datePrescription} au ${dateExpiration}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    <span>Ordonnance valable du <strong>${datePrescription}</strong> au <strong>${dateExpiration}</strong> — Non renouvelable sans avis médical</span>
   </div>` : ""}
 
   <!-- Signature -->
-  <div class="signature">
+  <div class="sig-section">
+    <div class="sig-note">
+      <strong>Recommandations au patient :</strong><br>
+      Respecter scrupuleusement la posologie prescrite. Ne pas interrompre le traitement sans avis médical.
+      En cas d'effet indésirable, contacter immédiatement votre médecin.
+    </div>
     <div class="sig-block">
-      <div class="sig-line"></div>
-      <div class="sig-label">Signature et cachet du médecin</div>
+      <div class="sig-area"></div>
       <div class="sig-name">${medecinNom}</div>
+      ${medecinSpec ? `<div style="font-size:9pt;color:#64748B;">${medecinSpec}</div>` : ""}
+      ${medecinOrdre ? `<div class="sig-ordre">N° Ordre : ${medecinOrdre}</div>` : ""}
     </div>
   </div>
 
-  <div class="footer">
-    Document généré par MediLink — ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")} &nbsp;|&nbsp; Ce document est confidentiel
+  <!-- Pied de page -->
+  <div class="doc-footer">
+    <span>Généré par MediLink le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+    <span class="confidential-badge">Document confidentiel</span>
+    <span>Réf. ${refDoc}</span>
   </div>
+
 </body>
 </html>`;
 
