@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { CalendarDays, Plus, Loader2, Clock, User, AlertTriangle, CheckCircle, X } from "lucide-react";
+import { CalendarDays, Plus, Loader2, Clock, User, AlertTriangle, CheckCircle, X, ChevronRight, Building2, FileText, Timer } from "lucide-react";
 import Link from "next/link";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -63,6 +63,7 @@ export default function RendezVousPage() {
   const [patientSearch, setPatientSearch] = useState("");
   const searchSeqRef = useRef(0);
   const [confirmAction, setConfirmAction] = useState<{ id: string; statut: string; label: string } | null>(null);
+  const [detailRdv, setDetailRdv] = useState<RDV | null>(null);
   const [form, setForm] = useState({
     patient_id: "", medecin_id: "", etablissement_id: "",
     date_rdv: new Date().toISOString().slice(0, 16),
@@ -338,67 +339,191 @@ export default function RendezVousPage() {
               const medecin = rdv.users_profiles as { nom: string; prenom: string } | null;
 
               return (
-                <Card key={rdv.id} className={`hover:shadow-md transition-shadow ${rdv.statut === "annule" ? "opacity-60" : ""}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="text-center min-w-[60px]">
-                        <p className="text-2xl font-bold text-medical-green">{heure}</p>
-                        <p className="text-xs text-muted-foreground">{rdv.duree_minutes} min</p>
+                <button
+                  key={rdv.id}
+                  type="button"
+                  className={`w-full text-left group ${rdv.statut === "annule" ? "opacity-60" : ""}`}
+                  onClick={() => setDetailRdv(rdv)}
+                >
+                  <Card className="hover:shadow-md hover:border-medical-green/30 transition-all group-hover:translate-x-0.5">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="text-center min-w-[60px]">
+                          <p className="text-2xl font-bold text-medical-green">{heure}</p>
+                          <p className="text-xs text-muted-foreground">{rdv.duree_minutes} min</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold group-hover:text-medical-green transition-colors">
+                              {patient ? `${patient.prenom} ${patient.nom}` : "Patient inconnu"}
+                            </span>
+                            <Badge variant="outline" className="text-xs">{typeLabels[rdv.type_rdv] || rdv.type_rdv}</Badge>
+                            <Badge variant={statut.variant} className="text-xs flex items-center gap-1">
+                              <Icon className="h-3 w-3" />
+                              {statut.label}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">{rdv.motif}</p>
+                          {medecin && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              Dr. {medecin.prenom} {medecin.nom}
+                            </p>
+                          )}
+                          {rdv.notes && <p className="text-xs text-muted-foreground mt-1 italic">{rdv.notes}</p>}
+                        </div>
+                        {/* Status actions — stop propagation so clicking buttons doesn't open dialog */}
+                        <div className="shrink-0 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {rdv.statut === "planifie" && (
+                            <div className="flex flex-col gap-1.5">
+                              <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "confirme")}>
+                                Confirmer
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500" onClick={() => setConfirmAction({ id: rdv.id, statut: "annule", label: "annuler ce rendez-vous" })}>
+                                Annuler
+                              </Button>
+                            </div>
+                          )}
+                          {rdv.statut === "confirme" && (
+                            <div className="flex flex-col gap-1.5">
+                              <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "effectue")}>
+                                Effectué
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-yellow-600" onClick={() => setConfirmAction({ id: rdv.id, statut: "absent", label: "marquer le patient comme absent" })}>
+                                Absent
+                              </Button>
+                            </div>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {patient ? (
-                            <Link
-                              href={`/patients/${patient.npi}`}
-                              className="font-semibold hover:text-medical-green transition-colors"
-                            >
-                              {patient.prenom} {patient.nom}
-                            </Link>
-                          ) : <span className="font-semibold text-muted-foreground">Patient inconnu</span>}
-                          <Badge variant="outline" className="text-xs">{typeLabels[rdv.type_rdv] || rdv.type_rdv}</Badge>
-                          <Badge variant={statut.variant} className="text-xs flex items-center gap-1">
-                            <Icon className="h-3 w-3" />
-                            {statut.label}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">{rdv.motif}</p>
-                        {medecin && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            Dr. {medecin.prenom} {medecin.nom}
-                          </p>
-                        )}
-                        {rdv.notes && <p className="text-xs text-muted-foreground mt-1 italic">{rdv.notes}</p>}
-                      </div>
-                      {/* Status actions */}
-                      {rdv.statut === "planifie" && (
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "confirme")}>
-                            Confirmer
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs text-red-500" onClick={() => setConfirmAction({ id: rdv.id, statut: "annule", label: "annuler ce rendez-vous" })}>
-                            Annuler
-                          </Button>
-                        </div>
-                      )}
-                      {rdv.statut === "confirme" && (
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 border-green-300" onClick={() => handleUpdateStatut(rdv.id, "effectue")}>
-                            Effectué
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs text-yellow-600" onClick={() => setConfirmAction({ id: rdv.id, statut: "absent", label: "marquer le patient comme absent" })}>
-                            Absent
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </button>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Detail dialog */}
+      {detailRdv && (() => {
+        const rdv = detailRdv;
+        const statut = statutConfig[rdv.statut] || statutConfig.planifie;
+        const StatutIcon = statut.icon;
+        const patient = rdv.patients as { nom: string; prenom: string; npi: string } | null;
+        const medecin = rdv.users_profiles as { nom: string; prenom: string } | null;
+        const heure = new Date(rdv.date_rdv).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+        const dateLabel = new Date(rdv.date_rdv).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        return (
+          <Dialog open onOpenChange={(o) => { if (!o) setDetailRdv(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-medical-green" />
+                  Détails du rendez-vous
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                {/* Patient */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                  <div className="p-1.5 rounded-md bg-white border shrink-0"><User className="h-4 w-4 text-slate-500" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Patient</p>
+                    {patient ? (
+                      <Link
+                        href={`/patients/${patient.npi}`}
+                        className="text-sm font-semibold text-medical-green hover:underline underline-offset-2"
+                        onClick={() => setDetailRdv(null)}
+                      >
+                        {patient.prenom} {patient.nom}
+                      </Link>
+                    ) : <p className="text-sm text-muted-foreground">Inconnu</p>}
+                  </div>
+                </div>
+                {/* Date & heure */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                  <div className="p-1.5 rounded-md bg-white border shrink-0"><CalendarDays className="h-4 w-4 text-slate-500" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Date &amp; heure</p>
+                    <p className="text-sm font-semibold capitalize">{dateLabel} à {heure}</p>
+                  </div>
+                </div>
+                {/* Durée & type */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                    <div className="p-1.5 rounded-md bg-white border shrink-0"><Timer className="h-4 w-4 text-slate-500" /></div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Durée</p>
+                      <p className="text-sm font-semibold">{rdv.duree_minutes} min</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                    <div className="p-1.5 rounded-md bg-white border shrink-0"><Building2 className="h-4 w-4 text-slate-500" /></div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Type</p>
+                      <p className="text-sm font-semibold">{typeLabels[rdv.type_rdv] || rdv.type_rdv}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Statut */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                  <div className="p-1.5 rounded-md bg-white border shrink-0"><StatutIcon className="h-4 w-4 text-slate-500" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Statut</p>
+                    <Badge variant={statut.variant} className="mt-0.5 text-xs flex items-center gap-1 w-fit">
+                      <StatutIcon className="h-3 w-3" />
+                      {statut.label}
+                    </Badge>
+                  </div>
+                </div>
+                {/* Motif */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                  <div className="p-1.5 rounded-md bg-white border shrink-0"><FileText className="h-4 w-4 text-slate-500" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Motif</p>
+                    <p className="text-sm font-medium mt-0.5">{rdv.motif}</p>
+                  </div>
+                </div>
+                {/* Médecin */}
+                {medecin && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                    <div className="p-1.5 rounded-md bg-white border shrink-0"><User className="h-4 w-4 text-slate-500" /></div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Médecin</p>
+                      <p className="text-sm font-medium mt-0.5">Dr. {medecin.prenom} {medecin.nom}</p>
+                    </div>
+                  </div>
+                )}
+                {/* Notes */}
+                {rdv.notes && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                    <div className="p-1.5 rounded-md bg-white border shrink-0"><FileText className="h-4 w-4 text-slate-500" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Notes</p>
+                      <p className="text-sm mt-0.5 text-foreground whitespace-pre-wrap">{rdv.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 pt-1">
+                {patient && (
+                  <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
+                    <Link href={`/patients/${patient.npi}`} onClick={() => setDetailRdv(null)}>
+                      <User className="h-4 w-4" />
+                      Dossier patient
+                    </Link>
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setDetailRdv(null)}>
+                  <X className="h-4 w-4" />
+                  Fermer
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {/* Confirmation dialog for destructive status changes */}
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
