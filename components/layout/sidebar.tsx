@@ -11,6 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
   LogOut, ShieldCheck, ClipboardList, CalendarDays, X,
@@ -168,15 +173,39 @@ export function Sidebar() {
                 </Badge>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-700 text-xs"
-            >
-              <LogOut className="h-3.5 w-3.5 mr-2" />
-              Déconnexion
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-700 text-xs"
+                >
+                  <LogOut className="h-3.5 w-3.5 mr-2" />
+                  Déconnexion
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <LogOut className="h-5 w-5 text-red-500" />
+                    Confirmer la déconnexion
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Vous êtes sur le point de vous déconnecter de MediLink. Toute session non sauvegardée sera perdue.
+                    Souhaitez-vous continuer ?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Se déconnecter
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         ) : null}
       </div>
