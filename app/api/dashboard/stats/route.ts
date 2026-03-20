@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.json({
       patientsToday: 0, consultationsWeek: 0,
       prescriptionsExpiring: 0, analysesEnAttente: 0,
@@ -13,7 +14,11 @@ export async function GET() {
     });
   }
 
-  const supabase = createServerSupabaseClient();
+  // Prefer service-role client (bypasses RLS, counts all records).
+  // Fall back to session-based client when service role key is not configured.
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServerSupabaseClient()
+    : await createSupabaseServerClient();
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { Patient, Hospitalisation, SoinInfirmier } from "@/types";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/hooks/use-toast";
@@ -521,6 +521,10 @@ export function HospitalisationsTab({ patient, hospitalisations: initialHospital
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    if (isDemoMode) {
+      toast({ variant: "destructive", title: "Mode démo", description: "Configurez NEXT_PUBLIC_SUPABASE_ANON_KEY pour enregistrer des données." });
+      return;
+    }
     setLoading(true);
     try {
       await supabase.from("hospitalisations").insert({

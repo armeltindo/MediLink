@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { Patient, Consultation, Constante } from "@/types";
-import { supabase } from "@/lib/supabase";
+import { supabase, isDemoMode } from "@/lib/supabase";
 import { formatDateTime, calculateIMC } from "@/lib/utils";
 import { searchCIM10, CIM10Code } from "@/lib/cim10";
 import { toast } from "@/hooks/use-toast";
@@ -238,6 +238,10 @@ function NewConsultationDialog({ patient, onSuccess, onClose }: {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    if (isDemoMode) {
+      toast({ variant: "destructive", title: "Mode démo", description: "Configurez NEXT_PUBLIC_SUPABASE_ANON_KEY pour enregistrer des données." });
+      return;
+    }
     setLoading(true);
     try {
       const { data: consultation, error } = await supabase.from("consultations").insert({
