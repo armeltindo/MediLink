@@ -1,13 +1,15 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
 import {
   Syringe, Search, CheckCircle2, Clock, AlertTriangle,
-  CalendarDays, User, ChevronRight, X,
+  CalendarDays, User, ChevronRight, X, Hash, FlaskConical,
+  Stethoscope, StickyNote,
 } from "lucide-react";
 
 export interface VaccinationRow {
@@ -84,9 +86,133 @@ function getStyle(v: VaccinationRow) {
   return STATUS_STYLE.a_jour;
 }
 
+function DetailDialog({ v, onClose }: { v: VaccinationRow; onClose: () => void }) {
+  const style = getStyle(v);
+  const StatusIcon = style.icon;
+  const days = daysUntil(v.prochain_rappel);
+
+  const fields: { icon: typeof User; label: string; value: ReactNode }[] = [
+    {
+      icon: User,
+      label: "Patient",
+      value: v.patients ? (
+        <Link
+          href={`/patients/${v.patients.npi}`}
+          className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
+          onClick={onClose}
+        >
+          {v.patients.prenom} {v.patients.nom}
+        </Link>
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      ),
+    },
+    {
+      icon: CalendarDays,
+      label: "Date de vaccination",
+      value: <span className="text-sm font-medium">{formatDate(v.date_vaccination)}</span>,
+    },
+    ...(v.dose ? [{
+      icon: Syringe,
+      label: "Dose",
+      value: <span className="text-sm font-medium">{v.dose}</span>,
+    }] : []),
+    ...(v.voie ? [{
+      icon: FlaskConical,
+      label: "Voie d'administration",
+      value: <span className="text-sm font-medium">{v.voie}</span>,
+    }] : []),
+    ...(v.lot ? [{
+      icon: Hash,
+      label: "Numéro de lot",
+      value: <span className="text-sm font-mono font-medium">{v.lot}</span>,
+    }] : []),
+    ...(v.prochain_rappel ? [{
+      icon: Clock,
+      label: "Prochain rappel",
+      value: (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium">{formatDate(v.prochain_rappel)}</span>
+          {days !== null && (
+            days < 0
+              ? <span className="text-xs font-medium text-red-600">En retard de {Math.abs(days)} j</span>
+              : days === 0
+              ? <span className="text-xs font-medium text-orange-600">Aujourd&apos;hui</span>
+              : days <= 30
+              ? <span className="text-xs font-medium text-amber-600">Dans {days} j</span>
+              : <span className="text-xs text-blue-600">Dans {days} j</span>
+          )}
+        </div>
+      ),
+    }] : []),
+  ];
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-lg border shrink-0 bg-background ${style.border} border-l-4`}>
+              <StatusIcon className={`h-5 w-5 ${style.iconClass}`} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-base leading-snug">{v.vaccin}</DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {v.statut === "a_jour" ? "À jour" : v.statut === "en_retard" ? "En retard" : v.statut === "contre_indique" ? "Contre-indiqué" : "—"}
+              </p>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-2 pt-1">
+          {fields.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+              <div className="p-1.5 rounded-md bg-white border shrink-0">
+                <Icon className="h-4 w-4 text-slate-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+                <div className="mt-0.5">{value}</div>
+              </div>
+            </div>
+          ))}
+
+          {v.statut === "en_retard" && (
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+              <div className="p-1.5 rounded-md bg-white border border-red-200 shrink-0">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Rappel en retard</p>
+                <p className="text-xs text-red-600 mt-0.5">Ce vaccin nécessite une mise à jour.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          {v.patients && (
+            <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
+              <Link href={`/patients/${v.patients.npi}`} onClick={onClose}>
+                <Stethoscope className="h-4 w-4" />
+                Dossier patient
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="gap-2" onClick={onClose}>
+            <StickyNote className="h-4 w-4" />
+            Fermer
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function VaccinationsList({ rows }: Props) {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabKey>("all");
+  const [selected, setSelected] = useState<VaccinationRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -212,7 +338,12 @@ export function VaccinationsList({ rows }: Props) {
             const style = getStyle(v);
             const StatusIcon = style.icon;
             return (
-              <Link key={v.id} href={v.patients ? `/patients/${v.patients.npi}` : "#"} className="block group">
+              <button
+                key={v.id}
+                type="button"
+                className="w-full text-left group"
+                onClick={() => setSelected(v)}
+              >
                 <Card className={`border-l-4 ${style.border} shadow-sm hover:shadow-md transition-all group-hover:translate-x-0.5`}>
                   <CardContent className="p-4 flex items-start gap-3">
                     {/* Status icon */}
@@ -256,20 +387,20 @@ export function VaccinationsList({ rows }: Props) {
 
                     {/* Date + arrow */}
                     <div className="shrink-0 flex items-center gap-2">
-                      <div className="text-right">
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {formatDate(v.date_vaccination)}
-                        </span>
-                      </div>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {formatDate(v.date_vaccination)}
+                      </span>
                       <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              </button>
             );
           })}
         </div>
       )}
+
+      {selected && <DetailDialog v={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
