@@ -1,74 +1,177 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
-import { Search, Bell, Sun, Moon, Settings, Menu } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Search, Bell, Menu, X, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
+import { getRoleBadge } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+// ─── Breadcrumb label map ─────────────────────────────────────────────────────
+
+const ROUTE_LABELS: Record<string, string> = {
+  "/dashboard":        "Tableau de bord",
+  "/patients":         "Patients",
+  "/rendez-vous":      "Rendez-vous",
+  "/consultations":    "Consultations",
+  "/prescriptions":    "Prescriptions",
+  "/analyses":         "Analyses",
+  "/vaccinations":     "Vaccinations",
+  "/hospitalisations": "Hospitalisations",
+  "/documents":        "Documents",
+  "/etablissements":   "Établissements",
+  "/admin":            "Administration",
+  "/audit":            "Audit & Sécurité",
+};
+
+function useBreadcrumb() {
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+
+  const crumbs: { label: string; href: string }[] = [];
+  let path = "";
+  for (const seg of segments) {
+    path += "/" + seg;
+    const label = ROUTE_LABELS[path];
+    if (label) crumbs.push({ label, href: path });
+    else crumbs.push({ label: seg, href: path });
+  }
+  return crumbs;
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
 
 export function Header({ title }: { title?: string }) {
   const { user } = useUser();
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [dark, setDark] = useState(false);
   const { toggle } = useSidebar();
+  const crumbs = useBreadcrumb();
+
+  const [search, setSearch]         = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (search.trim()) {
       router.push(`/patients?q=${encodeURIComponent(search)}`);
+      setSearchOpen(false);
+      setSearch("");
     }
   }
 
-  function toggleDark() {
-    setDark(!dark);
-    document.documentElement.classList.toggle("dark");
-  }
+  const displayTitle = title ?? crumbs[crumbs.length - 1]?.label ?? "";
 
   return (
-    <header className="sticky top-0 z-30 bg-background border-b border-border h-16 flex items-center px-4 gap-3">
-      {/* Hamburger — visible uniquement sur mobile */}
-      <Button
-        variant="ghost"
-        size="icon-sm"
+    <header className="sticky top-0 z-30 h-14 flex items-center bg-white border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0,0,0,0.04)] px-4 gap-3">
+
+      {/* ── Hamburger (mobile) ─────────────────────────────────────────────── */}
+      <button
         onClick={toggle}
-        className="lg:hidden"
+        className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
         aria-label="Ouvrir le menu"
       >
         <Menu className="h-5 w-5" />
-      </Button>
+      </button>
 
-      {title && (
-        <h2 className="text-lg font-serif font-semibold text-foreground hidden md:block">
-          {title}
-        </h2>
-      )}
+      {/* ── Breadcrumb / Title ─────────────────────────────────────────────── */}
+      <div className="hidden md:flex items-center gap-1.5 text-sm min-w-0">
+        {crumbs.length > 1 ? (
+          crumbs.map((crumb, i) => (
+            <span key={crumb.href} className="flex items-center gap-1.5 min-w-0">
+              {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />}
+              <span className={cn(
+                "truncate",
+                i === crumbs.length - 1
+                  ? "text-slate-800 font-semibold"
+                  : "text-slate-400 font-medium hover:text-slate-600 cursor-pointer"
+              )} onClick={() => i < crumbs.length - 1 && router.push(crumb.href)}>
+                {crumb.label}
+              </span>
+            </span>
+          ))
+        ) : (
+          <span className="text-slate-800 font-semibold truncate">{displayTitle}</span>
+        )}
+      </div>
 
-      {/* Search bar */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un patient (NPI, nom, date naissance)..."
+      {/* ── Search bar ─────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex justify-center px-4">
+        <form
+          onSubmit={handleSearch}
+          className={cn(
+            "relative w-full max-w-sm transition-all duration-200",
+            searchOpen ? "max-w-lg" : ""
+          )}
+        >
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Rechercher un patient…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm bg-muted border-0 focus-visible:ring-1"
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => !search && setSearchOpen(false)}
+            className={cn(
+              "w-full h-9 pl-9 pr-9 rounded-lg text-sm border transition-all duration-200 outline-none",
+              "bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400",
+              "focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            )}
           />
-        </div>
-      </form>
+          {search && (
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setSearchOpen(false); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </form>
+      </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" onClick={toggleDark} title="Thème sombre">
-          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-        <Button variant="ghost" size="icon-sm" title="Notifications">
-          <Bell className="h-4 w-4" />
-        </Button>
-        {(user?.role === "super_admin" || user?.role === "admin_etablissement") && (
-          <Button variant="ghost" size="icon-sm" onClick={() => router.push("/admin")} title="Administration">
-            <Settings className="h-4 w-4" />
-          </Button>
+      {/* ── Right actions ──────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 shrink-0">
+
+        {/* Notification bell */}
+        <button
+          className="relative p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          title="Notifications"
+        >
+          <Bell className="h-4.5 w-4.5" style={{ width: "1.05rem", height: "1.05rem" }} />
+          {/* Dot indicator */}
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+        </button>
+
+        {/* Divider */}
+        <span className="h-5 w-px bg-slate-200 mx-1" />
+
+        {/* User pill */}
+        {user && (
+          <button
+            onClick={() => (user.role === "super_admin" || user.role === "admin_etablissement") ? router.push("/admin") : undefined}
+            className={cn(
+              "flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-lg transition-colors",
+              (user.role === "super_admin" || user.role === "admin_etablissement")
+                ? "hover:bg-slate-100 cursor-pointer"
+                : "cursor-default"
+            )}
+            title={(user.role === "super_admin" || user.role === "admin_etablissement") ? "Administration" : undefined}
+          >
+            <Avatar className="h-7 w-7 shrink-0">
+              <AvatarFallback className="bg-medical-green/80 text-white text-[10px] font-bold">
+                {user.prenom?.[0]?.toUpperCase()}{user.nom?.[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:block text-left leading-tight">
+              <p className="text-xs font-semibold text-slate-800 truncate max-w-[120px]">
+                {user.prenom} {user.nom}
+              </p>
+              <p className="text-[10px] text-slate-400 truncate max-w-[120px]">
+                {getRoleBadge(user.role).label}
+              </p>
+            </div>
+          </button>
         )}
       </div>
     </header>
