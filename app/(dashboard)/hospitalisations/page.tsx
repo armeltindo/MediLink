@@ -7,7 +7,7 @@ import { BedDouble, Clock, CalendarCheck, CalendarX, User, Stethoscope, ArrowRig
 
 interface HospitalisationRow {
   id: string;
-  motif_admission: string;
+  motif: string;
   date_entree: string;
   date_sortie: string | null;
   service: string | null;
@@ -42,7 +42,7 @@ export default async function HospitalisationsPage({
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from("hospitalisations")
-      .select("id, motif_admission, date_entree, date_sortie, service, patients(npi, nom, prenom)")
+      .select("id, motif, date_entree, date_sortie, service, patients(npi, nom, prenom)")
       .is("deleted_at", null)
       .order("date_entree", { ascending: false })
       .limit(100);
@@ -200,7 +200,7 @@ export default async function HospitalisationsPage({
                       </div>
 
                       {/* Row 2 : motif */}
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{h.motif_admission}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{h.motif}</p>
 
                       {/* Row 3 : dates + duration */}
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
