@@ -57,7 +57,11 @@ interface UserRow {
   created_at: string;
   deleted_at?: string;
   etablissements?: { nom: string } | null;
+  user_etablissements?: { etablissement_id: string; etablissements: { id: string; nom: string } }[];
 }
+
+const PARAMEDICAL_ROLES = ["medecin", "infirmier", "laborantin", "pharmacien"];
+const MULTI_ETAB_ROLES = ["medecin", "infirmier", "laborantin"];
 
 interface EtablissementRow {
   id: string;
@@ -104,7 +108,7 @@ export default function AdminPage() {
   const [etablissements, setEtablissements] = useState<EtablissementRow[]>([]);
   const [newUserForm, setNewUserForm] = useState({
     nom: "", prenom: "", role: "", specialite: "",
-    telephone: "", etablissement_id: "", numero_ordre: "", titre: "",
+    telephone: "", etablissement_id: "", etablissement_ids: [] as string[], numero_ordre: "", titre: "",
   });
 
   // Etablissements state
@@ -149,15 +153,21 @@ export default function AdminPage() {
     e.preventDefault();
     setNewUserLoading(true);
     try {
+      const isParamedical = PARAMEDICAL_ROLES.includes(newUserForm.role);
+      const payload = {
+        ...newUserForm,
+        etablissement_ids: isParamedical ? newUserForm.etablissement_ids : undefined,
+        etablissement_id: isParamedical ? undefined : newUserForm.etablissement_id,
+      };
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUserForm),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast({ title: "Profil utilisateur créé", description: `${newUserForm.prenom} ${newUserForm.nom}` });
       setNewUserOpen(false);
-      setNewUserForm({ nom: "", prenom: "", role: "", specialite: "", telephone: "", etablissement_id: "", numero_ordre: "", titre: "" });
+      setNewUserForm({ nom: "", prenom: "", role: "", specialite: "", telephone: "", etablissement_id: "", etablissement_ids: [], numero_ordre: "", titre: "" });
       loadUsers();
     } catch (err: unknown) {
       toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
@@ -464,7 +474,7 @@ export default function AdminPage() {
                       </div>
                       <div className="space-y-1">
                         <Label>Rôle *</Label>
-                        <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, role: v })} required>
+                        <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, role: v, etablissement_id: "", etablissement_ids: [] })} required>
                           <SelectTrigger><SelectValue placeholder="Rôle..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="medecin">Médecin</SelectItem>
@@ -488,15 +498,65 @@ export default function AdminPage() {
                         <Label>Téléphone</Label>
                         <Input value={newUserForm.telephone} onChange={(e) => setNewUserForm({ ...newUserForm, telephone: e.target.value })} placeholder="+229 97 00 00 00" />
                       </div>
-                      <div className="space-y-1">
-                        <Label>Établissement</Label>
-                        <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_id: v })}>
-                          <SelectTrigger><SelectValue placeholder="Établissement..." /></SelectTrigger>
-                          <SelectContent>
-                            {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Establishment field — varies by role */}
+                      {newUserForm.role && !PARAMEDICAL_ROLES.includes(newUserForm.role) && (
+                        <div className="space-y-1">
+                          <Label>Établissement</Label>
+                          <Select onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_id: v })}>
+                            <SelectTrigger><SelectValue placeholder="Établissement..." /></SelectTrigger>
+                            <SelectContent>
+                              {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {newUserForm.role === "pharmacien" && (
+                        <div className="space-y-1">
+                          <Label>Pharmacie / Établissement <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
+                          <Select
+                            value={newUserForm.etablissement_ids[0] ?? "__none__"}
+                            onValueChange={(v) => setNewUserForm({ ...newUserForm, etablissement_ids: v === "__none__" ? [] : [v] })}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Aucun établissement..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Aucun établissement</SelectItem>
+                              {etablissements.map((e) => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {MULTI_ETAB_ROLES.includes(newUserForm.role) && (
+                        <div className="space-y-1 col-span-2">
+                          <Label>Établissements rattachés <span className="text-muted-foreground font-normal">(plusieurs possibles)</span></Label>
+                          <div className="border rounded-md max-h-36 overflow-y-auto divide-y">
+                            {etablissements.length === 0 && (
+                              <p className="text-xs text-muted-foreground px-3 py-2">Aucun établissement disponible</p>
+                            )}
+                            {etablissements.map((e) => {
+                              const checked = newUserForm.etablissement_ids.includes(e.id);
+                              return (
+                                <label key={e.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors">
+                                  <input
+                                    type="checkbox"
+                                    className="accent-medical-green h-3.5 w-3.5"
+                                    checked={checked}
+                                    onChange={() => {
+                                      const ids = checked
+                                        ? newUserForm.etablissement_ids.filter((id) => id !== e.id)
+                                        : [...newUserForm.etablissement_ids, e.id];
+                                      setNewUserForm({ ...newUserForm, etablissement_ids: ids });
+                                    }}
+                                  />
+                                  <span className="text-sm">{e.nom}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {newUserForm.etablissement_ids.length > 0 && (
+                            <p className="text-xs text-medical-green font-medium">{newUserForm.etablissement_ids.length} établissement{newUserForm.etablissement_ids.length > 1 ? "s" : ""} sélectionné{newUserForm.etablissement_ids.length > 1 ? "s" : ""}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-700">
@@ -557,7 +617,10 @@ export default function AdminPage() {
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5 truncate">
                               {u.specialite && <span className="font-medium text-foreground/60">{u.specialite} — </span>}
-                              {(u.etablissements as { nom: string } | null)?.nom || "Aucun établissement"}
+                              {u.user_etablissements && u.user_etablissements.length > 0
+                                ? u.user_etablissements.map((ue) => ue.etablissements?.nom).filter(Boolean).join(", ")
+                                : (u.etablissements as { nom: string } | null)?.nom || "Aucun établissement"
+                              }
                               {u.numero_ordre && ` · N° ${u.numero_ordre}`}
                             </p>
                           </div>

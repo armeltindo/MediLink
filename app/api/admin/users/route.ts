@@ -20,6 +20,8 @@ function createSupabaseServer() {
   );
 }
 
+const PARAMEDICAL_ROLES = ["medecin", "infirmier", "laborantin", "pharmacien"];
+
 // GET /api/admin/users — liste tous les profils utilisateurs
 export async function GET() {
   const supabase = createSupabaseServer();
@@ -38,7 +40,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("users_profiles")
-    .select("id, nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre, created_at, deleted_at, etablissements(nom)")
+    .select("id, nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre, created_at, deleted_at, etablissements(nom), user_etablissements(etablissement_id, etablissements(id, nom))")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre } = body;
+  const { nom, prenom, role, specialite, telephone, etablissement_id, etablissement_ids, numero_ordre, titre } = body;
 
   if (!nom || !prenom || !role) {
     return NextResponse.json({ error: "Nom, prénom et rôle requis" }, { status: 400 });
@@ -72,6 +74,9 @@ export async function POST(request: NextRequest) {
   if (!validRoles.includes(role)) {
     return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
   }
+
+  // For paramedical roles, etablissement_id in users_profiles stays null (handled via junction table)
+  const profileEtabId = PARAMEDICAL_ROLES.includes(role) ? null : (etablissement_id || null);
 
   // Log the admin action
   await supabase.from("audit_logs").insert({
@@ -83,11 +88,27 @@ export async function POST(request: NextRequest) {
 
   const { data: newProfile, error: insertError } = await supabase
     .from("users_profiles")
-    .insert({ nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre })
+    .insert({ nom, prenom, role, specialite, telephone, etablissement_id: profileEtabId, numero_ordre, titre })
     .select()
     .single();
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // Insert junction table records for paramedical roles
+  if (PARAMEDICAL_ROLES.includes(role) && Array.isArray(etablissement_ids) && etablissement_ids.length > 0) {
+    const junctionRows = etablissement_ids.map((eid: string) => ({
+      user_id: newProfile.id,
+      etablissement_id: eid,
+    }));
+    const { error: junctionError } = await supabase
+      .from("user_etablissements")
+      .insert(junctionRows);
+    if (junctionError) {
+      // Profile was created; log the warning but don't fail the whole request
+      console.error("user_etablissements insert error:", junctionError.message);
+    }
+  }
+
   return NextResponse.json(newProfile, { status: 201 });
 }
 
@@ -108,7 +129,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { id, ...updates } = body;
+  const { id, etablissement_ids, ...updates } = body;
 
   if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
@@ -125,6 +146,16 @@ export async function PATCH(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Update junction table if etablissement_ids provided
+  if (Array.isArray(etablissement_ids)) {
+    await supabase.from("user_etablissements").delete().eq("user_id", id);
+    if (etablissement_ids.length > 0) {
+      await supabase.from("user_etablissements").insert(
+        etablissement_ids.map((eid: string) => ({ user_id: id, etablissement_id: eid }))
+      );
+    }
+  }
 
   await supabase.from("audit_logs").insert({
     user_id: user.id,
