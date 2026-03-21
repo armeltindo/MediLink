@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       patient_id: payload.patientId,
       action: "btg_notification_sent",
       details: JSON.stringify({
-        patient_npi: patientNpi,
+        patient_nip: patientNpi,
         acteur: actorName,
         justification,
         notified_admins: adminList,
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
           <h2 style="color:#dc2626">Accès d'urgence détecté — MediLink</h2>
           <p><strong>Date et heure :</strong> ${accessTime}</p>
           <p><strong>Utilisateur :</strong> ${actorName}</p>
-          <p><strong>Patient NPI :</strong> ${patientNpi}</p>
+          <p><strong>Patient NIP :</strong> ${patientNpi}</p>
           <p><strong>Justification :</strong> ${justification}</p>
           <hr/>
           <p style="color:#6b7280;font-size:12px">

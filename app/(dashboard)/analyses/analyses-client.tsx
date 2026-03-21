@@ -21,7 +21,7 @@ export interface AnalyseRow {
   instructions: string | null;
   resultat_rapide: string | null;
   date_rendu: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
+  patients: { nip: string; nom: string; prenom: string } | null;
 }
 
 interface Props {
@@ -59,7 +59,7 @@ function DetailDialog({ a, onClose }: { a: AnalyseRow; onClose: () => void }) {
       label: "Patient",
       value: a.patients ? (
         <Link
-          href={`/patients/${a.patients.npi}`}
+          href={`/patients/${a.patients.nip}`}
           className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
           onClick={onClose}
         >
@@ -145,7 +145,7 @@ function DetailDialog({ a, onClose }: { a: AnalyseRow; onClose: () => void }) {
         <div className="flex gap-2 pt-2">
           {a.patients && (
             <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-              <Link href={`/patients/${a.patients.npi}`} onClick={onClose}>
+              <Link href={`/patients/${a.patients.nip}`} onClick={onClose}>
                 <Stethoscope className="h-4 w-4" />
                 Dossier patient
               </Link>

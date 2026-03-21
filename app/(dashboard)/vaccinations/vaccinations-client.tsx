@@ -21,7 +21,7 @@ export interface VaccinationRow {
   voie: string | null;
   statut: string | null;
   prochain_rappel: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
+  patients: { nip: string; nom: string; prenom: string } | null;
 }
 
 interface Props {
@@ -97,7 +97,7 @@ function DetailDialog({ v, onClose }: { v: VaccinationRow; onClose: () => void }
       label: "Patient",
       value: v.patients ? (
         <Link
-          href={`/patients/${v.patients.npi}`}
+          href={`/patients/${v.patients.nip}`}
           className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
           onClick={onClose}
         >
@@ -193,7 +193,7 @@ function DetailDialog({ v, onClose }: { v: VaccinationRow; onClose: () => void }
         <div className="flex gap-2 pt-2">
           {v.patients && (
             <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-              <Link href={`/patients/${v.patients.npi}`} onClick={onClose}>
+              <Link href={`/patients/${v.patients.nip}`} onClick={onClose}>
                 <Stethoscope className="h-4 w-4" />
                 Dossier patient
               </Link>

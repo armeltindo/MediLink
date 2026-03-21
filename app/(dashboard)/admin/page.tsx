@@ -236,12 +236,12 @@ export default function AdminPage() {
   async function exportCSV() {
     const res = await fetch("/api/admin/export/patients");
     if (!res.ok) return;
-    type PatientRow = { npi: string; nom: string; prenom: string; date_naissance: string; sexe: string; groupe_sanguin?: string; rhesus?: string; nationalite?: string; created_at: string };
+    type PatientRow = { nip: string; nom: string; prenom: string; date_naissance: string; sexe: string; groupe_sanguin?: string; rhesus?: string; nationalite?: string; created_at: string };
     const data = (await res.json()) as PatientRow[];
     if (!data) return;
-    const headers = ["NPI", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
+    const headers = ["NIP", "Nom", "Prénom", "Date naissance", "Sexe", "Groupe sanguin", "Nationalité", "Créé le"];
     const rows = data.map((p: PatientRow) => [
-      p.npi, p.nom, p.prenom, p.date_naissance, p.sexe,
+      p.nip, p.nom, p.prenom, p.date_naissance, p.sexe,
       `${p.groupe_sanguin ?? ""}${p.rhesus ?? ""}`,
       p.nationalite ?? "",
       new Date(p.created_at).toLocaleDateString("fr-FR"),

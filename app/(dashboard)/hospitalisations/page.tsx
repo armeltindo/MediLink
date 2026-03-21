@@ -24,7 +24,7 @@ export default async function HospitalisationsPage({
     const supabase = createServerSupabaseClient();
     let query = supabase
       .from("hospitalisations")
-      .select("id, motif, date_entree, date_sortie, service, resume_sejour, mode_sortie, patients(npi, nom, prenom), etablissements(nom)")
+      .select("id, motif, date_entree, date_sortie, service, resume_sejour, mode_sortie, patients(nip, nom, prenom), etablissements(nom)")
       .is("deleted_at", null)
       .order("date_entree", { ascending: false })
       .limit(100);

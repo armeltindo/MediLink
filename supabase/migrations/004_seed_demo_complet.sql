@@ -31,7 +31,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================
 -- PATIENTS
 -- ============================================================
-INSERT INTO patients (id, npi, nom, prenom, date_naissance, lieu_naissance, sexe, situation_matrimoniale,
+INSERT INTO patients (id, nip, nom, prenom, date_naissance, lieu_naissance, sexe, situation_matrimoniale,
   nombre_enfants, groupe_sanguin, rhesus, nationalite, profession, niveau_etudes,
   langue_preferee, contact_urgence_nom, contact_urgence_lien, contact_urgence_tel,
   assurance_organisme, assurance_numero, assurance_taux, ville, telephone) VALUES

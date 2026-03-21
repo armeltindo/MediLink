@@ -9,7 +9,7 @@ export default async function AnalysesPage() {
     const supabase = createServerSupabaseClient();
     const { data } = await supabase
       .from("analyses_prescrites")
-      .select("id, type_analyse, statut, date_prescription, urgence, instructions, resultat_rapide, date_rendu, patients(npi, nom, prenom)")
+      .select("id, type_analyse, statut, date_prescription, urgence, instructions, resultat_rapide, date_rendu, patients(nip, nom, prenom)")
       .is("deleted_at", null)
       .order("date_prescription", { ascending: false })
       .limit(200);

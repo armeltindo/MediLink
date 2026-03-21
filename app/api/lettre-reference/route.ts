@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const qrBase64 = await QRCode.toDataURL(
-      `${baseUrl}/patients/${patient.npi}`,
+      `${baseUrl}/patients/${patient.nip}`,
       { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
     );
 
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     .destinataire p { font-size: 10.5pt; }
     .objet-line { background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 20px; font-size: 10.5pt; }
     .objet-line strong { color: #1E3A5F; }
-    .objet-npi { font-family: 'Courier New', monospace; font-size: 10pt; color: #3B82F6; font-weight: 700; }
+    .objet-nip { font-family: 'Courier New', monospace; font-size: 10pt; color: #3B82F6; font-weight: 700; }
 
     /* ── PATIENT ─────────────────────────────────────── */
     .patient-card {
@@ -309,7 +309,7 @@ export async function GET(request: NextRequest) {
   <!-- Objet -->
   <div class="objet-line">
     <strong>Objet :</strong> Référence de ${civPatient} <strong>${patient.prenom} ${patient.nom.toUpperCase()}</strong>
-    &nbsp;&nbsp;|&nbsp;&nbsp; NPI : <span class="objet-npi">${patient.npi}</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp; NIP : <span class="objet-nip">${patient.nip}</span>
   </div>
 
   <!-- Patient -->
@@ -415,7 +415,7 @@ export async function GET(request: NextRequest) {
 
   <!-- Pied de page -->
   <div class="doc-footer">
-    <span>Généré par MediLink — NPI : ${patient.npi} — ${new Date().toLocaleDateString("fr-FR")} ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+    <span>Généré par MediLink — NIP : ${patient.nip} — ${new Date().toLocaleDateString("fr-FR")} ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
     <span class="confidential-badge">Confidentiel — médecin destinataire</span>
     <span>Réf. ${refDoc}</span>
   </div>
@@ -448,7 +448,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="lettre-reference-${patient.npi}.html"`,
+        "Content-Disposition": `inline; filename="lettre-reference-${patient.nip}.html"`,
       },
     });
   } catch (error: unknown) {

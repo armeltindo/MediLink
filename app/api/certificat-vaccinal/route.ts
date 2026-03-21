@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   const qrBase64 = await QRCode.toDataURL(
-    `${baseUrl}/patients/${patient.npi}`,
+    `${baseUrl}/patients/${patient.nip}`,
     { width: 120, margin: 1, color: { dark: "#065F46", light: "#FFFFFF" } }
   );
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
     .field-label { font-size: 8pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1px; }
     .field-value { font-size: 10.5pt; font-weight: 600; color: #1E293B; }
-    .npi-value { font-family: 'Courier New', monospace; font-size: 12pt; font-weight: 700; color: #0D7A5F; }
+    .nip-value { font-family: 'Courier New', monospace; font-size: 12pt; font-weight: 700; color: #0D7A5F; }
 
     /* ── TABLEAU VACCINS ─────────────────────────────── */
     .table-wrapper { margin-bottom: 20px; border-radius: 10px; overflow: hidden; border: 1px solid #D1FAE5; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
@@ -229,8 +229,8 @@ export async function POST(request: NextRequest) {
       <div class="field-value">${patient.nom.toUpperCase()} ${patient.prenom}</div>
     </div>
     <div>
-      <div class="field-label">Identifiant NPI</div>
-      <div class="npi-value">${patient.npi}</div>
+      <div class="field-label">Identifiant NIP</div>
+      <div class="nip-value">${patient.nip}</div>
     </div>
     <div>
       <div class="field-label">Date de naissance</div>
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
   <div class="legal-note">
     <strong>Document officiel :</strong> Ce carnet de vaccination a été généré électroniquement par le système MediLink
     à partir du dossier médical certifié de l'établissement.
-    NPI patient : <strong>${patient.npi}</strong> —
+    NIP patient : <strong>${patient.nip}</strong> —
     Généré le ${new Date().toLocaleString("fr-FR")}.
     Ce document est authentique et peut être présenté aux autorités sanitaires.
   </div>
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
   <div class="doc-footer">
     <span>MediLink DME — République du Bénin</span>
     <span class="official-badge">Document officiel</span>
-    <span>NPI : ${patient.npi}</span>
+    <span>NIP : ${patient.nip}</span>
   </div>
 
 <script>window.onload = () => window.print();</script>

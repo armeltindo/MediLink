@@ -75,13 +75,13 @@ async function run() {
   console.log(`  👨‍⚕️  Médecin : ${medecin.prenom} ${medecin.nom} (${medecin.id})`);
 
   // 2. Récupérer les patients de démo
-  const patients = curlGet("patients?limit=3&select=id,nom,prenom,npi&order=created_at.asc") as Array<{ id: string; nom: string; prenom: string; npi: string }>;
+  const patients = curlGet("patients?limit=3&select=id,nom,prenom,nip&order=created_at.asc") as Array<{ id: string; nom: string; prenom: string; nip: string }>;
   if (patients.length < 1) {
     console.error("❌  Aucun patient trouvé dans la base.");
     console.error("   → Exécutez d'abord le seed SQL principal.");
     process.exit(1);
   }
-  patients.forEach((p) => console.log(`  🧑  Patient : ${p.prenom} ${p.nom} (${p.npi})`));
+  patients.forEach((p) => console.log(`  🧑  Patient : ${p.prenom} ${p.nom} (${p.nip})`));
 
   // 3. Récupérer l'établissement
   const etablissements = curlGet("etablissements?limit=1&select=id,nom") as Array<{ id: string; nom: string }>;

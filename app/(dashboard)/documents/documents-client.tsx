@@ -16,7 +16,7 @@ export interface DocumentRow {
   type: string;
   uploaded_at: string;
   url: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
+  patients: { nip: string; nom: string; prenom: string } | null;
 }
 
 type IconType = typeof FileText;
@@ -141,7 +141,7 @@ export function DocumentsList({ rows }: Props) {
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Patient</p>
                       {selected.patients ? (
                         <Link
-                          href={`/patients/${selected.patients.npi}`}
+                          href={`/patients/${selected.patients.nip}`}
                           className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
                           onClick={() => setSelected(null)}
                         >
@@ -203,7 +203,7 @@ export function DocumentsList({ rows }: Props) {
                     )}
                     {selected.patients && (
                       <Button variant="outline" size="sm" className="gap-2" asChild>
-                        <Link href={`/patients/${selected.patients.npi}`} onClick={() => setSelected(null)}>
+                        <Link href={`/patients/${selected.patients.nip}`} onClick={() => setSelected(null)}>
                           <User className="h-4 w-4" />
                           Dossier patient
                         </Link>

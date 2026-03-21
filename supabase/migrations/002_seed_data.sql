@@ -20,7 +20,7 @@ INSERT INTO etablissements (id, nom, type, ville, region, pays, adresse, telepho
 -- ============================================================
 
 -- Patient 1: Agossou Dossou Félix — Diabétique type 2, HTA
-INSERT INTO patients (id, npi, nom, prenom, date_naissance, lieu_naissance, sexe, situation_matrimoniale, nombre_enfants, groupe_sanguin, rhesus, nationalite, profession, niveau_etudes, langue_preferee, contact_urgence_nom, contact_urgence_lien, contact_urgence_tel, assurance_organisme, assurance_numero, assurance_taux) VALUES
+INSERT INTO patients (id, nip, nom, prenom, date_naissance, lieu_naissance, sexe, situation_matrimoniale, nombre_enfants, groupe_sanguin, rhesus, nationalite, profession, niveau_etudes, langue_preferee, contact_urgence_nom, contact_urgence_lien, contact_urgence_tel, assurance_organisme, assurance_numero, assurance_taux) VALUES
   ('a1000000-0000-0000-0000-000000000001', 'NPI-2024-004821', 'AGOSSOU', 'Dossou Félix', '1968-03-15', 'Parakou', 'M', 'marié', 3, 'A', '+', 'Béninoise', 'Comptable', 'Licence', 'Français', 'Agossou Cécile', 'Épouse', '+229 97 11 22 33', 'CNSS', 'CNSS-2024-00981', 80.00),
   ('a1000000-0000-0000-0000-000000000002', 'NPI-2024-007340', 'HOUNSOU', 'Fatoumata', '1985-07-22', 'Abomey-Calavi', 'F', 'mariée', 4, 'O', '+', 'Béninoise', 'Infirmière libérale', 'BTS', 'Français', 'Hounsou Sébastien', 'Mari', '+229 96 22 33 44', 'RAMU', 'RAMU-2023-05521', 75.00),
   ('a1000000-0000-0000-0000-000000000003', 'NPI-2024-009156', 'GARBA', 'Ibrahima', '1952-11-08', 'Kandi', 'M', 'marié', 6, 'B', '-', 'Béninoise', 'Retraité', 'Primaire', 'Français', 'Garba Aminata', 'Fille', '+229 95 33 44 55', NULL, NULL, NULL),

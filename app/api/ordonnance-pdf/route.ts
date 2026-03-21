@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const qrBase64 = await QRCode.toDataURL(
-      `${baseUrl}/patients/${patient.npi}`,
+      `${baseUrl}/patients/${patient.nip}`,
       { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
     );
 
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
       margin-left: auto;
     }
 
-    /* ── DATE + NPI ──────────────────────────────────── */
+    /* ── DATE + NIP ──────────────────────────────────── */
     .meta-row {
       display: flex;
       justify-content: space-between;
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
     .patient-card-full { grid-column: 1 / -1; }
     .field-label { font-size: 8.5pt; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1px; }
     .field-value { font-size: 10.5pt; font-weight: 600; color: #1E293B; }
-    .field-value.npi { font-family: 'Courier New', monospace; color: #1E3A5F; font-size: 11pt; }
+    .field-value.nip { font-family: 'Courier New', monospace; color: #1E3A5F; font-size: 11pt; }
 
     /* ── PRESCRIPTION ────────────────────────────────── */
     .rx-header {
@@ -332,7 +332,7 @@ export async function GET(request: NextRequest) {
   <div class="meta-row">
     <span>Date de prescription : <strong>${datePrescription}</strong></span>
     ${dateExpiration ? `<span>Valable jusqu'au : <strong>${dateExpiration}</strong></span>` : ""}
-    <span>NPI patient : <strong style="font-family:'Courier New',monospace;">${patient.npi}</strong></span>
+    <span>NIP patient : <strong style="font-family:'Courier New',monospace;">${patient.nip}</strong></span>
   </div>
 
   <!-- Patient -->
@@ -346,8 +346,8 @@ export async function GET(request: NextRequest) {
       <div class="field-value">${formatDate(patient.date_naissance)} (${agePatient})</div>
     </div>
     <div>
-      <div class="field-label">Identifiant NPI</div>
-      <div class="field-value npi">${patient.npi}</div>
+      <div class="field-label">Identifiant NIP</div>
+      <div class="field-value nip">${patient.nip}</div>
     </div>
     ${patient.sexe ? `<div><div class="field-label">Sexe</div><div class="field-value">${patient.sexe === "M" ? "Masculin" : "Féminin"}</div></div>` : ""}
     ${patient.groupe_sanguin ? `<div><div class="field-label">Groupe sanguin</div><div class="field-value">${patient.groupe_sanguin}${patient.rhesus || ""}</div></div>` : ""}

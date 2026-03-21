@@ -26,7 +26,7 @@ export interface PrescriptionRow {
   date_expiration: string | null;
   date_dispensation: string | null;
   substitution_generique: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
+  patients: { nip: string; nom: string; prenom: string } | null;
 }
 
 interface Props {
@@ -100,7 +100,7 @@ function DetailDialog({ p, onClose }: { p: PrescriptionRow; onClose: () => void 
       label: "Patient",
       value: p.patients ? (
         <Link
-          href={`/patients/${p.patients.npi}`}
+          href={`/patients/${p.patients.nip}`}
           className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
           onClick={onClose}
         >
@@ -220,7 +220,7 @@ function DetailDialog({ p, onClose }: { p: PrescriptionRow; onClose: () => void 
         <div className="flex gap-2 pt-2">
           {p.patients && (
             <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-              <Link href={`/patients/${p.patients.npi}`} onClick={onClose}>
+              <Link href={`/patients/${p.patients.nip}`} onClick={onClose}>
                 <Stethoscope className="h-4 w-4" />
                 Dossier patient
               </Link>

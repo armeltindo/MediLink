@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
     .header { background: #0D7A5F; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
     .header h1 { font-size: 20pt; }
     .header p { font-size: 9pt; opacity: 0.8; }
-    .npi-badge { background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; text-align: right; }
-    .npi-badge .code { font-family: monospace; font-size: 14pt; font-weight: bold; }
+    .nip-badge { background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; text-align: right; }
+    .nip-badge .code { font-family: monospace; font-size: 14pt; font-weight: bold; }
     .patient-info { padding: 16px 20px; background: #F8FAFC; border-bottom: 2px solid #0D7A5F; }
     .patient-info h2 { font-size: 16pt; color: #0D7A5F; }
     .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; font-size: 9pt; }
@@ -75,9 +75,9 @@ export async function GET(request: NextRequest) {
       <p>Système de Dossier Médical Électronique Unifié</p>
       <p>Imprimé le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")}</p>
     </div>
-    <div class="npi-badge">
+    <div class="nip-badge">
       <p style="font-size:8pt;">Numéro d'Identification</p>
-      <div class="code">${patient.npi}</div>
+      <div class="code">${patient.nip}</div>
     </div>
   </div>
 
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
   <div class="footer">
     Document généré par MediLink — Système de Dossier Médical Électronique Unifié<br>
     Ce document est confidentiel et destiné exclusivement aux professionnels de santé autorisés.<br>
-    Imprimé le ${new Date().toLocaleDateString("fr-FR")} — NPI: ${patient.npi}
+    Imprimé le ${new Date().toLocaleDateString("fr-FR")} — NIP: ${patient.nip}
   </div>
 </body>
 </html>`;
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="dossier-${patient.npi}.html"`,
+        "Content-Disposition": `inline; filename="dossier-${patient.nip}.html"`,
       },
     });
   } catch (error: unknown) {

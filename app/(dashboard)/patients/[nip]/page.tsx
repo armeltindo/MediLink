@@ -158,7 +158,7 @@ function PageSkeleton() {
 
 // ─── Inner page ───────────────────────────────────────────────────────────────
 function PatientPageInner() {
-  const { npi } = useParams<{ npi: string }>();
+  const { nip } = useParams<{ nip: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -184,23 +184,23 @@ function PatientPageInner() {
   const [loading, setLoading]                 = useState(true);
 
   useEffect(() => {
-    if (!npi) return;
-    loadPatient(decodeURIComponent(npi));
-  }, [npi]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!nip) return;
+    loadPatient(decodeURIComponent(nip));
+  }, [nip]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTabChange(tab: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
-    router.replace(`/patients/${npi}?${params.toString()}`, { scroll: false });
+    router.replace(`/patients/${nip}?${params.toString()}`, { scroll: false });
   }
 
-  async function loadPatient(npiValue: string) {
+  async function loadPatient(nipValue: string) {
     setLoading(true);
 
     const { data: patientData, error } = await supabase
       .from("patients")
       .select("*")
-      .eq("npi", npiValue)
+      .eq("nip", nipValue)
       .is("deleted_at", null)
       .single();
 
@@ -268,7 +268,7 @@ function PatientPageInner() {
     if (!win) toast({ variant: "destructive", title: "Erreur", description: "Impossible d'ouvrir la fenêtre. Vérifiez les blocages de popups." });
   }
   function handleExportPDF() { if (patient) handleOpenAPI(`/api/export-pdf?patientId=${patient.id}`); }
-  function handleShowQR()    { if (patient) handleOpenAPI(`/api/qr?npi=${patient.npi}`); }
+  function handleShowQR()    { if (patient) handleOpenAPI(`/api/qr?nip=${patient.nip}`); }
   function handleLettreRef() { if (patient) handleOpenAPI(`/api/lettre-reference?patientId=${patient.id}`); }
 
   async function handleBreakGlass() {
@@ -321,7 +321,7 @@ function PatientPageInner() {
           {patient.prenom} <span className="uppercase">{patient.nom}</span>
         </span>
         <span className="ml-1 text-xs text-muted-foreground/60 font-mono hidden sm:inline">
-          {patient.npi}
+          {patient.nip}
         </span>
       </nav>
 
@@ -433,7 +433,7 @@ function PatientPageInner() {
                 habitudes={habitudes}
                 consultations={consultations}
                 prescriptions={prescriptions}
-                onRefresh={() => loadPatient(patient.npi)}
+                onRefresh={() => loadPatient(patient.nip)}
                 navigateToTab={handleTabChange}
               />
             </TabsContent>
@@ -442,7 +442,7 @@ function PatientPageInner() {
               <ConsultationsTab
                 patient={patient}
                 consultations={consultations}
-                onRefresh={() => loadPatient(patient.npi)}
+                onRefresh={() => loadPatient(patient.nip)}
               />
             </TabsContent>
 
@@ -450,24 +450,24 @@ function PatientPageInner() {
               <PrescriptionsTab
                 patient={patient}
                 allergies={allergies}
-                onRefresh={() => loadPatient(patient.npi)}
+                onRefresh={() => loadPatient(patient.nip)}
               />
             </TabsContent>
 
             <TabsContent value="analyses" className="mt-0">
-              <AnalysesTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+              <AnalysesTab patient={patient} onRefresh={() => loadPatient(patient.nip)} />
             </TabsContent>
 
             <TabsContent value="vaccinations" className="mt-0">
-              <VaccinationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+              <VaccinationsTab patient={patient} onRefresh={() => loadPatient(patient.nip)} />
             </TabsContent>
 
             <TabsContent value="hospitalisations" className="mt-0">
-              <HospitalisationsTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+              <HospitalisationsTab patient={patient} onRefresh={() => loadPatient(patient.nip)} />
             </TabsContent>
 
             <TabsContent value="rendez-vous" className="mt-0">
-              <RendezVousTab patient={patient} onRefresh={() => loadPatient(patient.npi)} />
+              <RendezVousTab patient={patient} onRefresh={() => loadPatient(patient.nip)} />
             </TabsContent>
 
             <TabsContent value="documents" className="mt-0">

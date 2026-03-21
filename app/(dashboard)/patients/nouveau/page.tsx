@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
-import { generateNPI, cn } from "@/lib/utils";
+import { generateNIP, cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -94,11 +94,11 @@ export default function NouveauPatientPage() {
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const [loading, setLoading]           = useState(false);
-  const [npi, setNpi]                   = useState(() => generateNPI());
-  const [npiCopied, setNpiCopied]       = useState(false);
+  const [nip, setNip]                   = useState(() => generateNIP());
+  const [nipCopied, setNipCopied]       = useState(false);
   const [photoFile, setPhotoFile]       = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [duplicates, setDuplicates]     = useState<{ id: string; npi: string; nom: string; prenom: string; date_naissance: string }[]>([]);
+  const [duplicates, setDuplicates]     = useState<{ id: string; nip: string; nom: string; prenom: string; date_naissance: string }[]>([]);
   const [checkingDups, setCheckingDups] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("section-identite");
 
@@ -192,7 +192,7 @@ export default function NouveauPatientPage() {
     const timer = setTimeout(async () => {
       const { data } = await supabase
         .from("patients")
-        .select("id, npi, nom, prenom, date_naissance")
+        .select("id, nip, nom, prenom, date_naissance")
         .ilike("nom", `%${watchedNom}%`)
         .ilike("prenom", `%${watchedPrenom}%`)
         .is("deleted_at", null)
@@ -244,10 +244,10 @@ export default function NouveauPatientPage() {
     if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
-  function copyNPI() {
-    navigator.clipboard.writeText(npi);
-    setNpiCopied(true);
-    setTimeout(() => setNpiCopied(false), 2000);
+  function copyNIP() {
+    navigator.clipboard.writeText(nip);
+    setNipCopied(true);
+    setTimeout(() => setNipCopied(false), 2000);
   }
 
   // ─── Submit ────────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ export default function NouveauPatientPage() {
       let photoUrl: string | undefined;
       if (photoFile) {
         const ext = photoFile.name.split(".").pop();
-        const path = `patients/${npi}/photo_${Date.now()}.${ext}`;
+        const path = `patients/${nip}/photo_${Date.now()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("documents").upload(path, photoFile);
         if (!uploadErr) {
           const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(path);
@@ -270,7 +270,7 @@ export default function NouveauPatientPage() {
 
       const { data: patient, error } = await supabase.from("patients").insert({
         ...data,
-        npi,
+        nip,
         created_by: user.id,
         ...(photoUrl ? { photo_url: photoUrl } : {}),
       }).select().single();
@@ -281,21 +281,21 @@ export default function NouveauPatientPage() {
         user_id: user.id,
         patient_id: patient.id,
         action: "create_patient",
-        details: JSON.stringify({ npi }),
+        details: JSON.stringify({ nip }),
         timestamp: new Date().toISOString(),
       });
 
-      toast({ title: "Patient enregistré", description: `${data.prenom} ${data.nom} — ${npi}` });
-      router.push(`/patients/${npi}`);
+      toast({ title: "Patient enregistré", description: `${data.prenom} ${data.nom} — ${nip}` });
+      router.push(`/patients/${nip}`);
     } catch (err: unknown) {
-      // Handle NPI unique-constraint collision (PostgreSQL code 23505)
+      // Handle NIP unique-constraint collision (PostgreSQL code 23505)
       const pgErr = err as { code?: string };
       if (pgErr.code === "23505") {
-        setNpi(generateNPI());
+        setNip(generateNIP());
         toast({
           variant: "destructive",
           title: "Identifiant en conflit",
-          description: "Un nouveau NPI a été généré automatiquement. Veuillez soumettre à nouveau.",
+          description: "Un nouveau NIP a été généré automatiquement. Veuillez soumettre à nouveau.",
         });
       } else {
         toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
@@ -326,17 +326,17 @@ export default function NouveauPatientPage() {
       {/* Main content */}
       <div className="flex-1 p-4 sm:p-6 pb-28 max-w-5xl mx-auto w-full">
 
-        {/* NPI Banner */}
+        {/* NIP Banner */}
         <div className="mb-6 bg-medical-green-light border border-medical-green/20 rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] text-medical-green font-semibold uppercase tracking-widest mb-1">
               Numéro Personnel d&apos;Identification — généré automatiquement
             </p>
-            <p className="text-2xl font-mono font-bold text-medical-green tracking-wider">{npi}</p>
+            <p className="text-2xl font-mono font-bold text-medical-green tracking-wider">{nip}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={copyNPI} className="border-medical-green/40 text-medical-green hover:bg-medical-green/10">
-            {npiCopied ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />}
-            {npiCopied ? "Copié !" : "Copier"}
+          <Button variant="outline" size="sm" onClick={copyNIP} className="border-medical-green/40 text-medical-green hover:bg-medical-green/10">
+            {nipCopied ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />}
+            {nipCopied ? "Copié !" : "Copier"}
           </Button>
         </div>
 
@@ -470,10 +470,10 @@ export default function NouveauPatientPage() {
                               — né(e) le {new Date(d.date_naissance).toLocaleDateString("fr-FR")}
                             </span>
                           )}
-                          <code className="font-mono ml-1.5 text-muted-foreground">{d.npi}</code>
+                          <code className="font-mono ml-1.5 text-muted-foreground">{d.nip}</code>
                         </span>
                         <a
-                          href={`/patients/${d.npi}`}
+                          href={`/patients/${d.nip}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-medical-green hover:underline ml-2 shrink-0"

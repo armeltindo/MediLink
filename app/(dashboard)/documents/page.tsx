@@ -25,7 +25,7 @@ export default async function DocumentsPage() {
     const supabase = createServerSupabaseClient();
     const { data } = await supabase
       .from("documents")
-      .select("id, nom, type, uploaded_at, url, patients(npi, nom, prenom)")
+      .select("id, nom, type, uploaded_at, url, patients(nip, nom, prenom)")
       .is("deleted_at", null)
       .order("uploaded_at", { ascending: false })
       .limit(100);

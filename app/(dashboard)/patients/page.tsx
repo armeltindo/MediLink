@@ -151,7 +151,7 @@ function PatientsPageInner() {
     let req = supabase
       .from("patients")
       .select(
-        "id, npi, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, contact_urgence_tel, created_at, photo_url",
+        "id, nip, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, contact_urgence_tel, created_at, photo_url",
         { count: "exact" },
       )
       .is("deleted_at", null)
@@ -160,7 +160,7 @@ function PatientsPageInner() {
 
     if (q.trim()) {
       const safe = sanitizeSearch(q);
-      req = req.or(`npi.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%`);
+      req = req.or(`nip.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%`);
     }
     if (f.sexe)           req = req.eq("sexe", f.sexe);
     if (f.groupe_sanguin) req = req.eq("groupe_sanguin", f.groupe_sanguin);
@@ -273,7 +273,7 @@ function PatientsPageInner() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Rechercher par NPI, nom ou prénom…"
+                placeholder="Rechercher par NIP, nom ou prénom…"
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 className="pl-9 pr-8 bg-background"
@@ -510,7 +510,7 @@ function PatientsPageInner() {
                 return (
                   <Link
                     key={patient.id}
-                    href={`/patients/${patient.npi}`}
+                    href={`/patients/${patient.nip}`}
                     className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-accent hover:border-medical-green/30 hover:shadow-md transition-all duration-150 shadow-sm"
                   >
                     {/* Avatar */}
@@ -546,7 +546,7 @@ function PatientsPageInner() {
                           {patient.prenom} <span className="uppercase">{patient.nom}</span>
                         </span>
                         <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {patient.npi}
+                          {patient.nip}
                         </code>
                         {bloodFull && (
                           <span className={cn(

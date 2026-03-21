@@ -14,7 +14,7 @@ interface AuditLog {
   details: string | null;
   timestamp: string;
   patient_id: string | null;
-  patients?: { nom: string; prenom: string; npi: string } | { nom: string; prenom: string; npi: string }[] | null;
+  patients?: { nom: string; prenom: string; nip: string } | { nom: string; prenom: string; nip: string }[] | null;
 }
 
 interface Notif {
@@ -197,7 +197,7 @@ export function NotificationPanel({ user }: { user: UserProfile }) {
 
       const { data } = await supabase
         .from("audit_logs")
-        .select("id, action, details, timestamp, patient_id, patients(nom, prenom, npi)")
+        .select("id, action, details, timestamp, patient_id, patients(nom, prenom, nip)")
         .eq("user_id", user.id)
         .in("action", NOTIF_ACTIONS)
         .order("timestamp", { ascending: false })

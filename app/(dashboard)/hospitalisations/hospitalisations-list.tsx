@@ -17,7 +17,7 @@ export interface HospitalisationRow {
   service: string | null;
   resume_sejour: string | null;
   mode_sortie: string | null;
-  patients: { npi: string; nom: string; prenom: string } | null;
+  patients: { nip: string; nom: string; prenom: string } | null;
   etablissements: { nom: string } | null;
 }
 
@@ -190,7 +190,7 @@ function DetailPanel({ h, onClose }: { h: HospitalisationRow; onClose: () => voi
         {h.patients && (
           <div className="border-t p-4">
             <Link
-              href={`/patients/${h.patients.npi}?tab=hospitalisations`}
+              href={`/patients/${h.patients.nip}?tab=hospitalisations`}
               className="flex items-center justify-center gap-2 w-full rounded-xl bg-medical-green text-white text-sm font-medium py-2.5 hover:bg-medical-green/90 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />
