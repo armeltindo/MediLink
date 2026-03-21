@@ -33,14 +33,39 @@ export default function LoginPage() {
           toast({ variant: "destructive", title: "Erreur de connexion", description: error });
           return;
         }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          toast({ variant: "destructive", title: "Erreur de connexion", description: error.message });
-          return;
-        }
+        // Mode démo : pas de sélection d'établissement
+        router.push("/dashboard");
+        router.refresh();
+        return;
       }
-      router.push("/dashboard");
+
+      const { error, data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast({ variant: "destructive", title: "Erreur de connexion", description: error.message });
+        return;
+      }
+
+      const userId = signInData.user?.id;
+      if (!userId) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      // Vérifier le nombre d'établissements affectés
+      const { data: junctions } = await supabase
+        .from("user_etablissements")
+        .select("etablissement_id")
+        .eq("user_id", userId);
+
+      if (junctions && junctions.length > 1) {
+        // Plusieurs établissements → laisser l'utilisateur choisir
+        router.push("/select-etablissement");
+      } else {
+        // 0 ou 1 établissement → la page select-etablissement gérera l'auto-sélection
+        // Le middleware redirigera vers /select-etablissement qui auto-sélectionne
+        router.push("/dashboard");
+      }
       router.refresh();
     } catch {
       toast({ variant: "destructive", title: "Erreur", description: "Une erreur inattendue s'est produite." });

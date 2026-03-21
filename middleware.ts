@@ -27,12 +27,15 @@ async function verifyDemoSession(cookieValue: string): Promise<boolean> {
 const ADMIN_ONLY_PATHS = ["/admin", "/audit"];
 // Routes accessibles à tous les rôles authentifiés
 const PROTECTED_PATHS = ["/dashboard", "/patients", "/consultations", "/prescriptions", "/analyses", "/vaccinations", "/hospitalisations", "/documents", "/etablissements", "/rendez-vous"];
+// Page de sélection d'établissement (accessible aux authentifiés sans cookie d'établissement)
+const SELECT_ETAB_PATH = "/select-etablissement";
 
 const ADMIN_ROLES = ["super_admin", "admin_etablissement"];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicPath = pathname === "/login" || pathname === "/" || pathname === "/forgot-password" || pathname === "/reset-password";
+  const isSelectEtabPath = pathname === SELECT_ETAB_PATH;
 
   // Guard: if Supabase env vars are not configured, use demo session cookie
   if (
@@ -65,6 +68,7 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
+    // En mode démo, pas de sélection d'établissement nécessaire
     return NextResponse.next();
   }
 
@@ -108,6 +112,26 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
+    }
+
+    // Sélection d'établissement obligatoire avant l'accès aux pages protégées
+    if (user && !isPublicPath && !isSelectEtabPath) {
+      const selectedEtab = request.cookies.get("selected_etablissement_id");
+      if (!selectedEtab) {
+        const url = request.nextUrl.clone();
+        url.pathname = SELECT_ETAB_PATH;
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // Si l'utilisateur a déjà sélectionné un établissement, pas besoin de repasser par la page
+    if (user && isSelectEtabPath) {
+      const selectedEtab = request.cookies.get("selected_etablissement_id");
+      if (selectedEtab) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
     }
 
     // Role-based access for admin-only routes

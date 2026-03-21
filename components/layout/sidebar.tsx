@@ -16,6 +16,7 @@ import {
   LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
   LogOut, ShieldCheck, ClipboardList, CalendarDays, X,
+  RefreshCw,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { useSidebar } from "@/components/layout/sidebar-context";
@@ -64,7 +65,8 @@ export function Sidebar() {
   const { open, close } = useSidebar();
 
   const [prescriptionsExpiring, setPrescriptionsExpiring] = useState(0);
-  const [analysesEnAttente, setAnalysesEnAttente] = useState(0);
+  const [analysesEnAttente, setAnalysesEnAttente]         = useState(0);
+  const [hasMultiEtab, setHasMultiEtab]                   = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -76,9 +78,12 @@ export function Sidebar() {
         .gte("date_expiration", new Date().toISOString()),
       supabase.from("analyses_prescrites").select("id", { count: "exact" })
         .in("statut", ["prescrit", "en_attente"]),
-    ]).then(([rx, an]) => {
+      supabase.from("user_etablissements").select("etablissement_id", { count: "exact" })
+        .eq("user_id", user.id),
+    ]).then(([rx, an, etabs]) => {
       setPrescriptionsExpiring(rx.count || 0);
       setAnalysesEnAttente(an.count || 0);
+      setHasMultiEtab((etabs.count ?? 0) > 1);
     });
   }, [user]);
 
@@ -229,6 +234,20 @@ export function Sidebar() {
                   {getRoleBadge(user.role).label}
                 </p>
               </div>
+
+              {/* Changer d'établissement */}
+              {hasMultiEtab && (
+                <button
+                  onClick={async () => {
+                    await fetch("/api/auth/select-etablissement", { method: "DELETE" });
+                    router.push("/select-etablissement");
+                  }}
+                  className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                  title="Changer d'établissement"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              )}
 
               {/* Logout icon button */}
               <AlertDialog>
