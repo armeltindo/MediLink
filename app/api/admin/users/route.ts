@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 function createSupabaseServer() {
   const cookieStore = cookies();
   return createServerClient(
@@ -22,15 +24,18 @@ function createSupabaseServer() {
 
 const PARAMEDICAL_ROLES = ["medecin", "infirmier", "laborantin", "pharmacien"];
 
-// GET /api/admin/users — liste tous les profils utilisateurs
+// GET /api/admin/users — liste les profils utilisateurs
+// super_admin : tous les utilisateurs
+// admin_etablissement : uniquement les utilisateurs de son établissement
 export async function GET() {
   const supabase = createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const cookieStore = cookies();
   const { data: profile } = await supabase
     .from("users_profiles")
-    .select("role")
+    .select("role, etablissement_id")
     .eq("id", user.id)
     .single();
 
@@ -38,13 +43,43 @@ export async function GET() {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
+  const SELECT_FIELDS = "id, nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre, created_at, deleted_at, etablissements(nom), user_etablissements(etablissement_id, etablissements(id, nom))";
+
+  // super_admin : tous les profils
+  if (profile.role === "super_admin") {
+    const { data, error } = await supabase
+      .from("users_profiles")
+      .select(SELECT_FIELDS)
+      .order("created_at", { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  // admin_etablissement : seulement les utilisateurs de son établissement
+  const etabId = cookieStore.get("selected_etablissement_id")?.value || profile.etablissement_id;
+  if (!etabId) return NextResponse.json({ error: "Aucun établissement sélectionné" }, { status: 400 });
+
+  // Récupérer les user_id liés à cet établissement via la junction table
+  const { data: junctions } = await supabase
+    .from("user_etablissements")
+    .select("user_id")
+    .eq("etablissement_id", etabId);
+
+  const junctionUserIds = (junctions || []).map((j) => j.user_id);
+
+  // Inclure aussi les admins dont etablissement_id correspond (ex: admin_etablissement du même établissement)
   const { data, error } = await supabase
     .from("users_profiles")
-    .select("id, nom, prenom, role, specialite, telephone, etablissement_id, numero_ordre, titre, created_at, deleted_at, etablissements(nom), user_etablissements(etablissement_id, etablissements(id, nom))")
+    .select(SELECT_FIELDS)
+    .or(
+      junctionUserIds.length > 0
+        ? `id.in.(${junctionUserIds.join(",")}),etablissement_id.eq.${etabId}`
+        : `etablissement_id.eq.${etabId}`
+    )
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(data ?? []);
 }
 
 // POST /api/admin/users — crée un profil utilisateur (après invitation Supabase Auth)

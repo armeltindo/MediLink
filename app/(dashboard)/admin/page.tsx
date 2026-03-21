@@ -394,7 +394,7 @@ export default function AdminPage() {
       </div>
 
       <div className="p-6 space-y-5">
-        <Tabs defaultValue="stats">
+        <Tabs defaultValue={user?.role === "admin_etablissement" ? "personnel" : "stats"}>
           <TabsList className="h-10 gap-0.5 bg-slate-100/80">
             <TabsTrigger value="stats" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
               <BarChart2 className="h-3.5 w-3.5" />
@@ -404,10 +404,12 @@ export default function AdminPage() {
               <Users className="h-3.5 w-3.5" />
               Utilisateurs
             </TabsTrigger>
-            <TabsTrigger value="etablissements" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
-              <Building2 className="h-3.5 w-3.5" />
-              Établissements
-            </TabsTrigger>
+            {user?.role === "super_admin" && (
+              <TabsTrigger value="etablissements" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
+                <Building2 className="h-3.5 w-3.5" />
+                Établissements
+              </TabsTrigger>
+            )}
             <TabsTrigger value="personnel" className="gap-1.5 text-sm data-[state=active]:text-medical-green" onClick={() => { if (personnel.length === 0) loadPersonnel(); }}>
               <UserCog className="h-3.5 w-3.5" />
               Personnel
@@ -864,8 +866,8 @@ export default function AdminPage() {
             )}
           </TabsContent>
 
-          {/* ── ETABLISSEMENTS TAB ── */}
-          <TabsContent value="etablissements" className="space-y-4 mt-5">
+          {/* ── ETABLISSEMENTS TAB (super_admin uniquement) ── */}
+          {user?.role === "super_admin" && <TabsContent value="etablissements" className="space-y-4 mt-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold">Établissements de santé</h2>
@@ -1017,9 +1019,10 @@ export default function AdminPage() {
                 )}
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
-          {/* ── EDIT ETABLISSEMENT DIALOG ── */}
+          {/* ── EDIT ETABLISSEMENT DIALOG (super_admin uniquement) ── */}
+          {user?.role === "super_admin" &&
           <Dialog open={editEtabOpen} onOpenChange={setEditEtabOpen}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
@@ -1084,7 +1087,7 @@ export default function AdminPage() {
                 </form>
               )}
             </DialogContent>
-          </Dialog>
+          </Dialog>}
 
           {/* ── PERSONNEL TAB ── */}
           <TabsContent value="personnel" className="space-y-4 mt-5">
