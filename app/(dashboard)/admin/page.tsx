@@ -254,7 +254,7 @@ export default function AdminPage() {
     if (!editEtabForm) return;
     setEditEtabLoading(true);
     try {
-      const { id, deleted_at: _skip, ...fields } = editEtabForm;
+      const { id, deleted_at: _, ...fields } = editEtabForm;
       const res = await fetch("/api/admin/etablissements", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
