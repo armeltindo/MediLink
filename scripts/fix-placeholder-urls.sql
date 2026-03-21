@@ -18,6 +18,7 @@ DECLARE
 
   storage_prefix TEXT;
   nb_updated     INTEGER;
+  r              RECORD;
 BEGIN
   storage_prefix := base_url || '/storage/v1/object/public/documents/';
 
