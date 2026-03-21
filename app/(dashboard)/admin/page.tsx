@@ -254,11 +254,11 @@ export default function AdminPage() {
     if (!editEtabForm) return;
     setEditEtabLoading(true);
     try {
-      const { id, deleted_at: _, ...fields } = editEtabForm;
+      const { id, nom, type, ville, region, adresse, telephone, email } = editEtabForm;
       const res = await fetch("/api/admin/etablissements", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...fields }),
+        body: JSON.stringify({ id, nom, type, ville, region, adresse, telephone, email }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast({ title: "Établissement mis à jour", description: editEtabForm.nom });
