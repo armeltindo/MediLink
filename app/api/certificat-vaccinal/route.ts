@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 interface VaccinRow {
   vaccin: string;
@@ -304,6 +305,32 @@ export async function POST(request: NextRequest) {
 <script>window.onload = () => window.print();</script>
 </body>
 </html>`;
+
+  // Sauvegarde dans l'espace documents du patient
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && patient?.id) {
+      const ts = Date.now();
+      const storageKey = `${patient.id}/generated/${ts}_certificat-vaccinal.html`;
+      const htmlBuffer = Buffer.from(html, "utf-8");
+      const { error: storageError } = await supabase.storage
+        .from("documents")
+        .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
+      if (!storageError) {
+        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
+        await supabase.from("documents").insert({
+          patient_id: patient.id,
+          nom: `Certificat vaccinal — ${new Date().toLocaleDateString("fr-FR")}`,
+          url: publicUrl,
+          type: "certificat",
+          taille: htmlBuffer.length,
+          uploaded_by: user.id,
+          description: `Carnet vaccinal — ${(vaccinations as VaccinRow[]).length} vaccination(s)`,
+        });
+      }
+    }
+  } catch { /* ne pas bloquer la réponse */ }
 
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },

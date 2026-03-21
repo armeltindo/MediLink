@@ -365,6 +365,53 @@ function AnalyseCard({
         date_resultat: new Date().toISOString(),
       });
       await supabase.from("analyses_prescrites").update({ statut: "rendu" }).eq("id", analyse.id);
+
+      // Sauvegarde dans l'espace documents du patient
+      try {
+        const dateStr = new Date().toLocaleDateString("fr-FR");
+        const valeurAffichee = newResultat.valeur
+          ? `${newResultat.valeur} ${newResultat.unite || ""}`.trim()
+          : newResultat.valeur_texte || "";
+        const content = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Résultat — ${analyse.type_analyse}</title>
+<style>body{font-family:system-ui,sans-serif;padding:24px;max-width:620px;margin:0 auto;color:#1e293b}
+h2{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:8px}
+table{width:100%;border-collapse:collapse;margin-top:16px}
+td{padding:8px 12px;border-bottom:1px solid #e2e8f0}
+tr:nth-child(even){background:#f8fafc}
+.label{font-weight:600;width:40%}.footer{margin-top:24px;font-size:11px;color:#94a3b8}</style>
+</head><body>
+<h2>Résultat d'analyse — ${analyse.type_analyse}</h2>
+<table>
+  <tr><td class="label">Date</td><td>${dateStr}</td></tr>
+  <tr><td class="label">Paramètre</td><td>${newResultat.parametre}</td></tr>
+  ${valeurAffichee ? `<tr><td class="label">Valeur</td><td><strong>${valeurAffichee}</strong></td></tr>` : ""}
+  ${newResultat.interpretation ? `<tr><td class="label">Interprétation</td><td>${newResultat.interpretation}</td></tr>` : ""}
+</table>
+<p class="footer">Généré par MediLink le ${dateStr}</p>
+</body></html>`;
+        const ts = Date.now();
+        const storageKey = `${analyse.patient_id}/generated/${ts}_resultat-analyse.html`;
+        const blob = new Blob([content], { type: "text/html;charset=utf-8" });
+        const { error: storageError } = await supabase.storage
+          .from("documents")
+          .upload(storageKey, blob, { contentType: "text/html; charset=utf-8" });
+        if (!storageError) {
+          const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
+          await supabase.from("documents").insert({
+            patient_id: analyse.patient_id,
+            nom: `Résultat — ${analyse.type_analyse} — ${dateStr}`,
+            url: publicUrl,
+            type: "compte_rendu",
+            taille: content.length,
+            uploaded_by: user.id,
+            description: valeurAffichee
+              ? `${newResultat.parametre} : ${valeurAffichee}`
+              : newResultat.parametre,
+          });
+        }
+      } catch { /* ne pas bloquer le flux principal */ }
+
       toast({ title: "Résultat enregistré" });
       setShowForm(false);
       setResultats(null);

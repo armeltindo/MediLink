@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" height="38">
   <path d="M20 3 L34 8 L34 22 Q34 30 20 36 Q6 30 6 22 L6 8 Z" fill="white" fill-opacity="0.2"/>
@@ -373,6 +374,32 @@ export async function POST(request: NextRequest) {
 <script>window.onload = () => window.print();</script>
 </body>
 </html>`;
+
+  // Sauvegarde dans l'espace documents du patient
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && patient?.id) {
+      const ts = Date.now();
+      const storageKey = `${patient.id}/generated/${ts}_lettre-sortie.html`;
+      const htmlBuffer = Buffer.from(html, "utf-8");
+      const { error: storageError } = await supabase.storage
+        .from("documents")
+        .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
+      if (!storageError) {
+        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
+        await supabase.from("documents").insert({
+          patient_id: patient.id,
+          nom: `Lettre de sortie — ${hospitalisation?.service || "Hospitalisation"} — ${sortie}`,
+          url: publicUrl,
+          type: "compte_rendu",
+          taille: htmlBuffer.length,
+          uploaded_by: user.id,
+          description: `Sortie : ${modeSortieLabels[hospitalisation?.mode_sortie] || hospitalisation?.mode_sortie || "—"}`,
+        });
+      }
+    }
+  } catch { /* ne pas bloquer la réponse */ }
 
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },

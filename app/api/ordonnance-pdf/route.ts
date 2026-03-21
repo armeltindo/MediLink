@@ -402,6 +402,28 @@ export async function GET(request: NextRequest) {
 </body>
 </html>`;
 
+    // Sauvegarde dans l'espace documents du patient
+    try {
+      const ts = Date.now();
+      const storageKey = `${patient.id}/generated/${ts}_ordonnance.html`;
+      const htmlBuffer = Buffer.from(html, "utf-8");
+      const { error: storageError } = await supabase.storage
+        .from("documents")
+        .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
+      if (!storageError) {
+        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
+        await supabase.from("documents").insert({
+          patient_id: patient.id,
+          nom: `Ordonnance — ${prescription.medicament_dci} — ${datePrescription}`,
+          url: publicUrl,
+          type: "ordonnance",
+          taille: htmlBuffer.length,
+          uploaded_by: user.id,
+          description: `${prescription.medicament_dci} ${prescription.dosage} — ${prescription.posologie}`,
+        });
+      }
+    } catch { /* ne pas bloquer la réponse */ }
+
     return new NextResponse(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
