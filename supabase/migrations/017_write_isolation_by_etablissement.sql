@@ -45,7 +45,7 @@ CREATE POLICY "consultations_insert" ON consultations
     get_user_role() = 'super_admin'
     OR (
       get_user_role() = 'medecin'
-      AND user_belongs_to_etablissement(NEW.etablissement_id)
+      AND user_belongs_to_etablissement(etablissement_id)
     )
   );
 
@@ -81,7 +81,7 @@ CREATE POLICY "vaccinations_insert" ON vaccinations
     get_user_role() = 'super_admin'
     OR (
       get_user_role() IN ('medecin', 'infirmier')
-      AND user_belongs_to_etablissement(NEW.etablissement_id)
+      AND user_belongs_to_etablissement(etablissement_id)
     )
   );
 
@@ -105,7 +105,7 @@ CREATE POLICY "hospitalisations_insert" ON hospitalisations
     get_user_role() = 'super_admin'
     OR (
       get_user_role() IN ('medecin', 'admin_etablissement')
-      AND user_belongs_to_etablissement(NEW.etablissement_id)
+      AND user_belongs_to_etablissement(etablissement_id)
     )
   );
 
@@ -143,7 +143,7 @@ CREATE POLICY "soins_infirmiers_insert" ON soins_infirmiers
       get_user_role() IN ('medecin', 'infirmier')
       AND EXISTS (
         SELECT 1 FROM hospitalisations h
-        WHERE h.id = NEW.hospitalisation_id
+        WHERE h.id = hospitalisation_id
           AND user_belongs_to_etablissement(h.etablissement_id)
       )
     )
@@ -175,8 +175,8 @@ CREATE POLICY "documents_insert" ON documents
     OR (
       get_user_role() IN ('medecin', 'infirmier', 'admin_etablissement')
       AND (
-        NEW.etablissement_id IS NULL
-        OR user_belongs_to_etablissement(NEW.etablissement_id)
+        etablissement_id IS NULL
+        OR user_belongs_to_etablissement(etablissement_id)
       )
     )
   );
@@ -194,8 +194,8 @@ CREATE POLICY "rdv_insert" ON rendez_vous
     OR (
       get_user_role() IN ('admin_etablissement', 'medecin', 'infirmier')
       AND (
-        NEW.etablissement_id IS NULL
-        OR user_belongs_to_etablissement(NEW.etablissement_id)
+        etablissement_id IS NULL
+        OR user_belongs_to_etablissement(etablissement_id)
       )
     )
   );
@@ -228,10 +228,10 @@ CREATE POLICY "prescriptions_insert" ON prescriptions
       get_user_role() = 'medecin'
       AND (
         -- prescription sans consultation (cas de prescription directe)
-        NEW.consultation_id IS NULL
+        consultation_id IS NULL
         OR EXISTS (
           SELECT 1 FROM consultations c
-          WHERE c.id = NEW.consultation_id
+          WHERE c.id = consultation_id
             AND user_belongs_to_etablissement(c.etablissement_id)
         )
       )
@@ -273,10 +273,10 @@ CREATE POLICY "analyses_insert" ON analyses_prescrites
     OR (
       get_user_role() = 'medecin'
       AND (
-        NEW.consultation_id IS NULL
+        consultation_id IS NULL
         OR EXISTS (
           SELECT 1 FROM consultations c
-          WHERE c.id = NEW.consultation_id
+          WHERE c.id = consultation_id
             AND user_belongs_to_etablissement(c.etablissement_id)
         )
       )
