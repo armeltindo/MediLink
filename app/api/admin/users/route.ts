@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export async function GET() {
   return NextResponse.json(data ?? []);
 }
 
-// POST /api/admin/users — crée un profil utilisateur (après invitation Supabase Auth)
+// POST /api/admin/users — invite un utilisateur via Supabase Auth puis crée son profil
 export async function POST(request: NextRequest) {
   const supabase = createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -99,16 +100,28 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nom, prenom, role, specialite, telephone, etablissement_id, etablissement_ids, numero_ordre, titre } = body;
+  const { email, nom, prenom, role, specialite, telephone, etablissement_id, etablissement_ids, numero_ordre, titre } = body;
 
-  if (!nom || !prenom || !role) {
-    return NextResponse.json({ error: "Nom, prénom et rôle requis" }, { status: 400 });
+  if (!email || !nom || !prenom || !role) {
+    return NextResponse.json({ error: "Email, nom, prénom et rôle requis" }, { status: 400 });
   }
 
   const validRoles = ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"];
   if (!validRoles.includes(role)) {
     return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
   }
+
+  // Utiliser le client service role pour inviter l'utilisateur via Supabase Auth
+  const serviceSupabase = createServerSupabaseClient();
+  const { data: inviteData, error: inviteError } = await serviceSupabase.auth.admin.inviteUserByEmail(email, {
+    data: { nom, prenom, role },
+  });
+
+  if (inviteError) {
+    return NextResponse.json({ error: inviteError.message }, { status: 400 });
+  }
+
+  const newUserId = inviteData.user.id;
 
   // For paramedical roles, etablissement_id in users_profiles stays null (handled via junction table)
   const profileEtabId = PARAMEDICAL_ROLES.includes(role) ? null : (etablissement_id || null);
@@ -117,17 +130,21 @@ export async function POST(request: NextRequest) {
   await supabase.from("audit_logs").insert({
     user_id: user.id,
     action: "create_user_profile",
-    details: JSON.stringify({ nom, prenom, role }),
+    details: JSON.stringify({ nom, prenom, role, email }),
     timestamp: new Date().toISOString(),
   });
 
-  const { data: newProfile, error: insertError } = await supabase
+  const { data: newProfile, error: insertError } = await serviceSupabase
     .from("users_profiles")
-    .insert({ nom, prenom, role, specialite, telephone, etablissement_id: profileEtabId, numero_ordre, titre })
+    .insert({ id: newUserId, nom, prenom, role, specialite, telephone, etablissement_id: profileEtabId, numero_ordre, titre })
     .select()
     .single();
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) {
+    // Supprimer l'utilisateur auth créé si le profil échoue
+    await serviceSupabase.auth.admin.deleteUser(newUserId);
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
 
   // Insert junction table records for paramedical roles
   if (PARAMEDICAL_ROLES.includes(role) && Array.isArray(etablissement_ids) && etablissement_ids.length > 0) {
@@ -135,11 +152,10 @@ export async function POST(request: NextRequest) {
       user_id: newProfile.id,
       etablissement_id: eid,
     }));
-    const { error: junctionError } = await supabase
+    const { error: junctionError } = await serviceSupabase
       .from("user_etablissements")
       .insert(junctionRows);
     if (junctionError) {
-      // Profile was created; log the warning but don't fail the whole request
       console.error("user_etablissements insert error:", junctionError.message);
     }
   }

@@ -134,7 +134,7 @@ export default function AdminPage() {
   const [newUserLoading, setNewUserLoading] = useState(false);
   const [etablissements, setEtablissements] = useState<EtablissementRow[]>([]);
   const [newUserForm, setNewUserForm] = useState({
-    nom: "", prenom: "", role: "", specialite: "",
+    email: "", nom: "", prenom: "", role: "", specialite: "",
     telephone: "", etablissement_id: "", etablissement_ids: [] as string[], numero_ordre: "", titre: "",
   });
   const [etabSearch, setEtabSearch] = useState("");
@@ -205,7 +205,7 @@ export default function AdminPage() {
       if (!res.ok) throw new Error((await res.json()).error);
       toast({ title: "Profil utilisateur créé", description: `${newUserForm.prenom} ${newUserForm.nom}` });
       setNewUserOpen(false);
-      setNewUserForm({ nom: "", prenom: "", role: "", specialite: "", telephone: "", etablissement_id: "", etablissement_ids: [], numero_ordre: "", titre: "" });
+      setNewUserForm({ email: "", nom: "", prenom: "", role: "", specialite: "", telephone: "", etablissement_id: "", etablissement_ids: [], numero_ordre: "", titre: "" });
       setEtabSearch("");
       loadUsers();
     } catch (err: unknown) {
@@ -590,6 +590,10 @@ export default function AdminPage() {
                         <div className="col-span-2 space-y-1.5">
                           <Label className="text-xs">Nom <span className="text-red-500">*</span></Label>
                           <Input className="h-9 uppercase" value={newUserForm.nom} onChange={(e) => setNewUserForm({ ...newUserForm, nom: e.target.value })} required placeholder="DUPONT" />
+                        </div>
+                        <div className="col-span-6 space-y-1.5">
+                          <Label className="text-xs">Email <span className="text-red-500">*</span></Label>
+                          <Input className="h-9" type="email" value={newUserForm.email} onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })} required placeholder="jean.dupont@etablissement.bj" />
                         </div>
                         <div className="col-span-3 space-y-1.5">
                           <Label className="text-xs">Téléphone</Label>
