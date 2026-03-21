@@ -165,6 +165,28 @@ export async function GET(request: NextRequest) {
 </body>
 </html>`;
 
+    // Save generated document to patient's document space
+    try {
+      const ts = Date.now();
+      const storageKey = `${patientId}/generated/${ts}_dossier-medical.html`;
+      const htmlBuffer = Buffer.from(html, "utf-8");
+      const { error: storageError } = await supabase.storage
+        .from("documents")
+        .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
+      if (!storageError) {
+        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
+        await supabase.from("documents").insert({
+          patient_id: patientId,
+          nom: `Dossier médical — ${new Date().toLocaleDateString("fr-FR")}`,
+          url: publicUrl,
+          type: "compte_rendu",
+          taille: htmlBuffer.length,
+          uploaded_by: user.id,
+          description: "Export dossier médical complet — généré automatiquement",
+        });
+      }
+    } catch { /* ne pas bloquer la réponse si la sauvegarde échoue */ }
+
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
