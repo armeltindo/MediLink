@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const [{ data: junction }, { data: profile }] = await Promise.all([
       supabase
         .from("user_etablissements")
-        .select("etablissement_id")
+        .select("etablissement_id, suspended_at")
         .eq("user_id", user.id)
         .eq("etablissement_id", etablissement_id)
         .maybeSingle(),
@@ -46,6 +46,14 @@ export async function POST(request: NextRequest) {
     if (!isAdmin && !isInJunction && !isProfileEtab) {
       return NextResponse.json(
         { error: "Vous n'êtes pas affecté à cet établissement" },
+        { status: 403 }
+      );
+    }
+
+    // Vérifier que l'accès n'est pas suspendu (uniquement pour les affectations via junction)
+    if (isInJunction && junction?.suspended_at) {
+      return NextResponse.json(
+        { error: "Votre accès à cet établissement a été suspendu. Contactez votre administrateur." },
         { status: 403 }
       );
     }

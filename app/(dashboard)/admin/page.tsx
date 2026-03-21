@@ -19,7 +19,7 @@ import {
   Users, Stethoscope, BedDouble, Building2,
   Download, TrendingUp, Activity, UserPlus, Shield,
   MapPin, Phone, Mail, Loader2, UserCheck, UserX, Syringe, Settings2, ExternalLink,
-  Search, BarChart2, Pill, FlaskConical, X,
+  Search, BarChart2, Pill, FlaskConical, X, Pencil, PowerOff, Power, UserCog,
 } from "lucide-react";
 import { getRoleBadge, cn } from "@/lib/utils";
 import Link from "next/link";
@@ -81,6 +81,24 @@ interface EtablissementRow {
   adresse?: string;
   telephone?: string;
   email?: string;
+  deleted_at?: string | null;
+}
+
+interface PersonnelRow {
+  id: string; // junction id
+  user_id: string;
+  suspended_at: string | null;
+  created_at: string;
+  users_profiles: {
+    id: string;
+    nom: string;
+    prenom: string;
+    role: string;
+    specialite?: string;
+    titre?: string;
+    telephone?: string;
+    deleted_at?: string | null;
+  } | null;
 }
 
 const typeEtabLabels: Record<string, string> = {
@@ -130,6 +148,16 @@ export default function AdminPage() {
     nom: "", type: "", ville: "", region: "",
     adresse: "", telephone: "", email: "",
   });
+
+  // Edit etablissement state (super_admin)
+  const [editEtabOpen, setEditEtabOpen] = useState(false);
+  const [editEtabLoading, setEditEtabLoading] = useState(false);
+  const [editEtabForm, setEditEtabForm] = useState<EtablissementRow | null>(null);
+
+  // Personnel state (admin_etablissement)
+  const [personnel, setPersonnel] = useState<PersonnelRow[]>([]);
+  const [personnelLoading, setPersonnelLoading] = useState(false);
+  const [personnelSearch, setPersonnelSearch] = useState("");
 
   useEffect(() => {
     loadStats();
@@ -218,6 +246,67 @@ export default function AdminPage() {
       toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
     } finally {
       setNewEtabLoading(false);
+    }
+  }
+
+  async function handleEditEtab(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editEtabForm) return;
+    setEditEtabLoading(true);
+    try {
+      const { id, deleted_at: _skip, ...fields } = editEtabForm;
+      const res = await fetch("/api/admin/etablissements", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...fields }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast({ title: "Établissement mis à jour", description: editEtabForm.nom });
+      setEditEtabOpen(false);
+      loadEtablissements();
+    } catch (err: unknown) {
+      toast({ variant: "destructive", title: "Erreur", description: err instanceof Error ? err.message : "Erreur" });
+    } finally {
+      setEditEtabLoading(false);
+    }
+  }
+
+  async function handleToggleEtab(etab: EtablissementRow) {
+    const isActive = !etab.deleted_at;
+    const res = await fetch("/api/admin/etablissements", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: etab.id, deleted_at: isActive ? new Date().toISOString() : null }),
+    });
+    if (res.ok) {
+      toast({ title: isActive ? "Établissement désactivé" : "Établissement réactivé" });
+      loadEtablissements();
+    } else {
+      const { error } = await res.json();
+      toast({ variant: "destructive", title: "Erreur", description: error });
+    }
+  }
+
+  const loadPersonnel = useCallback(async () => {
+    setPersonnelLoading(true);
+    const res = await fetch("/api/admin/personnel");
+    if (res.ok) setPersonnel(await res.json());
+    setPersonnelLoading(false);
+  }, []);
+
+  async function handleTogglePersonnel(junction: PersonnelRow) {
+    const suspend = !junction.suspended_at;
+    const res = await fetch("/api/admin/personnel", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ junction_id: junction.id, suspend }),
+    });
+    if (res.ok) {
+      toast({ title: suspend ? "Accès suspendu" : "Accès rétabli" });
+      loadPersonnel();
+    } else {
+      const { error } = await res.json();
+      toast({ variant: "destructive", title: "Erreur", description: error });
     }
   }
 
@@ -318,6 +407,10 @@ export default function AdminPage() {
             <TabsTrigger value="etablissements" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
               <Building2 className="h-3.5 w-3.5" />
               Établissements
+            </TabsTrigger>
+            <TabsTrigger value="personnel" className="gap-1.5 text-sm data-[state=active]:text-medical-green" onClick={() => { if (personnel.length === 0) loadPersonnel(); }}>
+              <UserCog className="h-3.5 w-3.5" />
+              Personnel
             </TabsTrigger>
             <TabsTrigger value="configuration" className="gap-1.5 text-sm data-[state=active]:text-medical-green">
               <Settings2 className="h-3.5 w-3.5" />
@@ -851,22 +944,38 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {etabRows.map((e) => (
-                  <Card key={e.id} className="shadow-sm hover:shadow-md transition-shadow group">
+                {etabRows.map((e) => {
+                  const isDisabled = !!e.deleted_at;
+                  return (
+                  <Card key={e.id} className={cn("shadow-sm hover:shadow-md transition-shadow group", isDisabled && "opacity-55")}>
                     <CardHeader className="pb-2 pt-4 px-4">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-lg bg-medical-green/10 flex items-center justify-center shrink-0 group-hover:bg-medical-green/20 transition-colors">
                           <Building2 className="h-5 w-5 text-medical-green" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm font-semibold leading-snug">{e.nom}</CardTitle>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <CardTitle className="text-sm font-semibold leading-snug">{e.nom}</CardTitle>
+                            {isDisabled && <Badge variant="danger" className="text-xs h-4 px-1.5">Désactivé</Badge>}
+                          </div>
                           <span className={`inline-block mt-1 text-xs font-medium px-1.5 py-0.5 rounded ${TYPE_ETAB_BADGE[e.type] ?? "bg-slate-100 text-slate-600"}`}>
                             {typeEtabLabels[e.type] || e.type}
                           </span>
                         </div>
+                        {user?.role === "super_admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Modifier"
+                            onClick={() => { setEditEtabForm({ ...e }); setEditEtabOpen(true); }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
-                    <CardContent className="px-4 pb-4 space-y-1.5">
+                    <CardContent className="px-4 pb-3 space-y-1.5">
                       <div className="flex items-start gap-2 text-xs text-muted-foreground">
                         <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
                         <span>{e.ville}{e.region ? `, ${e.region}` : ""}</span>
@@ -883,9 +992,23 @@ export default function AdminPage() {
                           <a href={`mailto:${e.email}`} className="hover:text-foreground transition-colors truncate">{e.email}</a>
                         </div>
                       )}
+                      {user?.role === "super_admin" && (
+                        <div className="pt-1 border-t mt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleEtab(e)}
+                            className={cn("h-7 text-xs gap-1.5 w-full justify-start", isDisabled ? "text-emerald-600 hover:bg-emerald-50" : "text-red-500 hover:bg-red-50")}
+                          >
+                            {isDisabled ? <Power className="h-3 w-3" /> : <PowerOff className="h-3 w-3" />}
+                            {isDisabled ? "Réactiver l'établissement" : "Désactiver l'établissement"}
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
                 {etabRows.length === 0 && (
                   <div className="col-span-full text-center py-16 text-muted-foreground">
                     <Building2 className="h-10 w-10 mx-auto mb-3 opacity-20" />
@@ -893,6 +1016,171 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+            )}
+          </TabsContent>
+
+          {/* ── EDIT ETABLISSEMENT DIALOG ── */}
+          <Dialog open={editEtabOpen} onOpenChange={setEditEtabOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-medical-green/10">
+                    <Pencil className="h-4 w-4 text-medical-green" />
+                  </div>
+                  Modifier l&apos;établissement
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Modifiez les informations de l&apos;établissement.
+                </DialogDescription>
+              </DialogHeader>
+              {editEtabForm && (
+                <form onSubmit={handleEditEtab} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 col-span-2">
+                      <Label className="text-xs">Nom *</Label>
+                      <Input value={editEtabForm.nom} onChange={(e) => setEditEtabForm({ ...editEtabForm, nom: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Type *</Label>
+                      <Select value={editEtabForm.type} onValueChange={(v) => setEditEtabForm({ ...editEtabForm, type: v })}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CHU">CHU</SelectItem>
+                          <SelectItem value="CSP">Centre de Santé</SelectItem>
+                          <SelectItem value="hopital">Hôpital</SelectItem>
+                          <SelectItem value="clinique">Clinique</SelectItem>
+                          <SelectItem value="cabinet">Cabinet médical</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Ville *</Label>
+                      <Input value={editEtabForm.ville} onChange={(e) => setEditEtabForm({ ...editEtabForm, ville: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Région *</Label>
+                      <Input value={editEtabForm.region} onChange={(e) => setEditEtabForm({ ...editEtabForm, region: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Téléphone</Label>
+                      <Input value={editEtabForm.telephone ?? ""} onChange={(e) => setEditEtabForm({ ...editEtabForm, telephone: e.target.value })} placeholder="+229 21 00 00 00" />
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <Label className="text-xs">Adresse</Label>
+                      <Input value={editEtabForm.adresse ?? ""} onChange={(e) => setEditEtabForm({ ...editEtabForm, adresse: e.target.value })} />
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <Label className="text-xs">Email</Label>
+                      <Input type="email" value={editEtabForm.email ?? ""} onChange={(e) => setEditEtabForm({ ...editEtabForm, email: e.target.value })} placeholder="contact@hopital.bj" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setEditEtabOpen(false)}>Annuler</Button>
+                    <Button type="submit" variant="medical" disabled={editEtabLoading}>
+                      {editEtabLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Enregistrer
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* ── PERSONNEL TAB ── */}
+          <TabsContent value="personnel" className="space-y-4 mt-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Accès du personnel</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Suspendre ou rétablir l&apos;accès d&apos;un membre du personnel à cet établissement
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={loadPersonnel}>
+                <Loader2 className={cn("h-3.5 w-3.5", personnelLoading && "animate-spin")} />
+                Actualiser
+              </Button>
+            </div>
+
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Rechercher par nom, rôle..."
+                value={personnelSearch}
+                onChange={(e) => setPersonnelSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {personnelLoading ? (
+              <div className="space-y-2">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-[60px] w-full rounded-lg" />)}</div>
+            ) : (
+              <Card className="shadow-sm overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {personnel
+                      .filter((p) => {
+                        const u = p.users_profiles;
+                        if (!u) return false;
+                        if (!personnelSearch) return true;
+                        return `${u.prenom} ${u.nom} ${u.role} ${u.specialite ?? ""}`.toLowerCase().includes(personnelSearch.toLowerCase());
+                      })
+                      .length === 0 && !personnelLoading ? (
+                      <div className="text-center py-14 text-muted-foreground">
+                        <UserCog className="h-9 w-9 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">Aucun personnel trouvé</p>
+                        <p className="text-xs mt-1">Cliquez sur &quot;Actualiser&quot; pour charger la liste</p>
+                      </div>
+                    ) : personnel
+                      .filter((p) => {
+                        const u = p.users_profiles;
+                        if (!u) return false;
+                        if (!personnelSearch) return true;
+                        return `${u.prenom} ${u.nom} ${u.role} ${u.specialite ?? ""}`.toLowerCase().includes(personnelSearch.toLowerCase());
+                      })
+                      .map((p) => {
+                        const u = p.users_profiles!;
+                        const isSuspended = !!p.suspended_at;
+                        const isGloballyDisabled = !!u.deleted_at;
+                        const roleBadge = getRoleBadge(u.role);
+                        const avatarClass = ROLE_AVATAR[u.role] ?? "bg-slate-100 text-slate-600";
+                        return (
+                          <div key={p.id} className={cn("flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50/60", (isSuspended || isGloballyDisabled) && "opacity-55")}>
+                            <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${avatarClass}`}>
+                              {u.prenom?.[0]?.toUpperCase()}{u.nom?.[0]?.toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium text-sm">{u.titre ? `${u.titre} ` : ""}{u.prenom} {u.nom}</span>
+                                <Badge className={`text-xs px-1.5 py-0 h-4 ${roleBadge.color}`} variant="outline">
+                                  {roleBadge.label}
+                                </Badge>
+                                {isSuspended && <Badge variant="danger" className="text-xs h-4">Suspendu</Badge>}
+                                {isGloballyDisabled && <Badge variant="secondary" className="text-xs h-4">Compte désactivé</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {u.specialite && <span className="font-medium text-foreground/60">{u.specialite}</span>}
+                                {isSuspended && p.suspended_at && (
+                                  <span className="ml-1 text-red-400">· Suspendu le {new Date(p.suspended_at).toLocaleDateString("fr-FR")}</span>
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTogglePersonnel(p)}
+                              disabled={isGloballyDisabled}
+                              className={cn("h-8 px-2.5 text-xs gap-1.5", isSuspended ? "text-emerald-600 hover:bg-emerald-50" : "text-amber-600 hover:bg-amber-50")}
+                              title={isSuspended ? "Rétablir l'accès" : "Suspendre l'accès"}
+                            >
+                              {isSuspended ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
+                              <span className="hidden sm:inline">{isSuspended ? "Rétablir" : "Suspendre"}</span>
+                            </Button>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
