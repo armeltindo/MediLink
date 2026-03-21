@@ -28,7 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_rendez_vous_patient
 
 -- Rendez-vous par date (queries plage temporelle dashboard)
 CREATE INDEX IF NOT EXISTS idx_rendez_vous_date
-  ON rendez_vous(date_heure DESC);
+  ON rendez_vous(date_rdv DESC);
 
 -- Vaccinations par statut (alertes vaccins en retard)
 CREATE INDEX IF NOT EXISTS idx_vaccinations_statut
