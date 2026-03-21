@@ -55,12 +55,22 @@ export default function SelectEtablissementPage() {
       if (profile) {
         setUserName(`${profile.prenom ?? ""} ${profile.nom ?? ""}`.trim());
 
-        // Les admins ont un seul établissement — auto-sélection
-        if (profile.role === "super_admin" || profile.role === "admin_etablissement") {
+        // admin_etablissement : établissement unique → auto-sélection
+        if (profile.role === "admin_etablissement") {
           if (profile.etablissement_id) {
             await selectEtablissement(profile.etablissement_id);
           }
-          // Si pas d'établissement configuré, on reste sur la page (afficher erreur)
+          return;
+        }
+
+        // super_admin : pas d'établissement propre → afficher tous les établissements
+        if (profile.role === "super_admin") {
+          const { data: etabs } = await supabase
+            .from("etablissements")
+            .select("*")
+            .is("deleted_at", null)
+            .order("nom");
+          setEtablissements(etabs ?? []);
           return;
         }
       }
