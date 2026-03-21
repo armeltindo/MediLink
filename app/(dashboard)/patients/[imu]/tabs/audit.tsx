@@ -90,7 +90,7 @@ export function AuditTab({ patient }: AuditTabProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `audit-${patient.nip}-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `audit-${patient.imu}-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

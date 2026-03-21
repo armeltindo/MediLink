@@ -15,13 +15,13 @@ export default async function VaccinationsPage() {
     const supabase = createServerSupabaseClient();
     const { data } = await supabase
       .from("vaccinations")
-      .select("id, vaccin, date_vaccination, dose, lot, voie, statut, prochain_rappel, patients(nip, nom, prenom)")
+      .select("id, vaccin, date_vaccination, dose, lot, voie, statut, prochain_rappel, patients(imu, nom, prenom)")
       .order("date_vaccination", { ascending: false })
       .limit(200);
     rows = (data as unknown as VaccinationRow[]) || [];
   }
 
-  const patientsUniques = new Set(rows.map((v) => v.patients?.nip).filter(Boolean)).size;
+  const patientsUniques = new Set(rows.map((v) => v.patients?.imu).filter(Boolean)).size;
   const rappelsUrgents = rows.filter((v) => {
     const d = daysUntil(v.prochain_rappel);
     return d !== null && d >= 0 && d <= 30;

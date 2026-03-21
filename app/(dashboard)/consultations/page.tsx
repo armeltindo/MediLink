@@ -12,7 +12,7 @@ export default async function ConsultationsPage() {
       .select(`id, date_consultation, motif, type_consultation,
                diagnostic_principal, diagnostic_cim10,
                anamnese, plan_prise_en_charge, diagnostics_differentiels,
-               patients(nip, nom, prenom)`)
+               patients(imu, nom, prenom)`)
       .is("deleted_at", null)
       .order("date_consultation", { ascending: false })
       .limit(200);

@@ -46,12 +46,12 @@ export function formatAge(dob: string | null | undefined): string {
   return `${adjustedYears} ans`;
 }
 
-export function generateNIP(): string {
+export function generateIMU(): string {
   const year = new Date().getFullYear();
   const num = Math.floor(Math.random() * 999999)
     .toString()
     .padStart(6, "0");
-  return `NIP-${year}-${num}`;
+  return `IMU-${year}-${num}`;
 }
 
 export function calculateIMC(poids: number, taille: number): number {

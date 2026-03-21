@@ -28,7 +28,7 @@ interface RDV {
   motif: string;
   statut: string;
   notes?: string;
-  patients?: { nom: string; prenom: string; nip: string } | null;
+  patients?: { nom: string; prenom: string; imu: string } | null;
   users_profiles?: { nom: string; prenom: string } | null;
 }
 
@@ -57,7 +57,7 @@ export default function RendezVousPage() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
-  const [patients, setPatients] = useState<{ id: string; nom: string; prenom: string; nip: string }[]>([]);
+  const [patients, setPatients] = useState<{ id: string; nom: string; prenom: string; imu: string }[]>([]);
   const [medecins, setMedecins] = useState<{ id: string; nom: string; prenom: string }[]>([]);
   const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
   const [patientSearch, setPatientSearch] = useState("");
@@ -78,7 +78,7 @@ export default function RendezVousPage() {
 
     const { data } = await supabase
       .from("rendez_vous")
-      .select("*, patients(nom, prenom, nip)")
+      .select("*, patients(nom, prenom, imu)")
       .gte("date_rdv", start)
       .lte("date_rdv", end)
       .is("deleted_at", null)
@@ -117,8 +117,8 @@ export default function RendezVousPage() {
     const timer = setTimeout(async () => {
       const { data } = await supabase
         .from("patients")
-        .select("id, nom, prenom, nip")
-        .or(`nom.ilike.%${patientSearch}%,prenom.ilike.%${patientSearch}%,nip.ilike.%${patientSearch}%`)
+        .select("id, nom, prenom, imu")
+        .or(`nom.ilike.%${patientSearch}%,prenom.ilike.%${patientSearch}%,imu.ilike.%${patientSearch}%`)
         .is("deleted_at", null)
         .limit(10);
       // Discard stale responses from previous keystrokes
@@ -195,7 +195,7 @@ export default function RendezVousPage() {
                   <div className="space-y-2">
                     <Label>Patient *</Label>
                     <Input
-                      placeholder="Rechercher par nom, prénom ou NIP..."
+                      placeholder="Rechercher par nom, prénom ou IMU..."
                       value={patientSearch}
                       onChange={(e) => { setPatientSearch(e.target.value); setForm({ ...form, patient_id: "" }); }}
                     />
@@ -205,11 +205,11 @@ export default function RendezVousPage() {
                           <button
                             key={p.id}
                             type="button"
-                            onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(`${p.prenom} ${p.nom} (${p.nip})`); setPatients([]); }}
+                            onClick={() => { setForm({ ...form, patient_id: p.id }); setPatientSearch(`${p.prenom} ${p.nom} (${p.imu})`); setPatients([]); }}
                             className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
                           >
                             <span className="font-medium">{p.prenom} {p.nom}</span>
-                            <span className="text-muted-foreground ml-2 font-mono text-xs">{p.nip}</span>
+                            <span className="text-muted-foreground ml-2 font-mono text-xs">{p.imu}</span>
                           </button>
                         ))}
                       </div>
@@ -335,7 +335,7 @@ export default function RendezVousPage() {
               const statut = statutConfig[rdv.statut] || statutConfig.planifie;
               const Icon = statut.icon;
               const heure = new Date(rdv.date_rdv).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-              const patient = rdv.patients as { nom: string; prenom: string; nip: string } | null;
+              const patient = rdv.patients as { nom: string; prenom: string; imu: string } | null;
               const medecin = rdv.users_profiles as { nom: string; prenom: string } | null;
 
               return (
@@ -411,7 +411,7 @@ export default function RendezVousPage() {
         const rdv = detailRdv;
         const statut = statutConfig[rdv.statut] || statutConfig.planifie;
         const StatutIcon = statut.icon;
-        const patient = rdv.patients as { nom: string; prenom: string; nip: string } | null;
+        const patient = rdv.patients as { nom: string; prenom: string; imu: string } | null;
         const medecin = rdv.users_profiles as { nom: string; prenom: string } | null;
         const heure = new Date(rdv.date_rdv).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
         const dateLabel = new Date(rdv.date_rdv).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -432,7 +432,7 @@ export default function RendezVousPage() {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Patient</p>
                     {patient ? (
                       <Link
-                        href={`/patients/${patient.nip}`}
+                        href={`/patients/${patient.imu}`}
                         className="text-sm font-semibold text-medical-green hover:underline underline-offset-2"
                         onClick={() => setDetailRdv(null)}
                       >
@@ -509,7 +509,7 @@ export default function RendezVousPage() {
               <div className="flex gap-2 pt-1">
                 {patient && (
                   <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-                    <Link href={`/patients/${patient.nip}`} onClick={() => setDetailRdv(null)}>
+                    <Link href={`/patients/${patient.imu}`} onClick={() => setDetailRdv(null)}>
                       <User className="h-4 w-4" />
                       Dossier patient
                     </Link>

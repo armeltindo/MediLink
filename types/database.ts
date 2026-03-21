@@ -46,7 +46,7 @@ export interface Database {
       patients: {
         Row: {
           id: string;
-          nip: string;
+          imu: string;
           nom: string;
           prenom: string;
           date_naissance: string;

@@ -22,7 +22,7 @@ export interface ConsultationRow {
   anamnese: string | null;
   plan_prise_en_charge: string | null;
   diagnostics_differentiels: string[] | null;
-  patients: { nip: string; nom: string; prenom: string } | null;
+  patients: { imu: string; nom: string; prenom: string } | null;
 }
 
 interface Props {
@@ -64,7 +64,7 @@ function DetailDialog({ c, onClose }: { c: ConsultationRow; onClose: () => void 
       label: "Patient",
       value: c.patients ? (
         <Link
-          href={`/patients/${c.patients.nip}`}
+          href={`/patients/${c.patients.imu}`}
           className="text-sm font-medium text-medical-green hover:underline underline-offset-2"
           onClick={onClose}
         >
@@ -161,7 +161,7 @@ function DetailDialog({ c, onClose }: { c: ConsultationRow; onClose: () => void 
         <div className="flex gap-2 pt-2">
           {c.patients && (
             <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-              <Link href={`/patients/${c.patients.nip}`} onClick={onClose}>
+              <Link href={`/patients/${c.patients.imu}`} onClick={onClose}>
                 <Stethoscope className="h-4 w-4" />
                 Dossier patient
               </Link>

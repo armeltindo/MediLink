@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   const qrBase64 = await QRCode.toDataURL(
-    `${baseUrl}/patients/${patient.nip}`,
+    `${baseUrl}/patients/${patient.imu}`,
     { width: 120, margin: 1, color: { dark: "#1E3A5F", light: "#FFFFFF" } }
   );
 
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
     <div class="info-block">
       <h3>Identité du patient</h3>
       <div class="info-row"><span class="info-label">Nom complet</span><span class="info-value">${patient.prenom} ${patient.nom.toUpperCase()}</span></div>
-      <div class="info-row"><span class="info-label">NIP</span><span class="info-value mono">${patient.nip}</span></div>
+      <div class="info-row"><span class="info-label">IMU</span><span class="info-value mono">${patient.imu}</span></div>
       <div class="info-row"><span class="info-label">Date de naissance</span><span class="info-value">${patient.date_naissance ? new Date(patient.date_naissance).toLocaleDateString("fr-FR") : "—"}</span></div>
       <div class="info-row"><span class="info-label">Sexe</span><span class="info-value">${patient.sexe === "M" ? "Masculin" : "Féminin"}</span></div>
       ${patient.groupe_sanguin ? `<div class="info-row"><span class="info-label">Groupe sanguin</span><span class="info-value">${patient.groupe_sanguin}${patient.rhesus || ""}</span></div>` : ""}
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
 
   <!-- Pied de page -->
   <div class="doc-footer">
-    <span>MediLink — NIP : ${patient.nip} — Généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+    <span>MediLink — IMU : ${patient.imu} — Généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
     <span class="confidential-badge">Document médical confidentiel</span>
     <span>${etablissement?.nom || ""}</span>
   </div>

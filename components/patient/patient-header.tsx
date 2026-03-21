@@ -79,7 +79,7 @@ export function PatientHeader({
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `patients/${patient.nip}/photo_${Date.now()}.${ext}`;
+      const path = `patients/${patient.imu}/photo_${Date.now()}.${ext}`;
       const { error: uploadErr } = await supabase.storage.from("photos").upload(path, file, { upsert: true });
       if (uploadErr) throw uploadErr;
       const { data: { publicUrl } } = supabase.storage.from("photos").getPublicUrl(path);
@@ -224,7 +224,7 @@ export function PatientHeader({
                   <span className="uppercase">{patient.nom}</span>
                 </h1>
                 <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded mt-0.5 inline-block">
-                  {patient.nip}
+                  {patient.imu}
                 </code>
               </div>
 

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
         date_expiration,
         patient_id,
         medecin_id,
-        patients!inner(nom, prenom, nip)
+        patients!inner(nom, prenom, imu)
       `)
       .eq("statut", "en_cours")
       .not("date_expiration", "is", null)
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       date_expiration: string;
       patient_id: string;
       medecin_id: string;
-      patients: { nom: string; prenom: string; nip: string };
+      patients: { nom: string; prenom: string; imu: string };
     }) => ({
       user_id: rx.medecin_id,
       patient_id: rx.patient_id,
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         prescription_id: rx.id,
         medicament: rx.medicament_dci,
         date_expiration: rx.date_expiration,
-        patient_nip: rx.patients.nip,
+        patient_imu: rx.patients.imu,
         patient_nom: `${rx.patients.prenom} ${rx.patients.nom}`,
         days_remaining: Math.ceil(
           (new Date(rx.date_expiration).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)

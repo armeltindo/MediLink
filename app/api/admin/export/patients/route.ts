@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = createServerSupabaseClient();
   const { data } = await supabase
     .from("patients")
-    .select("nip, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at")
+    .select("imu, nom, prenom, date_naissance, sexe, groupe_sanguin, rhesus, nationalite, created_at")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   return NextResponse.json(data || []);

@@ -11,7 +11,7 @@ export default async function PrescriptionsPage() {
       .from("prescriptions")
       .select(`id, medicament_dci, medicament_commercial, dosage, forme, posologie, duree,
                instructions, statut, date_prescription, date_expiration, date_dispensation,
-               substitution_generique, patients(nip, nom, prenom)`)
+               substitution_generique, patients(imu, nom, prenom)`)
       .is("deleted_at", null)
       .order("date_prescription", { ascending: false })
       .limit(200);

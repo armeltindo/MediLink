@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         vaccin,
         prochain_rappel,
         patient_id,
-        patients!inner(nom, prenom, nip, medecin_traitant_id)
+        patients!inner(nom, prenom, imu, medecin_traitant_id)
       `)
       .not("prochain_rappel", "is", null)
       .gte("prochain_rappel", now.toISOString())
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       vaccin: string;
       prochain_rappel: string;
       patient_id: string;
-      patients: { nom: string; prenom: string; nip: string; medecin_traitant_id: string | null };
+      patients: { nom: string; prenom: string; imu: string; medecin_traitant_id: string | null };
     }) => ({
       user_id: v.patients.medecin_traitant_id || "system",
       patient_id: v.patient_id,
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
         vaccination_id: v.id,
         vaccin: v.vaccin,
         prochain_rappel: v.prochain_rappel,
-        patient_nip: v.patients.nip,
+        patient_imu: v.patients.imu,
         patient_nom: `${v.patients.prenom} ${v.patients.nom}`,
         days_remaining: Math.ceil(
           (new Date(v.prochain_rappel).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
