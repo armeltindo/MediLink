@@ -24,6 +24,7 @@ export default function SelectEtablissementPage() {
   const router = useRouter();
   const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
   const [loading, setLoading]               = useState(true);
+  const [redirecting, setRedirecting]       = useState(false);
   const [selecting, setSelecting]           = useState<string | null>(null);
   const [userName, setUserName]             = useState("");
 
@@ -36,7 +37,8 @@ export default function SelectEtablissementPage() {
     try {
       // En mode démo : on n'a pas de user_etablissements — rediriger vers dashboard
       if (isDemoMode) {
-        router.replace("/dashboard");
+        setRedirecting(true);
+        window.location.replace("/dashboard");
         return;
       }
 
@@ -57,9 +59,8 @@ export default function SelectEtablissementPage() {
         if (profile.role === "super_admin" || profile.role === "admin_etablissement") {
           if (profile.etablissement_id) {
             await selectEtablissement(profile.etablissement_id);
-          } else {
-            router.replace("/dashboard");
           }
+          // Si pas d'établissement configuré, on reste sur la page (afficher erreur)
           return;
         }
       }
@@ -71,12 +72,11 @@ export default function SelectEtablissementPage() {
         .eq("user_id", user.id);
 
       if (!junctions || junctions.length === 0) {
-        // Pas d'affectation → utiliser l'établissement du profil ou dashboard directement
+        // Pas d'affectation → utiliser l'établissement du profil
         if (profile?.etablissement_id) {
           await selectEtablissement(profile.etablissement_id);
-        } else {
-          router.replace("/dashboard");
         }
+        // Si vraiment aucun établissement, on laisse la page gérer l'état vide
         return;
       }
 
@@ -119,8 +119,8 @@ export default function SelectEtablissementPage() {
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      setRedirecting(true);
+      window.location.replace("/dashboard");
     } catch {
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de sélectionner l'établissement." });
       setSelecting(null);
@@ -132,11 +132,26 @@ export default function SelectEtablissementPage() {
     router.push("/login");
   }
 
-  // ── Écran de chargement / auto-sélection en cours ──────────────────────────
-  if (loading || (etablissements.length === 0 && !loading)) {
+  // ── Écran de chargement / redirection en cours ──────────────────────────────
+  if (loading || redirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a6650] via-[#0D7A5F] to-[#1a3a4a]">
         <Loader2 className="h-8 w-8 text-white animate-spin" />
+      </div>
+    );
+  }
+
+  // ── Aucun établissement affecté ──────────────────────────────────────────────
+  if (etablissements.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a6650] via-[#0D7A5F] to-[#1a3a4a]">
+        <div className="text-center text-white/70 space-y-3">
+          <Building2 className="h-10 w-10 mx-auto opacity-40" />
+          <p className="text-sm">Aucun établissement affecté à votre compte.</p>
+          <button onClick={handleLogout} className="text-xs underline opacity-50 hover:opacity-80">
+            Se déconnecter
+          </button>
+        </div>
       </div>
     );
   }
