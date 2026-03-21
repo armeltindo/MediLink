@@ -21,47 +21,34 @@ export async function GET() {
     supabase.from("hospitalisations").select("id", { count: "exact" }).is("deleted_at", null),
     supabase.from("hospitalisations").select("id", { count: "exact" }).is("date_sortie", null).is("deleted_at", null),
     supabase.from("etablissements").select("id", { count: "exact" }).is("deleted_at", null),
-    supabase.from("consultations").select("diagnostic_cim10").not("diagnostic_cim10", "is", null).is("deleted_at", null).limit(500),
-    supabase.from("consultations").select("medecin_id, users_profiles(nom, prenom)").is("deleted_at", null).limit(500),
+    supabase.rpc("get_top_diagnostics", { p_limit: 10 }),
+    supabase.rpc("get_top_medecins", { p_limit: 8 }),
   ]);
 
   const get = <T>(r: PromiseSettledResult<T>, fallback: T): T =>
     r.status === "fulfilled" ? r.value : fallback;
   const empty = { data: [] as never[], count: 0, error: null, status: 200, statusText: "OK" } as never;
 
-  const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinConsultRes] = [
+  const [patientsRes, consultRes, hospitRes, hospitEnCoursRes, etablRes, diagRes, medecinRes] = [
     get(results[0], empty), get(results[1], empty), get(results[2], empty),
     get(results[3], empty), get(results[4], empty), get(results[5], empty),
     get(results[6], empty),
   ];
 
-  const diagCount: Record<string, number> = {};
-  (diagRes.data || []).forEach((c: { diagnostic_cim10?: string }) => {
-    if (c.diagnostic_cim10) diagCount[c.diagnostic_cim10] = (diagCount[c.diagnostic_cim10] || 0) + 1;
-  });
-  const topDiagnostics = Object.entries(diagCount)
-    .sort((a, b) => b[1] - a[1]).slice(0, 10)
-    .map(([code, count]) => ({ code, libelle: code, count }));
+  const topDiagnostics = (diagRes.data || []).map((r: { code: string; count: number }) => ({
+    code: r.code,
+    libelle: r.code,
+    count: Number(r.count),
+  }));
 
   const patients = patientsRes.data || [];
   const hommes = patients.filter((p: { sexe: string }) => p.sexe === "M").length;
   const femmes = patients.filter((p: { sexe: string }) => p.sexe === "F").length;
 
-  const medecinCount: Record<string, { nom: string; count: number }> = {};
-  (medecinConsultRes.data || []).forEach((c: { medecin_id: unknown; users_profiles?: unknown }) => {
-    const id = c.medecin_id as string;
-    if (id) {
-      if (!medecinCount[id]) {
-        const profiles = c.users_profiles as { nom: string; prenom: string }[] | { nom: string; prenom: string } | null;
-        const p = Array.isArray(profiles) ? profiles[0] : profiles;
-        medecinCount[id] = { nom: p ? `Dr. ${p.prenom} ${p.nom}` : id.slice(0, 8), count: 0 };
-      }
-      medecinCount[id].count++;
-    }
-  });
-  const activiteMedecins = Object.values(medecinCount)
-    .sort((a, b) => b.count - a.count).slice(0, 8)
-    .map((m) => ({ nom: m.nom, consultations: m.count }));
+  const activiteMedecins = (medecinRes.data || []).map((m: { nom: string; consultations: number }) => ({
+    nom: m.nom,
+    consultations: Number(m.consultations),
+  }));
 
   return NextResponse.json({
     totalPatients: patientsRes.count || 0,

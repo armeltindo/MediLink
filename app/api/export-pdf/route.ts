@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
       supabase.from("patients").select("*").eq("id", patientId).single(),
       supabase.from("allergies").select("*").eq("patient_id", patientId).eq("actif", true),
       supabase.from("antecedents").select("*").eq("patient_id", patientId).is("deleted_at", null),
-      supabase.from("consultations").select("*").eq("patient_id", patientId).is("deleted_at", null).order("date_consultation", { ascending: false }),
-      supabase.from("prescriptions").select("*").eq("patient_id", patientId).is("deleted_at", null).order("date_prescription", { ascending: false }),
-      supabase.from("vaccinations").select("*").eq("patient_id", patientId).order("date_vaccination", { ascending: false }),
+      supabase.from("consultations").select("*").eq("patient_id", patientId).is("deleted_at", null).order("date_consultation", { ascending: false }).limit(20),
+      supabase.from("prescriptions").select("*").eq("patient_id", patientId).is("deleted_at", null).order("date_prescription", { ascending: false }).limit(50),
+      supabase.from("vaccinations").select("*").eq("patient_id", patientId).order("date_vaccination", { ascending: false }).limit(50),
     ]);
 
     const patient = patientRes.data;

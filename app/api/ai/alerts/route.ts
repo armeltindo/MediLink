@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
 
     // Load relevant data for alerts
     const [prescriptionsRes, allergiesRes, analysesRes, constRes, vaccinsRes] = await Promise.all([
-      supabase.from("prescriptions").select("*").eq("patient_id", patientId).in("statut", ["prescrit", "en_cours"]),
-      supabase.from("allergies").select("*").eq("patient_id", patientId).eq("actif", true),
+      supabase.from("prescriptions").select("medicament_dci, dosage, posologie, statut, date_expiration").eq("patient_id", patientId).in("statut", ["prescrit", "en_cours"]).limit(30),
+      supabase.from("allergies").select("substance, type, severite, reaction").eq("patient_id", patientId).eq("actif", true).limit(20),
       supabase.from("resultats_analyse").select("*").eq("patient_id", patientId).order("date_resultat", { ascending: false }).limit(20),
       supabase.from("constantes").select("*").eq("patient_id", patientId).order("date_mesure", { ascending: false }).limit(10),
-      supabase.from("vaccinations").select("*").eq("patient_id", patientId),
+      supabase.from("vaccinations").select("vaccin, statut, prochain_rappel").eq("patient_id", patientId).limit(30),
     ]);
 
     const prescriptions = prescriptionsRes.data || [];

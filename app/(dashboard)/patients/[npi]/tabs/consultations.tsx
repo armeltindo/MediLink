@@ -79,29 +79,11 @@ function StatsBar({ consultations }: { consultations: Consultation[] }) {
 
 // ─── Consultation Card ────────────────────────────────────────────────────────
 
-function ConsultationCard({ consultation }: { consultation: Consultation }) {
+function ConsultationCard({ consultation, constantes }: { consultation: Consultation; constantes: Constante[] }) {
   const [expanded, setExpanded] = useState(false);
-  const [constantes, setConstantes] = useState<Constante[]>([]);
-  const [loadingConst, setLoadingConst] = useState(false);
 
   const type = TYPE_CONFIG[consultation.type_consultation || "externe"] ?? TYPE_CONFIG.externe;
   const TypeIcon = type.icon;
-
-  async function loadConstantes() {
-    if (constantes.length > 0) { setExpanded(!expanded); return; }
-    setLoadingConst(true);
-    const { data } = await supabase
-      .from("constantes")
-      .select("*")
-      .eq("consultation_id", consultation.id)
-      .order("date_mesure");
-    setConstantes(data || []);
-    setLoadingConst(false);
-    setExpanded(true);
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadConstantes(); }, []);
 
   const c0 = constantes[0];
   const vitals = c0 ? [
@@ -118,7 +100,7 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
       {/* Header row — always visible */}
       <div
         className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-        onClick={loadConstantes}
+        onClick={() => setExpanded(!expanded)}
       >
         {/* Type icon */}
         <div className="mt-0.5 p-1.5 rounded-md bg-muted flex-shrink-0">
@@ -144,9 +126,7 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
         </div>
 
         <Button variant="ghost" size="icon-sm" className="shrink-0">
-          {loadingConst ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : expanded ? (
+          {expanded ? (
             <ChevronUp className="h-4 w-4" />
           ) : (
             <ChevronDown className="h-4 w-4" />
@@ -460,7 +440,7 @@ export function ConsultationsTab({ patient, consultations: initialConsultations,
   }, [patient.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    supabase.from("constantes").select("*").eq("patient_id", patient.id).order("date_mesure")
+    supabase.from("constantes").select("*").eq("patient_id", patient.id).order("date_mesure").limit(200)
       .then(({ data }) => setAllConstantes(data || []));
   }, [patient.id]);
 
@@ -606,7 +586,13 @@ export function ConsultationsTab({ patient, consultations: initialConsultations,
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-xs text-muted-foreground">{items.length} consultation{items.length > 1 ? "s" : ""}</span>
               </div>
-              {items.map((c) => <ConsultationCard key={c.id} consultation={c} />)}
+              {items.map((c) => (
+                <ConsultationCard
+                  key={c.id}
+                  consultation={c}
+                  constantes={allConstantes.filter((ct) => ct.consultation_id === c.id)}
+                />
+              ))}
             </div>
           ))}
         </div>

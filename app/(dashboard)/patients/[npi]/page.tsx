@@ -213,15 +213,17 @@ function PatientPageInner() {
 
     if (!auditLoggedRef.current) {
       auditLoggedRef.current = true;
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase.from("audit_logs").insert({
-          user_id: authUser.id,
-          patient_id: patientData.id,
-          action: "view_patient",
-          timestamp: new Date().toISOString(),
-        });
-      }
+      // Fire-and-forget: don't block data loading on audit write
+      supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+        if (authUser) {
+          supabase.from("audit_logs").insert({
+            user_id: authUser.id,
+            patient_id: patientData.id,
+            action: "view_patient",
+            timestamp: new Date().toISOString(),
+          });
+        }
+      });
     }
 
     const [
