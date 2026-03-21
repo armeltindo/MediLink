@@ -330,7 +330,7 @@ export default function NouveauPatientPage() {
         <div className="mb-6 bg-medical-green-light border border-medical-green/20 rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] text-medical-green font-semibold uppercase tracking-widest mb-1">
-              Numéro Personnel d&apos;Identification — généré automatiquement
+              Identifiant Médical Unique — généré automatiquement
             </p>
             <p className="text-2xl font-mono font-bold text-medical-green tracking-wider">{imu}</p>
           </div>
