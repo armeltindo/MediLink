@@ -46,7 +46,7 @@ const NAV_GROUPS = [
     label: "Gestion",
     items: [
       { href: "/documents",        label: "Documents",        icon: FileText,        iconColor: "text-orange-400",  roles: ["super_admin", "admin_etablissement", "medecin"] },
-      { href: "/etablissements",   label: "Établissements",   icon: Building2,       iconColor: "text-slate-300",   roles: ["super_admin", "admin_etablissement"] },
+      { href: "/etablissements",   label: "Établissements",   icon: Building2,       iconColor: "text-slate-300",   roles: ["super_admin"] },
       { href: "/admin",            label: "Administration",   icon: BarChart3,       iconColor: "text-blue-400",    roles: ["super_admin", "admin_etablissement"] },
       { href: "/audit",            label: "Audit & Sécurité", icon: ShieldCheck,     iconColor: "text-red-400",     roles: ["super_admin", "admin_etablissement"] },
     ],
