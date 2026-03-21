@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { Etablissement } from "@/types";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/ui/logo";
 import {
