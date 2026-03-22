@@ -20,7 +20,7 @@ import {
 import {
   FlaskConical, Plus, Loader2, ArrowUp, ArrowDown, Minus,
   TrendingUp, Clock, CheckCircle2, XCircle, AlertTriangle,
-  ChevronDown, ChevronUp, ChevronRight, Activity,
+  ChevronDown, ChevronUp, ChevronRight, Activity, FileText,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -454,6 +454,21 @@ tr:nth-child(even){background:#f8fafc}
           )}
         </div>
 
+        {/* Bon d'analyses PDF */}
+        <Button
+          variant="ghost" size="icon-sm" className="shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          title="Générer le bon d'analyses PDF"
+          onClick={(e) => {
+            e.stopPropagation();
+            const win = window.open("", "_blank");
+            fetch(`/api/bon-analyse-pdf?analyseId=${analyse.id}`)
+              .then(r => r.text())
+              .then(html => { if (win) { win.document.write(html); win.document.close(); } });
+          }}
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+
         <Button variant="ghost" size="icon-sm" className="shrink-0">
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -471,9 +486,25 @@ tr:nth-child(even){background:#f8fafc}
           {/* Results */}
           {resultats && resultats.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Résultats ({resultats.length})
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Résultats ({resultats.length})
+                </p>
+                <Button
+                  variant="outline" size="sm"
+                  className="h-7 text-xs text-purple-700 border-purple-200 hover:bg-purple-50"
+                  title="Générer le rapport de résultats PDF"
+                  onClick={() => {
+                    const win = window.open("", "_blank");
+                    fetch(`/api/resultat-analyse-pdf?analyseId=${analyse.id}`)
+                      .then(r => r.text())
+                      .then(html => { if (win) { win.document.write(html); win.document.close(); } });
+                  }}
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  Résultats PDF
+                </Button>
+              </div>
               <div className="space-y-2">
                 {resultats.map((r: ResultatAnalyse) => <ResultRow key={r.id} r={r} />)}
               </div>
