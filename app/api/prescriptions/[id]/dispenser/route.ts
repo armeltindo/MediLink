@@ -22,6 +22,42 @@ function createSupabaseServer() {
   );
 }
 
+// ── Décrémentation du stock (non-bloquante) ───────────────────────────────────
+// Recherche un article de stock correspondant au DCI prescrit (insensible à la casse)
+// et soustrait la quantité dispensée, sans jamais descendre en-dessous de 0.
+async function decrementStock(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  pharmacieId: string,
+  medicamentDci: string,
+  quantite: number
+): Promise<void> {
+  try {
+    const { data: rows } = await supabase
+      .from("stock_medicaments")
+      .select("id, quantite_stock")
+      .eq("pharmacie_id", pharmacieId)
+      .ilike("medicament_dci", medicamentDci)
+      .is("deleted_at", null)
+      .gt("quantite_stock", 0)
+      .order("quantite_stock", { ascending: true })
+      .limit(1);
+
+    if (!rows || rows.length === 0) return;
+
+    const stock = rows[0] as { id: string; quantite_stock: number };
+    await supabase
+      .from("stock_medicaments")
+      .update({
+        quantite_stock: Math.max(0, stock.quantite_stock - quantite),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", stock.id);
+  } catch {
+    // Non-bloquant : une erreur de stock ne doit pas annuler une dispensation
+  }
+}
+
 // PATCH /api/prescriptions/[id]/dispenser
 // Corps : { pharmacie_id, produit_servi?, quantite_dispensee? }
 //
@@ -190,6 +226,9 @@ export async function PATCH(
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
+    // Fix 2 — Décrémenter le stock correspondant (non-bloquant)
+    await decrementStock(supabase, pharmacie_id, prescription.medicament_dci, quantite_dispensee);
+
     // Relire la prescription mise à jour par le trigger
     const { data: updated } = await supabase
       .from("prescriptions")
@@ -207,12 +246,13 @@ export async function PATCH(
   }
 
   // ── MODE LEGACY : prescription sans quantite (dispensation binaire) ─
+  const now = new Date().toISOString();
   const { data: updated, error } = await supabase
     .from("prescriptions")
     .update({
       statut: "dispense",
       dispense_par: user.id,
-      date_dispensation: new Date().toISOString(),
+      date_dispensation: now,
       pharmacie_id,
       substitution_generique: substitution,
     })
@@ -224,6 +264,24 @@ export async function PATCH(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fix 3 — Insérer un enregistrement d'historique même en mode legacy
+  // quantite_dispensee est optionnel côté client ; on stocke 0 s'il n'est pas fourni
+  // afin de tracer QUI a dispensé et QUAND, même sans quantité connue.
+  const legacyQty = (quantite_dispensee && quantite_dispensee > 0) ? quantite_dispensee : 0;
+  await supabase.from("prescription_dispensations").insert({
+    prescription_id: params.id,
+    pharmacie_id,
+    dispense_par: user.id,
+    quantite: legacyQty,
+    substitution_generique: substitution,
+    date_dispensation: now,
+  }).then(() => {
+    // Fix 2 — décrémenter le stock si la quantité est connue
+    if (legacyQty > 0) {
+      return decrementStock(supabase, pharmacie_id, prescription.medicament_dci, legacyQty);
+    }
+  }).catch(() => { /* non-bloquant */ });
 
   return NextResponse.json(updated);
 }

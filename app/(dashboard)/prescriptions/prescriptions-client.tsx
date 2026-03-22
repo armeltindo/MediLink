@@ -168,14 +168,35 @@ function DispensationDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fix 1 — restant frais récupéré depuis l'API au montage du dialog pour éviter
+  // les données périmées si un autre pharmacien a dispensé entre-temps.
+  const [freshRestant, setFreshRestant] = useState<number | null>(restant);
+  const [loadingRestant, setLoadingRestant] = useState(restant !== null);
+
+  useEffect(() => {
+    if (restant === null) return; // mode legacy : pas de quantite connue
+    fetch(`/api/prescriptions/${p.id}/dispensations`)
+      .then((r) => r.json())
+      .then((data: { restant?: number }) => {
+        if (typeof data.restant === "number") {
+          setFreshRestant(data.restant);
+          setQuantiteSaisie(String(data.restant));
+        }
+      })
+      .catch(() => { /* fallback sur la valeur initiale */ })
+      .finally(() => setLoadingRestant(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.id]);
+
   const isSimilaire =
     produitServi.trim().toLowerCase() !== p.medicament_dci.trim().toLowerCase();
 
   const quantiteNumerique = parseInt(quantiteSaisie, 10);
+  // Fix 1 — valider contre freshRestant (donné frais de l'API) au lieu du prop
   const quantiteValide =
-    restant === null
-      ? true  // legacy : pas de saisie quantite
-      : !isNaN(quantiteNumerique) && quantiteNumerique > 0 && quantiteNumerique <= restant;
+    freshRestant === null
+      ? quantiteSaisie === "" || (!isNaN(quantiteNumerique) && quantiteNumerique > 0)  // legacy : optionnel
+      : !isNaN(quantiteNumerique) && quantiteNumerique > 0 && quantiteNumerique <= freshRestant;
 
   async function handleDispenser() {
     setLoading(true);
@@ -185,8 +206,9 @@ function DispensationDialog({
         pharmacie_id: pharmacieId,
         produit_servi: produitServi.trim(),
       };
-      if (restant !== null) {
-        bodyPayload.quantite_dispensee = quantiteNumerique;
+      // Fix 3 — envoyer quantite_dispensee même en mode legacy si l'utilisateur a saisi une valeur
+      if (freshRestant !== null || (quantiteSaisie !== "" && !isNaN(quantiteNumerique) && quantiteNumerique > 0)) {
+        bodyPayload.quantite_dispensee = quantiteNumerique || undefined;
       }
 
       const res = await fetch(`/api/prescriptions/${p.id}/dispenser`, {
@@ -277,31 +299,39 @@ function DispensationDialog({
             </div>
           )}
 
-          {/* Quantité à dispenser (seulement si quantite définie) */}
-          {restant !== null && (
-            <div className="space-y-1.5">
-              <Label htmlFor="qte-dispensee" className="text-sm">
-                Quantité à dispenser
-                <span className="text-muted-foreground ml-1">
-                  (max {restant} {p.unite ?? ""})
-                </span>
-              </Label>
-              <Input
-                id="qte-dispensee"
-                type="number"
-                min={1}
-                max={restant}
-                value={quantiteSaisie}
-                onChange={(e) => setQuantiteSaisie(e.target.value)}
-                className="h-9"
-              />
-              {!quantiteValide && quantiteSaisie !== "" && (
-                <p className="text-xs text-red-600">
-                  Valeur entre 1 et {restant} {p.unite ?? ""}
-                </p>
+          {/* Quantité à dispenser */}
+          <div className="space-y-1.5">
+            <Label htmlFor="qte-dispensee" className="text-sm">
+              Quantité dispensée
+              {freshRestant !== null ? (
+                loadingRestant ? (
+                  <span className="text-muted-foreground ml-1 text-xs">(chargement…)</span>
+                ) : (
+                  <span className="text-muted-foreground ml-1">
+                    (max {freshRestant} {p.unite ?? ""})
+                  </span>
+                )
+              ) : (
+                <span className="text-muted-foreground ml-1 text-xs">(optionnel)</span>
               )}
-            </div>
-          )}
+            </Label>
+            <Input
+              id="qte-dispensee"
+              type="number"
+              min={1}
+              max={freshRestant ?? undefined}
+              value={quantiteSaisie}
+              onChange={(e) => setQuantiteSaisie(e.target.value)}
+              className="h-9"
+              disabled={loadingRestant}
+              placeholder={freshRestant === null ? "Ex: 30" : undefined}
+            />
+            {!quantiteValide && quantiteSaisie !== "" && freshRestant !== null && (
+              <p className="text-xs text-red-600">
+                Valeur entre 1 et {freshRestant} {p.unite ?? ""}
+              </p>
+            )}
+          </div>
 
           {/* Produit réellement servi */}
           <div className="space-y-1.5">
@@ -340,7 +370,7 @@ function DispensationDialog({
               size="sm"
               className="flex-1 gap-2"
               onClick={handleDispenser}
-              disabled={loading || !produitServi.trim() || !quantiteValide}
+              disabled={loading || loadingRestant || !produitServi.trim() || !quantiteValide}
             >
               <Package className="h-4 w-4" />
               {loading ? "Enregistrement…" : "Confirmer la dispensation"}
