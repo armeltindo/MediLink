@@ -32,19 +32,21 @@ export default async function InventairePage() {
           .eq("user_id", user.id)
           .is("suspended_at", null);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pharmacies = (junctions ?? []).filter((j: any) => j.etablissements?.type === "pharmacie");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        type Junction = {
+          etablissement_id: string;
+          etablissements: { id: string; nom: string; type: string } | null;
+        };
+        const pharmacies = (junctions as Junction[] ?? []).filter(
+          (j) => j.etablissements?.type === "pharmacie"
+        );
         // Fallback sur la première pharmacie si le cookie pointe ailleurs
         const active = cookieEtabId
-          ? (pharmacies.find((j: any) => j.etablissement_id === cookieEtabId) ?? pharmacies[0])
+          ? (pharmacies.find((j) => j.etablissement_id === cookieEtabId) ?? pharmacies[0])
           : pharmacies[0];
 
         if (active) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          pharmacieId  = (active as any).etablissement_id;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          pharmacieNom = (active as any).etablissements?.nom ?? null;
+          pharmacieId  = active.etablissement_id;
+          pharmacieNom = active.etablissements?.nom ?? null;
 
           const { data } = await supabase
             .from("stock_medicaments")
