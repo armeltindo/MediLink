@@ -5,11 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/utils";
 import {
   Pill, Search, X, ChevronRight, User, CalendarDays,
   Clock, CheckCircle2, Ban, Stethoscope, ClipboardList,
-  CalendarCheck, Repeat2, FlaskConical, Package,
+  CalendarCheck, Repeat2, FlaskConical, Package, Store,
+  ArrowLeftRight,
 } from "lucide-react";
 
 export interface PrescriptionRow {
@@ -26,11 +28,16 @@ export interface PrescriptionRow {
   date_expiration: string | null;
   date_dispensation: string | null;
   substitution_generique: string | null;
+  pharmacie_id: string | null;
   patients: { imu: string; nom: string; prenom: string } | null;
+  pharmacie: { nom: string } | null;
 }
 
 interface Props {
   rows: PrescriptionRow[];
+  userRole: string | null;
+  pharmacieId: string | null;
+  pharmacieNom: string | null;
 }
 
 type TabKey = "actif" | "termine" | "all";
@@ -88,11 +95,165 @@ function ExpiryChip({ date }: { date: string | null }) {
   return null;
 }
 
+/* ── Dialog de dispensation ─────────────────────────────────────────── */
+function DispensationDialog({
+  p,
+  pharmacieId,
+  pharmacieNom,
+  onClose,
+  onSuccess,
+}: {
+  p: PrescriptionRow;
+  pharmacieId: string;
+  pharmacieNom: string;
+  onClose: () => void;
+  onSuccess: (updated: Partial<PrescriptionRow>) => void;
+}) {
+  const [produitServi, setProduitServi] = useState(p.medicament_dci);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isSimilaire =
+    produitServi.trim().toLowerCase() !== p.medicament_dci.trim().toLowerCase();
+
+  async function handleDispenser() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/prescriptions/${p.id}/dispenser`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pharmacie_id: pharmacieId,
+          produit_servi: produitServi.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Erreur inconnue");
+        return;
+      }
+      onSuccess({
+        statut: "dispense",
+        date_dispensation: json.date_dispensation,
+        pharmacie_id: pharmacieId,
+        pharmacie: { nom: pharmacieNom },
+        substitution_generique: json.substitution_generique,
+      });
+      onClose();
+    } catch {
+      setError("Impossible de contacter le serveur");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Package className="h-5 w-5 text-purple-500" />
+            Dispenser ce produit
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Récapitulatif */}
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 space-y-1">
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Produit prescrit</p>
+            <p className="text-sm font-bold text-blue-900">{p.medicament_dci}</p>
+            {p.medicament_commercial && (
+              <p className="text-xs text-blue-700">({p.medicament_commercial})</p>
+            )}
+            <p className="text-xs text-blue-600">{p.dosage}{p.forme ? ` · ${p.forme}` : ""} · {p.posologie} · {p.duree}</p>
+          </div>
+
+          {/* Pharmacie */}
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border text-sm">
+            <Store className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-medium">{pharmacieNom}</span>
+          </div>
+
+          {/* Produit réellement servi */}
+          <div className="space-y-1.5">
+            <Label htmlFor="produit-servi" className="flex items-center gap-1.5 text-sm">
+              <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
+              Produit remis au patient
+            </Label>
+            <Input
+              id="produit-servi"
+              value={produitServi}
+              onChange={(e) => setProduitServi(e.target.value)}
+              placeholder={p.medicament_dci}
+              className="h-9"
+            />
+            {isSimilaire && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3" />
+                Substitution notée — similaire ou générique
+              </p>
+            )}
+            {!isSimilaire && (
+              <p className="text-xs text-muted-foreground">
+                Modifiez si vous remettez un générique ou un similaire.
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="medical"
+              size="sm"
+              className="flex-1 gap-2"
+              onClick={handleDispenser}
+              disabled={loading || !produitServi.trim()}
+            >
+              <Package className="h-4 w-4" />
+              {loading ? "Enregistrement…" : "Confirmer la dispensation"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ── Detail dialog ──────────────────────────────────────────────────── */
-function DetailDialog({ p, onClose }: { p: PrescriptionRow; onClose: () => void }) {
+function DetailDialog({
+  p,
+  userRole,
+  pharmacieId,
+  pharmacieNom,
+  onClose,
+  onDispensed,
+}: {
+  p: PrescriptionRow;
+  userRole: string | null;
+  pharmacieId: string | null;
+  pharmacieNom: string | null;
+  onClose: () => void;
+  onDispensed: (updated: Partial<PrescriptionRow>) => void;
+}) {
   const s = getStyle(p.statut);
   const StatusIcon = s.icon;
   const expiryDays = daysUntilExpiry(p.date_expiration);
+  const [showDispensation, setShowDispensation] = useState(false);
+
+  const canDispense =
+    userRole === "pharmacien" &&
+    pharmacieId !== null &&
+    p.statut === "prescrit" &&
+    (p.date_expiration === null || daysUntilExpiry(p.date_expiration)! >= 0);
 
   const fields: { icon: typeof User; label: string; value: ReactNode }[] = [
     {
@@ -154,15 +315,20 @@ function DetailDialog({ p, onClose }: { p: PrescriptionRow; onClose: () => void 
       label: "Date de dispensation",
       value: <span className="text-sm font-medium">{formatDate(p.date_dispensation)}</span>,
     }] : []),
+    ...(p.pharmacie ? [{
+      icon: Store,
+      label: "Pharmacie",
+      value: <span className="text-sm font-medium">{p.pharmacie.nom}</span>,
+    }] : []),
     ...(p.medicament_commercial ? [{
       icon: Pill,
       label: "Nom commercial",
       value: <span className="text-sm font-medium">{p.medicament_commercial}</span>,
     }] : []),
     ...(p.substitution_generique ? [{
-      icon: Pill,
-      label: "Substitution générique",
-      value: <span className="text-sm font-medium">{p.substitution_generique}</span>,
+      icon: ArrowLeftRight,
+      label: "Produit remis (substitution)",
+      value: <span className="text-sm font-medium text-amber-700">{p.substitution_generique}</span>,
     }] : []),
     ...(p.instructions ? [{
       icon: ClipboardList,
@@ -172,85 +338,129 @@ function DetailDialog({ p, onClose }: { p: PrescriptionRow; onClose: () => void 
   ];
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start gap-3">
-            <div className={`p-2.5 rounded-lg border shrink-0 bg-background border-l-4 ${s.border}`}>
-              <StatusIcon className={`h-5 w-5 ${s.iconClass}`} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="text-base leading-snug">{p.medicament_dci}</DialogTitle>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
-                  {s.label}
-                </span>
-                <ExpiryChip date={p.date_expiration} />
-              </div>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-2 pt-1">
-          {fields.map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
-              <div className="p-1.5 rounded-md bg-white border shrink-0">
-                <Icon className="h-4 w-4 text-slate-500" />
+    <>
+      <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-lg border shrink-0 bg-background border-l-4 ${s.border}`}>
+                <StatusIcon className={`h-5 w-5 ${s.iconClass}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-                <div className="mt-0.5">{value}</div>
+                <DialogTitle className="text-base leading-snug">{p.medicament_dci}</DialogTitle>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
+                    {s.label}
+                  </span>
+                  <ExpiryChip date={p.date_expiration} />
+                </div>
               </div>
             </div>
-          ))}
+          </DialogHeader>
 
-          {p.statut === "annule" && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
-              <div className="p-1.5 rounded-md bg-white border border-red-200 shrink-0">
-                <Ban className="h-4 w-4 text-red-500" />
+          <div className="space-y-2 pt-1">
+            {fields.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border">
+                <div className="p-1.5 rounded-md bg-white border shrink-0">
+                  <Icon className="h-4 w-4 text-slate-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+                  <div className="mt-0.5">{value}</div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Prescription annulée</p>
-                <p className="text-xs text-red-600 mt-0.5">Cette prescription a été annulée.</p>
-              </div>
-            </div>
-          )}
-        </div>
+            ))}
 
-        <div className="flex gap-2 pt-2">
-          {p.patients && (
-            <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
-              <Link href={`/patients/${p.patients.imu}`} onClick={onClose}>
-                <Stethoscope className="h-4 w-4" />
-                Dossier patient
-              </Link>
+            {p.statut === "annule" && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                <div className="p-1.5 rounded-md bg-white border border-red-200 shrink-0">
+                  <Ban className="h-4 w-4 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Prescription annulée</p>
+                  <p className="text-xs text-red-600 mt-0.5">Cette prescription a été annulée.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Avertissement pharmacien sans pharmacie rattachée */}
+            {userRole === "pharmacien" && !pharmacieId && p.statut === "prescrit" && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <Store className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">
+                  Vous n&apos;êtes rattaché à aucune pharmacie. Contactez un administrateur.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            {canDispense && (
+              <Button
+                variant="default"
+                size="sm"
+                className="flex-1 gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => setShowDispensation(true)}
+              >
+                <Package className="h-4 w-4" />
+                Dispenser
+              </Button>
+            )}
+            {p.patients && !canDispense && (
+              <Button variant="medical" size="sm" className="flex-1 gap-2" asChild>
+                <Link href={`/patients/${p.patients.imu}`} onClick={onClose}>
+                  <Stethoscope className="h-4 w-4" />
+                  Dossier patient
+                </Link>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="gap-2" onClick={onClose}>
+              <X className="h-4 w-4" />
+              Fermer
             </Button>
-          )}
-          <Button variant="outline" size="sm" className="gap-2" onClick={onClose}>
-            <X className="h-4 w-4" />
-            Fermer
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {showDispensation && pharmacieId && pharmacieNom && (
+        <DispensationDialog
+          p={p}
+          pharmacieId={pharmacieId}
+          pharmacieNom={pharmacieNom}
+          onClose={() => setShowDispensation(false)}
+          onSuccess={(updated) => {
+            onDispensed(updated);
+            setShowDispensation(false);
+          }}
+        />
+      )}
+    </>
   );
 }
 
 /* ── Main list ──────────────────────────────────────────────────────── */
-export function PrescriptionsList({ rows }: Props) {
+export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }: Props) {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabKey>("actif");
   const [selected, setSelected] = useState<PrescriptionRow | null>(null);
+  const [localRows, setLocalRows] = useState<PrescriptionRow[]>(rows);
+
+  function handleDispensed(id: string, updated: Partial<PrescriptionRow>) {
+    setLocalRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updated } : r))
+    );
+    setSelected((prev) => (prev?.id === id ? { ...prev, ...updated } : prev));
+  }
 
   const tabCounts = useMemo(() => ({
-    actif:   rows.filter((p) => ["prescrit", "en_cours", "dispense"].includes(p.statut)).length,
-    termine: rows.filter((p) => ["termine", "annule"].includes(p.statut)).length,
-    all:     rows.length,
-  }), [rows]);
+    actif:   localRows.filter((p) => ["prescrit", "en_cours", "dispense"].includes(p.statut)).length,
+    termine: localRows.filter((p) => ["termine", "annule"].includes(p.statut)).length,
+    all:     localRows.length,
+  }), [localRows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((p) => {
+    return localRows.filter((p) => {
       if (q) {
         const patient = p.patients ? `${p.patients.prenom} ${p.patients.nom}`.toLowerCase() : "";
         const med = `${p.medicament_dci} ${p.medicament_commercial ?? ""}`.toLowerCase();
@@ -260,9 +470,9 @@ export function PrescriptionsList({ rows }: Props) {
       if (tab === "termine") return ["termine", "annule"].includes(p.statut);
       return true;
     });
-  }, [rows, search, tab]);
+  }, [localRows, search, tab]);
 
-  if (rows.length === 0) {
+  if (localRows.length === 0) {
     return (
       <div className="text-center py-20 text-muted-foreground">
         <div className="mx-auto h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
@@ -281,6 +491,16 @@ export function PrescriptionsList({ rows }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Bandeau pharmacien */}
+      {userRole === "pharmacien" && pharmacieId && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 border border-purple-200 text-sm text-purple-800">
+          <Store className="h-4 w-4 shrink-0" />
+          <span>
+            Dispensation active — <span className="font-semibold">{pharmacieNom}</span>
+          </span>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b">
         {TABS.map(({ key, label }) => {
@@ -333,9 +553,9 @@ export function PrescriptionsList({ rows }: Props) {
 
       {/* Count */}
       <p className="text-xs text-muted-foreground">
-        {filtered.length !== rows.length
-          ? `${filtered.length} / ${rows.length} prescription${rows.length > 1 ? "s" : ""}`
-          : `${rows.length} prescription${rows.length > 1 ? "s" : ""}`}
+        {filtered.length !== localRows.length
+          ? `${filtered.length} / ${localRows.length} prescription${localRows.length > 1 ? "s" : ""}`
+          : `${localRows.length} prescription${localRows.length > 1 ? "s" : ""}`}
       </p>
 
       {/* List */}
@@ -353,6 +573,10 @@ export function PrescriptionsList({ rows }: Props) {
             const StatusIcon = s.icon;
             const expiring = daysUntilExpiry(p.date_expiration);
             const isExpiringSoon = expiring !== null && expiring >= 0 && expiring <= 7;
+            const dispensable =
+              userRole === "pharmacien" && pharmacieId && p.statut === "prescrit" &&
+              (p.date_expiration === null || daysUntilExpiry(p.date_expiration)! >= 0);
+
             return (
               <button
                 key={p.id}
@@ -380,6 +604,12 @@ export function PrescriptionsList({ rows }: Props) {
                           {s.label}
                         </span>
                         <ExpiryChip date={p.date_expiration} />
+                        {dispensable && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+                            <Package className="h-2.5 w-2.5" />
+                            À dispenser
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-3 flex-wrap">
@@ -392,6 +622,12 @@ export function PrescriptionsList({ rows }: Props) {
                         <span className="text-xs text-muted-foreground">
                           {p.dosage}{p.forme ? ` · ${p.forme}` : ""} · {p.posologie}
                         </span>
+                        {p.pharmacie && (
+                          <span className="text-xs text-purple-600 flex items-center gap-1">
+                            <Store className="h-3 w-3" />
+                            {p.pharmacie.nom}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -410,7 +646,16 @@ export function PrescriptionsList({ rows }: Props) {
         </div>
       )}
 
-      {selected && <DetailDialog p={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <DetailDialog
+          p={selected}
+          userRole={userRole}
+          pharmacieId={pharmacieId}
+          pharmacieNom={pharmacieNom}
+          onClose={() => setSelected(null)}
+          onDispensed={(updated) => handleDispensed(selected.id, updated)}
+        />
+      )}
     </div>
   );
 }
