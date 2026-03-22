@@ -375,7 +375,6 @@ export async function GET(request: NextRequest) {
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
       if (!storageError) {
-        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
         const typesListe = analyses.map(a => a.type_analyse).join(", ");
         await supabase.from("documents").insert({
           patient_id: patient.id,

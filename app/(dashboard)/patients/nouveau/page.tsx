@@ -404,6 +404,7 @@ export default function NouveauPatientPage() {
                       className="group relative h-20 w-20 rounded-full border-2 border-dashed border-border overflow-hidden bg-muted flex items-center justify-center hover:border-medical-green/60 transition-colors"
                     >
                       {photoPreview
+                        // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={photoPreview} alt="Aperçu" className="h-full w-full object-cover" />
                         : <Camera className="h-7 w-7 text-muted-foreground" />
                       }

@@ -397,7 +397,6 @@ tr:nth-child(even){background:#f8fafc}
           .from("documents")
           .upload(storageKey, blob, { contentType: "text/html; charset=utf-8" });
         if (!storageError) {
-          const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
           await supabase.from("documents").insert({
             patient_id: analyse.patient_id,
             nom: `Résultat — ${analyse.type_analyse} — ${dateStr}`,
