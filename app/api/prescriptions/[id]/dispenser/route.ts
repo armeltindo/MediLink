@@ -269,19 +269,22 @@ export async function PATCH(
   // quantite_dispensee est optionnel côté client ; on stocke 0 s'il n'est pas fourni
   // afin de tracer QUI a dispensé et QUAND, même sans quantité connue.
   const legacyQty = (quantite_dispensee && quantite_dispensee > 0) ? quantite_dispensee : 0;
-  await supabase.from("prescription_dispensations").insert({
-    prescription_id: params.id,
-    pharmacie_id,
-    dispense_par: user.id,
-    quantite: legacyQty,
-    substitution_generique: substitution,
-    date_dispensation: now,
-  }).then(() => {
-    // Fix 2 — décrémenter le stock si la quantité est connue
-    if (legacyQty > 0) {
-      return decrementStock(supabase, pharmacie_id, prescription.medicament_dci, legacyQty);
-    }
-  }).catch(() => { /* non-bloquant */ });
+  // Non-bloquant : erreur d'historique/stock ne doit pas annuler la réponse
+  void (async () => {
+    try {
+      await supabase.from("prescription_dispensations").insert({
+        prescription_id: params.id,
+        pharmacie_id,
+        dispense_par: user.id,
+        quantite: legacyQty,
+        substitution_generique: substitution,
+        date_dispensation: now,
+      });
+      if (legacyQty > 0) {
+        await decrementStock(supabase, pharmacie_id, prescription.medicament_dci, legacyQty);
+      }
+    } catch { /* non-bloquant */ }
+  })();
 
   return NextResponse.json(updated);
 }
