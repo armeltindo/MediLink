@@ -115,12 +115,32 @@ export async function middleware(request: NextRequest) {
     }
 
     // Sélection d'établissement obligatoire avant l'accès aux pages protégées
+    // Exception : super_admin n'a pas à sélectionner un établissement
     if (user && !isPublicPath && !isSelectEtabPath) {
       const selectedEtab = request.cookies.get("selected_etablissement_id");
-      if (!selectedEtab) {
-        const url = request.nextUrl.clone();
-        url.pathname = SELECT_ETAB_PATH;
-        return NextResponse.redirect(url);
+      const superAdminAccess = request.cookies.get("super_admin_access");
+
+      if (!selectedEtab && !superAdminAccess) {
+        // Vérifier si c'est un super_admin (pas de cookie établissement requis)
+        const { data: profile } = await supabase
+          .from("users_profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role === "super_admin") {
+          // Mémoriser dans un cookie pour éviter la requête DB à chaque requête
+          supabaseResponse.cookies.set("super_admin_access", "1", {
+            path: "/",
+            maxAge: 8 * 60 * 60,
+            sameSite: "strict",
+            httpOnly: true,
+          });
+        } else {
+          const url = request.nextUrl.clone();
+          url.pathname = SELECT_ETAB_PATH;
+          return NextResponse.redirect(url);
+        }
       }
     }
 

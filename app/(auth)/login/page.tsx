@@ -52,6 +52,20 @@ export default function LoginPage() {
         return;
       }
 
+      // Récupérer le rôle pour adapter la redirection
+      const { data: profile } = await supabase
+        .from("users_profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      if (profile?.role === "super_admin") {
+        // super_admin n'a pas à sélectionner un établissement
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
       // Vérifier le nombre d'établissements affectés
       const { data: junctions } = await supabase
         .from("user_etablissements")

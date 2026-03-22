@@ -76,5 +76,6 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, "", { path: "/", maxAge: 0 });
+  cookieStore.set("super_admin_access", "", { path: "/", maxAge: 0 });
   return NextResponse.json({ ok: true });
 }
