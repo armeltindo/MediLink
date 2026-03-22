@@ -87,6 +87,22 @@ export async function PATCH(
     return NextResponse.json({ error: "L'établissement n'est pas une pharmacie" }, { status: 400 });
   }
 
+  // Vérifier que le pharmacien est bien affilié à cette pharmacie
+  const { data: affiliation } = await supabase
+    .from("user_etablissements")
+    .select("etablissement_id")
+    .eq("user_id", user.id)
+    .eq("etablissement_id", pharmacie_id)
+    .is("suspended_at", null)
+    .single();
+
+  if (!affiliation) {
+    return NextResponse.json(
+      { error: "Vous n'êtes pas autorisé à dispenser pour cette pharmacie" },
+      { status: 403 }
+    );
+  }
+
   // Vérifier l'état actuel de la prescription + quantités existantes
   const { data: prescription } = await supabase
     .from("prescriptions")

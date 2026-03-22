@@ -94,14 +94,15 @@ export async function GET() {
       .gte("date_expiration", now.toISOString())
       .is("deleted_at", null),
 
-    // Stock faible (si pharmacie connue)
+    // Stock faible (quantite_stock <= seuil_alerte) — comparaison colonne-à-colonne.
+    // PostgREST / Supabase JS ne supporte pas les comparaisons colonne-à-colonne
+    // via le client, on récupère les valeurs et on filtre côté serveur Node.
     pharmacieId
       ? supabase.from("stock_medicaments")
-          .select("id", { count: "exact" })
+          .select("id, quantite_stock, seuil_alerte")
           .eq("pharmacie_id", pharmacieId)
           .is("deleted_at", null)
-          .filter("quantite_stock", "lte", "seuil_alerte")
-      : Promise.resolve({ count: 0, data: [], error: null }),
+      : Promise.resolve({ data: [], error: null }),
 
     // 5 ordonnances urgentes (expirant dans 7 jours ou partiellement dispensées)
     supabase.from("prescriptions")
@@ -132,15 +133,20 @@ export async function GET() {
   const emptyCount = { count: 0, data: [], error: null } as never;
   const emptyData  = { data: [], error: null }            as never;
 
-  const [enAttente, partiel, dispensees, expirant, stockFaible, ordUrgentes, dispensationsRecentes] = [
+  const [enAttente, partiel, dispensees, expirant, stockRaw, ordUrgentes, dispensationsRecentes] = [
     get(enAttenteRes, emptyCount),
     get(partielRes, emptyCount),
     get(dispenséesRes, emptyCount),
     get(expirantRes, emptyCount),
-    get(stockFaibleRes, emptyCount),
+    get(stockFaibleRes, emptyData),
     get(ordUrgentesRes, emptyData),
     get(dispensationsRecentesRes, emptyData),
   ];
+
+  // Compter le stock faible côté Node (comparaison colonne-à-colonne)
+  const stockFaibleCount = ((stockRaw.data ?? []) as { quantite_stock: number; seuil_alerte: number }[])
+    .filter(s => s.quantite_stock <= s.seuil_alerte)
+    .length;
 
   return NextResponse.json({
     pharmacieId,
@@ -148,7 +154,7 @@ export async function GET() {
     partiellement:       partiel.count       ?? 0,
     dispensees_auj:      dispensees.count    ?? 0,
     expirant_urgent:     expirant.count      ?? 0,
-    stock_faible:        stockFaible.count   ?? 0,
+    stock_faible:        stockFaibleCount,
     ordonnances_urgentes: (ordUrgentes.data ?? []).map((p: {
       id: string;
       medicament_dci: string;

@@ -101,23 +101,39 @@ function CROperatoireDialog({
     if (!user) return;
     setLoading(true);
     try {
-      await supabase.from("documents").insert({
-        patient_id: patient.id,
-        nom: `CR Opératoire — ${form.type_intervention}`,
-        url: "",
-        type: "compte_rendu",
-        description: JSON.stringify({
-          hospitalisation_id: hospitalisation.id,
-          type_intervention: form.type_intervention,
-          chirurgien: form.chirurgien,
-          anesthesiste: form.anesthesiste,
-          duree_minutes: form.duree_minutes ? parseInt(form.duree_minutes) : null,
-          complications: form.complications || null,
-          notes: form.notes || null,
-        }),
-        uploaded_by: user.id,
-        etablissement_id: hospitalisation.etablissement_id,
-      });
+      // 1. Insérer le document et récupérer son ID
+      const { data: inserted, error: insertError } = await supabase
+        .from("documents")
+        .insert({
+          patient_id: patient.id,
+          nom: `CR Opératoire — ${form.type_intervention}`,
+          url: "",
+          type: "compte_rendu",
+          description: JSON.stringify({
+            hospitalisation_id: hospitalisation.id,
+            type_intervention: form.type_intervention,
+            chirurgien: form.chirurgien,
+            anesthesiste: form.anesthesiste,
+            duree_minutes: form.duree_minutes ? parseInt(form.duree_minutes) : null,
+            complications: form.complications || null,
+            notes: form.notes || null,
+          }),
+          uploaded_by: user.id,
+          etablissement_id: hospitalisation.etablissement_id,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+
+      // 2. Mettre à jour l'URL avec la route d'impression
+      if (inserted?.id) {
+        await supabase
+          .from("documents")
+          .update({ url: `/api/cr-operatoire?id=${inserted.id}` })
+          .eq("id", inserted.id);
+      }
+
       toast({ title: "Compte rendu opératoire enregistré" });
       setOpen(false);
       setForm({ type_intervention: "", chirurgien: "", anesthesiste: "", duree_minutes: "", complications: "", notes: "" });
