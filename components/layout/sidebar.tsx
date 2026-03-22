@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Users, Building2, FlaskConical,
   Pill, Syringe, BedDouble, FileText, BarChart3,
   LogOut, ShieldCheck, ClipboardList, CalendarDays, X,
-  RefreshCw,
+  RefreshCw, Store, Archive,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { useSidebar } from "@/components/layout/sidebar-context";
@@ -43,6 +43,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Pharmacie",
+    items: [
+      { href: "/pharmacie",        label: "Ma pharmacie",     icon: Store,           iconColor: "text-purple-400",  roles: ["pharmacien"] },
+      { href: "/inventaire",       label: "Inventaire",       icon: Archive,         iconColor: "text-rose-400",    roles: ["pharmacien", "super_admin"] },
+    ],
+  },
+  {
     label: "Gestion",
     items: [
       { href: "/documents",        label: "Documents",        icon: FileText,        iconColor: "text-orange-400",  roles: ["super_admin", "admin_etablissement", "medecin"] },
@@ -54,7 +61,7 @@ const NAV_GROUPS = [
 ] as const;
 
 // Badge alerts per href
-const ALERT_HREFS = new Set(["/prescriptions", "/analyses"]);
+const ALERT_HREFS = new Set(["/prescriptions", "/analyses", "/pharmacie", "/inventaire"]);
 
 // ─── Sidebar component ────────────────────────────────────────────────────────
 
@@ -66,12 +73,14 @@ export function Sidebar() {
 
   const [prescriptionsExpiring, setPrescriptionsExpiring] = useState(0);
   const [analysesEnAttente, setAnalysesEnAttente]         = useState(0);
+  const [pharmacieAlerts, setPharmacieAlerts]             = useState(0);
   const [hasMultiEtab, setHasMultiEtab]                   = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    Promise.all([
+
+    const baseQueries = [
       supabase.from("prescriptions").select("id", { count: "exact" })
         .in("statut", ["prescrit", "en_cours"])
         .lte("date_expiration", sevenDaysLater)
@@ -80,16 +89,31 @@ export function Sidebar() {
         .in("statut", ["prescrit", "en_attente"]),
       supabase.from("user_etablissements").select("etablissement_id", { count: "exact" })
         .eq("user_id", user.id),
-    ]).then(([rx, an, etabs]) => {
+    ] as const;
+
+    Promise.all(baseQueries).then(([rx, an, etabs]) => {
       setPrescriptionsExpiring(rx.count || 0);
       setAnalysesEnAttente(an.count || 0);
       setHasMultiEtab((etabs.count ?? 0) > 1);
     });
+
+    // Alertes spécifiques pharmacien
+    if (user.role === "pharmacien") {
+      const threeDaysLater = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+      supabase.from("prescriptions").select("id", { count: "exact" })
+        .in("statut", ["prescrit", "partiellement_dispense"])
+        .lte("date_expiration", threeDaysLater)
+        .gte("date_expiration", new Date().toISOString())
+        .is("deleted_at", null)
+        .then(r => setPharmacieAlerts(r.count || 0));
+    }
   }, [user]);
 
   function getAlertBadge(href: string): number {
     if (href === "/prescriptions") return prescriptionsExpiring;
-    if (href === "/analyses") return analysesEnAttente;
+    if (href === "/analyses")      return analysesEnAttente;
+    if (href === "/pharmacie")     return pharmacieAlerts;
+    if (href === "/inventaire")    return 0;
     return 0;
   }
 

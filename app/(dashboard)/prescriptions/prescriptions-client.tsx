@@ -11,7 +11,7 @@ import {
   Pill, Search, X, ChevronRight, User, CalendarDays,
   Clock, CheckCircle2, Ban, Stethoscope, ClipboardList,
   CalendarCheck, Repeat2, FlaskConical, Package, Store,
-  ArrowLeftRight, History,
+  ArrowLeftRight, History, AlertTriangle,
 } from "lucide-react";
 
 export interface PrescriptionRow {
@@ -149,6 +149,7 @@ function DispensationDialog({
   pharmacieId,
   pharmacieNom,
   restant,
+  otherActivePrescriptions,
   onClose,
   onSuccess,
 }: {
@@ -156,6 +157,7 @@ function DispensationDialog({
   pharmacieId: string;
   pharmacieNom: string;
   restant: number | null;       // null = legacy (pas de quantite)
+  otherActivePrescriptions: PrescriptionRow[];
   onClose: () => void;
   onSuccess: (updated: Partial<PrescriptionRow>, totalDispense?: number) => void;
 }) {
@@ -252,6 +254,28 @@ function DispensationDialog({
             <Store className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="font-medium">{pharmacieNom}</span>
           </div>
+
+          {/* Avertissement co-prescriptions actives */}
+          {otherActivePrescriptions.length > 0 && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1.5">
+              <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5 uppercase tracking-wide">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                {otherActivePrescriptions.length} autre{otherActivePrescriptions.length > 1 ? "s" : ""} ordonnance{otherActivePrescriptions.length > 1 ? "s" : ""} active{otherActivePrescriptions.length > 1 ? "s" : ""} pour ce patient
+              </p>
+              <ul className="space-y-0.5">
+                {otherActivePrescriptions.map(o => (
+                  <li key={o.id} className="text-xs text-amber-700 flex items-center gap-1">
+                    <Pill className="h-3 w-3 shrink-0" />
+                    <span className="font-medium">{o.medicament_dci}</span>
+                    {o.dosage && <span className="text-amber-600">· {o.dosage}</span>}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-amber-600 pt-0.5">
+                Vérifiez l&apos;absence d&apos;interactions avant de dispenser.
+              </p>
+            </div>
+          )}
 
           {/* Quantité à dispenser (seulement si quantite définie) */}
           {restant !== null && (
@@ -418,6 +442,7 @@ function DetailDialog({
   pharmacieId,
   pharmacieNom,
   totalDispense,
+  allRows,
   onClose,
   onDispensed,
 }: {
@@ -426,6 +451,7 @@ function DetailDialog({
   pharmacieId: string | null;
   pharmacieNom: string | null;
   totalDispense: number;
+  allRows: PrescriptionRow[];
   onClose: () => void;
   onDispensed: (updated: Partial<PrescriptionRow>, newTotalDispense?: number) => void;
 }) {
@@ -446,6 +472,13 @@ function DetailDialog({
 
   const showHistorique =
     p.statut === "partiellement_dispense" || p.statut === "dispense";
+
+  // Autres prescriptions actives du même patient (pour l'avertissement co-prescriptions)
+  const otherActivePrescriptions = allRows.filter(r =>
+    r.id !== p.id &&
+    r.patients?.imu === p.patients?.imu &&
+    !["dispense", "termine", "annule"].includes(r.statut)
+  );
 
   const fields: { icon: typeof User; label: string; value: ReactNode }[] = [
     {
@@ -639,6 +672,7 @@ function DetailDialog({
           pharmacieId={pharmacieId}
           pharmacieNom={pharmacieNom}
           restant={restant}
+          otherActivePrescriptions={otherActivePrescriptions}
           onClose={() => setShowDispensation(false)}
           onSuccess={(updated, newTotal) => {
             onDispensed(updated, newTotal);
@@ -884,6 +918,7 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
           pharmacieId={pharmacieId}
           pharmacieNom={pharmacieNom}
           totalDispense={dispenseTotals[selected.id] ?? 0}
+          allRows={localRows}
           onClose={() => setSelected(null)}
           onDispensed={(updated, newTotal) => handleDispensed(selected.id, updated, newTotal)}
         />
