@@ -31,6 +31,8 @@ import { DocumentsTab } from "./tabs/documents";
 import { AuditTab } from "./tabs/audit";
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
+// roles : liste des rôles autorisés. Si absent → tous les rôles y ont accès.
+// adminOnly : raccourci pour restreindre aux admins (conservé pour compatibilité).
 const TAB_DEFS = [
   {
     id: "overview",
@@ -40,6 +42,7 @@ const TAB_DEFS = [
     activeBorder: "border-slate-700",
     activeBadge: "bg-slate-800 text-white",
     activeIcon: "text-slate-700",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "pharmacien", "laborantin"],
   },
   {
     id: "consultations",
@@ -49,6 +52,7 @@ const TAB_DEFS = [
     activeBorder: "border-blue-600",
     activeBadge: "bg-blue-600 text-white",
     activeIcon: "text-blue-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"],
   },
   {
     id: "prescriptions",
@@ -58,6 +62,7 @@ const TAB_DEFS = [
     activeBorder: "border-amber-500",
     activeBadge: "bg-amber-500 text-white",
     activeIcon: "text-amber-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "pharmacien"],
   },
   {
     id: "analyses",
@@ -67,6 +72,7 @@ const TAB_DEFS = [
     activeBorder: "border-purple-600",
     activeBadge: "bg-purple-600 text-white",
     activeIcon: "text-purple-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin"],
   },
   {
     id: "vaccinations",
@@ -76,6 +82,7 @@ const TAB_DEFS = [
     activeBorder: "border-emerald-600",
     activeBadge: "bg-emerald-600 text-white",
     activeIcon: "text-emerald-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"],
   },
   {
     id: "hospitalisations",
@@ -85,6 +92,7 @@ const TAB_DEFS = [
     activeBorder: "border-violet-600",
     activeBadge: "bg-violet-600 text-white",
     activeIcon: "text-violet-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"],
   },
   {
     id: "rendez-vous",
@@ -94,6 +102,7 @@ const TAB_DEFS = [
     activeBorder: "border-teal-600",
     activeBadge: "bg-teal-600 text-white",
     activeIcon: "text-teal-600",
+    roles: ["super_admin", "admin_etablissement", "medecin", "infirmier"],
   },
   {
     id: "documents",
@@ -103,6 +112,7 @@ const TAB_DEFS = [
     activeBorder: "border-orange-500",
     activeBadge: "bg-orange-500 text-white",
     activeIcon: "text-orange-600",
+    roles: ["super_admin", "admin_etablissement", "medecin"],
   },
   {
     id: "audit",
@@ -112,6 +122,7 @@ const TAB_DEFS = [
     activeBorder: "border-red-600",
     activeBadge: "bg-red-600 text-white",
     activeIcon: "text-red-600",
+    roles: ["super_admin", "admin_etablissement"],
     adminOnly: true,
   },
 ] as const;
@@ -187,6 +198,17 @@ function PatientPageInner() {
     if (!imu) return;
     loadPatient(decodeURIComponent(imu));
   }, [imu]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rediriger vers le premier onglet autorisé si l'onglet actif est interdit pour ce rôle
+  useEffect(() => {
+    if (loading || !user?.role) return;
+    const allowed = TAB_DEFS.filter((t) => (t.roles as readonly string[]).includes(user.role));
+    const tabAllowed = allowed.some((t) => t.id === activeTab);
+    if (!tabAllowed && allowed.length > 0) {
+      handleTabChange(allowed[0].id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user?.role, activeTab]);
 
   function handleTabChange(tab: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -304,7 +326,10 @@ function PatientPageInner() {
     return tabCounts[tabId] || undefined;
   }
 
-  const visibleTabs = TAB_DEFS.filter((t) => !("adminOnly" in t && t.adminOnly) || isAdmin);
+  // Filtrer les onglets selon le rôle de l'utilisateur
+  const visibleTabs = TAB_DEFS.filter((t) =>
+    !user?.role || (t.roles as readonly string[]).includes(user.role)
+  );
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50/60 scrollbar-hidden overflow-x-hidden">
