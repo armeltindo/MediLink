@@ -32,12 +32,16 @@ export default async function InventairePage() {
           .eq("user_id", user.id)
           .is("suspended_at", null);
 
+        type JunctionEtab = { id: string; nom: string; type: string };
         type Junction = {
           etablissement_id: string;
-          etablissements: { id: string; nom: string; type: string } | null;
+          etablissements: JunctionEtab | JunctionEtab[] | null;
         };
-        const pharmacies = (junctions as Junction[] ?? []).filter(
-          (j) => j.etablissements?.type === "pharmacie"
+        const etabOf = (j: Junction): JunctionEtab | null =>
+          Array.isArray(j.etablissements) ? (j.etablissements[0] ?? null) : (j.etablissements ?? null);
+
+        const pharmacies = (junctions as unknown as Junction[] ?? []).filter(
+          (j) => etabOf(j)?.type === "pharmacie"
         );
         // Fallback sur la première pharmacie si le cookie pointe ailleurs
         const active = cookieEtabId
@@ -46,7 +50,7 @@ export default async function InventairePage() {
 
         if (active) {
           pharmacieId  = active.etablissement_id;
-          pharmacieNom = active.etablissements?.nom ?? null;
+          pharmacieNom = etabOf(active)?.nom ?? null;
 
           const { data } = await supabase
             .from("stock_medicaments")
