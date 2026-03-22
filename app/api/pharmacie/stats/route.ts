@@ -43,9 +43,25 @@ export async function GET() {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  // Pharmacie active via cookie
+  // Pharmacie active : cookie selected_etablissement_id s'il correspond bien à
+  // une pharmacie affiliée, sinon on prend la première pharmacie de l'utilisateur.
   const cookieStore = cookies();
-  const pharmacieId = cookieStore.get("selected_etablissement_id")?.value ?? null;
+  const cookieEtabId = cookieStore.get("selected_etablissement_id")?.value ?? null;
+
+  const { data: junctions } = await supabase
+    .from("user_etablissements")
+    .select("etablissement_id, etablissements(type)")
+    .eq("user_id", user.id)
+    .is("suspended_at", null);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pharmacieIds = (junctions ?? []).filter((j: any) => j.etablissements?.type === "pharmacie")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((j: any) => j.etablissement_id as string);
+
+  const pharmacieId: string | null = cookieEtabId && pharmacieIds.includes(cookieEtabId)
+    ? cookieEtabId
+    : (pharmacieIds[0] ?? null);
 
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();

@@ -35,7 +35,10 @@ export default async function InventairePage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pharmacies = (junctions ?? []).filter((j: any) => j.etablissements?.type === "pharmacie");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const active = cookieEtabId ? pharmacies.find((j: any) => j.etablissement_id === cookieEtabId) : pharmacies[0];
+        // Fallback sur la première pharmacie si le cookie pointe ailleurs
+        const active = cookieEtabId
+          ? (pharmacies.find((j: any) => j.etablissement_id === cookieEtabId) ?? pharmacies[0])
+          : pharmacies[0];
 
         if (active) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

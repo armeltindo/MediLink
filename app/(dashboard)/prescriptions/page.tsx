@@ -52,9 +52,11 @@ export default async function PrescriptionsPage() {
           (j: any) => j.etablissements?.type === "pharmacie"
         );
 
+        // Si le cookie pointe vers un établissement non-pharmacie (ou inexistant),
+        // on tombe sur la première pharmacie disponible plutôt que de renvoyer undefined.
         const active = cookieEtabId
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ? pharmacies.find((j: any) => j.etablissement_id === cookieEtabId)
+          ? (pharmacies.find((j: any) => j.etablissement_id === cookieEtabId) ?? pharmacies[0])
           : pharmacies[0];
 
         if (active) {
