@@ -380,7 +380,7 @@ export async function GET(request: NextRequest) {
         await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Bon d'analyses — ${typesListe.slice(0, 60)}${typesListe.length > 60 ? "…" : ""} — ${dateDoc}`,
-          url: publicUrl,
+          url: `/api/bon-analyse-pdf?${consultationId ? `consultationId=${consultationId}` : `analyseId=${analyseId}`}`,
           type: "ordonnance",
           taille: htmlBuffer.length,
           uploaded_by: user.id,

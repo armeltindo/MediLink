@@ -433,7 +433,7 @@ export async function GET(request: NextRequest) {
           supabase.from("documents").insert({
             patient_id: patient.id,
             nom: `Résultats — ${analyse.type_analyse} — ${dateResultat}`,
-            url: publicUrl,
+            url: `/api/resultat-analyse-pdf?analyseId=${analyseId}`,
             type: "compte_rendu",
             taille: htmlBuffer.length,
             uploaded_by: user.id,
@@ -441,7 +441,7 @@ export async function GET(request: NextRequest) {
           }),
           // Met à jour le pdf_url sur chaque résultat
           supabase.from("resultats_analyse")
-            .update({ pdf_url: publicUrl })
+            .update({ pdf_url: `/api/resultat-analyse-pdf?analyseId=${analyseId}` })
             .eq("analyse_id", analyseId),
         ]);
       }

@@ -438,7 +438,7 @@ export async function GET(request: NextRequest) {
         const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patientId,
           nom: `Lettre de référence — ${new Date().toLocaleDateString("fr-FR")}`,
-          url: publicUrl,
+          url: `/api/lettre-reference?patientId=${patientId}`,
           type: "compte_rendu",
           taille: htmlBuffer.length,
           uploaded_by: user.id,

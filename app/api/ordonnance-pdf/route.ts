@@ -417,7 +417,7 @@ export async function GET(request: NextRequest) {
         const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Ordonnance — ${prescription.medicament_dci} — ${datePrescription}`,
-          url: publicUrl,
+          url: `/api/ordonnance-pdf?prescriptionId=${prescriptionId}`,
           type: "ordonnance",
           taille: htmlBuffer.length,
           uploaded_by: user.id,

@@ -401,7 +401,7 @@ tr:nth-child(even){background:#f8fafc}
           await supabase.from("documents").insert({
             patient_id: analyse.patient_id,
             nom: `Résultat — ${analyse.type_analyse} — ${dateStr}`,
-            url: publicUrl,
+            url: `/api/resultat-analyse-pdf?analyseId=${analyse.id}`,
             type: "compte_rendu",
             taille: content.length,
             uploaded_by: user.id,

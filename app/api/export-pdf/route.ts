@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
         await supabase.from("documents").insert({
           patient_id: patientId,
           nom: `Dossier médical — ${new Date().toLocaleDateString("fr-FR")}`,
-          url: publicUrl,
+          url: `/api/export-pdf?patientId=${patientId}`,
           type: "compte_rendu",
           taille: htmlBuffer.length,
           uploaded_by: user.id,
