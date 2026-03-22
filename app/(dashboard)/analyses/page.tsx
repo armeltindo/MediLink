@@ -1,20 +1,27 @@
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { Header } from "@/components/layout/header";
 import { AnalysesList, type AnalyseRow } from "./analyses-client";
 
 export default async function AnalysesPage() {
   let rows: AnalyseRow[] = [];
 
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const supabase = createServerSupabaseClient();
-    const { data } = await supabase
-      .from("analyses_prescrites")
-      .select("id, type_analyse, statut, date_prescription, urgence, instructions, resultat_rapide, date_rendu, patients(imu, nom, prenom)")
-      .is("deleted_at", null)
-      .order("date_prescription", { ascending: false })
-      .limit(200);
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    rows = (data as unknown as AnalyseRow[]) || [];
+    if (user) {
+      // RLS applique les droits par rôle (medecin, laborantin, infirmier…)
+      const { data } = await supabase
+        .from("analyses_prescrites")
+        .select("id, type_analyse, statut, date_prescription, urgence, instructions, resultat_rapide, date_rendu, patients(imu, nom, prenom)")
+        .is("deleted_at", null)
+        .order("date_prescription", { ascending: false })
+        .limit(200);
+
+      rows = (data as unknown as AnalyseRow[]) || [];
+    }
+  } catch (err) {
+    console.error("[analyses/page] erreur chargement:", err);
   }
 
   return (

@@ -1,4 +1,3 @@
-import { createServerSupabaseClient } from "@/lib/supabase";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { Header } from "@/components/layout/header";
 import { PrescriptionsList, type PrescriptionRow } from "./prescriptions-client";
@@ -10,31 +9,12 @@ export default async function PrescriptionsPage() {
   let pharmacieId: string | null = null;
   let pharmacieNom: string | null = null;
 
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const supabase = createServerSupabaseClient();
-
-    // Données des prescriptions
-    const { data } = await supabase
-      .from("prescriptions")
-      .select(`id, medicament_dci, medicament_commercial, dosage, forme, posologie, duree,
-               instructions, statut, date_prescription, date_expiration, date_dispensation,
-               substitution_generique, pharmacie_id,
-               patients(imu, nom, prenom),
-               pharmacie:etablissements!pharmacie_id(nom)`)
-      .is("deleted_at", null)
-      .order("date_prescription", { ascending: false })
-      .limit(200);
-
-    rows = (data as unknown as PrescriptionRow[]) || [];
-  }
-
-  // Rôle de l'utilisateur connecté (via session Supabase)
   try {
-    const supabaseAuth = await createSupabaseServerClient();
-    const { data: { user } } = await supabaseAuth.auth.getUser();
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: profile } = await supabaseAuth
+      const { data: profile } = await supabase
         .from("users_profiles")
         .select("role")
         .eq("id", user.id)
@@ -42,12 +22,26 @@ export default async function PrescriptionsPage() {
 
       userRole = profile?.role ?? null;
 
+      // Données des prescriptions (RLS applique les droits par rôle)
+      const { data } = await supabase
+        .from("prescriptions")
+        .select(`id, medicament_dci, medicament_commercial, dosage, forme, posologie, duree,
+                 instructions, statut, date_prescription, date_expiration, date_dispensation,
+                 substitution_generique, pharmacie_id,
+                 patients(imu, nom, prenom),
+                 pharmacie:etablissements!pharmacie_id(nom)`)
+        .is("deleted_at", null)
+        .order("date_prescription", { ascending: false })
+        .limit(200);
+
+      rows = (data as unknown as PrescriptionRow[]) || [];
+
       if (userRole === "pharmacien") {
         // Pharmacie active : cookie selected_etablissement_id ou premier rattachement
         const cookieStore = await cookies();
         const cookieEtabId = cookieStore.get("selected_etablissement_id")?.value;
 
-        const { data: junctions } = await supabaseAuth
+        const { data: junctions } = await supabase
           .from("user_etablissements")
           .select("etablissement_id, etablissements(id, nom, type)")
           .eq("user_id", user.id)
@@ -71,8 +65,8 @@ export default async function PrescriptionsPage() {
         }
       }
     }
-  } catch {
-    // Session absente (demo ou non connecté) — pas de rôle
+  } catch (err) {
+    console.error("[prescriptions/page] erreur chargement:", err);
   }
 
   return (

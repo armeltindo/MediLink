@@ -636,7 +636,11 @@ export function AnalysesTab({ patient, analyses: initialAnalyses, onRefresh }: A
       .eq("patient_id", patient.id)
       .is("deleted_at", null)
       .order("date_prescription", { ascending: false })
-      .then(({ data }: { data: AnalysePrescrite[] | null }) => { setAnalyses(data || []); setTabLoading(false); });
+      .then(({ data, error }: { data: AnalysePrescrite[] | null; error: { message: string } | null }) => {
+        if (error) console.error("[analyses] chargement échoué:", error.message);
+        setAnalyses(data || []);
+        setTabLoading(false);
+      });
   }, [patient.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Realtime notifications for médecin when laborantin saves a result

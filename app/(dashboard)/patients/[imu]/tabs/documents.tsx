@@ -230,12 +230,13 @@ export function DocumentsTab({ patient }: DocumentsTabProps) {
   useEffect(() => { loadDocuments(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadDocuments() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("documents")
       .select("*")
       .eq("patient_id", patient.id)
       .is("deleted_at", null)
       .order("uploaded_at", { ascending: false });
+    if (error) console.error("[documents] chargement échoué:", error.message);
     setDocuments(data || []);
     setLoading(false);
   }
