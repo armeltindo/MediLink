@@ -32,9 +32,11 @@ export interface EtablissementRow {
 const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: any }> = {
   CHU:      { label: "CHU",            color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200",    icon: Landmark     },
   CSP:      { label: "CSP",            color: "text-green-700",  bg: "bg-green-50",  border: "border-green-200",  icon: Hospital     },
-  clinique: { label: "Clinique",       color: "text-blue-700",   bg: "bg-blue-50",   border: "border-blue-200",   icon: Stethoscope  },
-  hopital:  { label: "Hôpital",        color: "text-orange-700", bg: "bg-orange-50", border: "border-orange-200", icon: Hospital     },
-  cabinet:  { label: "Cabinet médical",color: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200", icon: Pill         },
+  clinique:     { label: "Clinique",       color: "text-blue-700",   bg: "bg-blue-50",    border: "border-blue-200",    icon: Stethoscope  },
+  polyclinique: { label: "Polyclinique",  color: "text-cyan-700",   bg: "bg-cyan-50",    border: "border-cyan-200",    icon: Stethoscope  },
+  hopital:      { label: "Hôpital",       color: "text-orange-700", bg: "bg-orange-50",  border: "border-orange-200",  icon: Hospital     },
+  cabinet:      { label: "Cabinet médical",color: "text-violet-700",bg: "bg-violet-50",  border: "border-violet-200",  icon: Pill         },
+  pharmacie:    { label: "Pharmacie",     color: "text-amber-700",  bg: "bg-amber-50",   border: "border-amber-200",   icon: Pill         },
   labo:     { label: "Laboratoire",    color: "text-teal-700",   bg: "bg-teal-50",   border: "border-teal-200",   icon: FlaskConical },
   autre:    { label: "Autre",          color: "text-gray-600",   bg: "bg-gray-50",   border: "border-gray-200",   icon: Building2    },
 };

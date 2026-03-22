@@ -105,8 +105,10 @@ const typeEtabLabels: Record<string, string> = {
   CHU: "CHU",
   CSP: "Centre de Santé",
   clinique: "Clinique",
+  polyclinique: "Polyclinique",
   hopital: "Hôpital",
   cabinet: "Cabinet médical",
+  pharmacie: "Pharmacie",
 };
 
 export default function AdminPage() {
@@ -906,7 +908,9 @@ export default function AdminPage() {
                               <SelectItem value="CSP">Centre de Santé</SelectItem>
                               <SelectItem value="hopital">Hôpital</SelectItem>
                               <SelectItem value="clinique">Clinique</SelectItem>
+                              <SelectItem value="polyclinique">Polyclinique</SelectItem>
                               <SelectItem value="cabinet">Cabinet médical</SelectItem>
+                              <SelectItem value="pharmacie">Pharmacie</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1056,7 +1060,9 @@ export default function AdminPage() {
                           <SelectItem value="CSP">Centre de Santé</SelectItem>
                           <SelectItem value="hopital">Hôpital</SelectItem>
                           <SelectItem value="clinique">Clinique</SelectItem>
+                          <SelectItem value="polyclinique">Polyclinique</SelectItem>
                           <SelectItem value="cabinet">Cabinet médical</SelectItem>
+                          <SelectItem value="pharmacie">Pharmacie</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
