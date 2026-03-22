@@ -652,7 +652,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* ── Section 3 : Rattachement ─────────────────────────── */}
-                    {newUserForm.role && (
+                    {newUserForm.role && user?.role !== "admin_etablissement" && (
                       <>
                         <div className="border-t border-dashed" />
                         <div className="space-y-3">

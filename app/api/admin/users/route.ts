@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("users_profiles")
-    .select("role")
+    .select("role, etablissement_id")
     .eq("id", user.id)
     .single();
 
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { email, nom, prenom, role, specialite, telephone, etablissement_id, etablissement_ids, numero_ordre, titre } = body;
+  const { email, nom, prenom, role, specialite, telephone, numero_ordre, titre } = body;
+  let { etablissement_id, etablissement_ids } = body;
 
   if (!email || !nom || !prenom || !role) {
     return NextResponse.json({ error: "Email, nom, prénom et rôle requis" }, { status: 400 });
@@ -109,6 +110,17 @@ export async function POST(request: NextRequest) {
   const validRoles = ["super_admin", "admin_etablissement", "medecin", "infirmier", "laborantin", "pharmacien"];
   if (!validRoles.includes(role)) {
     return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
+  }
+
+  // admin_etablissement : forcer son propre établissement, ignorer ce que le frontend envoie
+  if (profile.role === "admin_etablissement") {
+    const cookieStore = cookies();
+    const adminEtabId = cookieStore.get("selected_etablissement_id")?.value || profile.etablissement_id;
+    if (!adminEtabId) {
+      return NextResponse.json({ error: "Aucun établissement associé à votre compte" }, { status: 400 });
+    }
+    etablissement_id = adminEtabId;
+    etablissement_ids = [adminEtabId];
   }
 
   // Utiliser le client service role pour inviter l'utilisateur via Supabase Auth
