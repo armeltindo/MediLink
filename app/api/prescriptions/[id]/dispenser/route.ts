@@ -23,16 +23,25 @@ function createSupabaseServer() {
 }
 
 // PATCH /api/prescriptions/[id]/dispenser
-// Corps : { pharmacie_id: string, produit_servi?: string }
-//   - pharmacie_id  : UUID de la pharmacie qui dispense
-//   - produit_servi : nom du produit réellement remis (si similaire/générique)
-//                     si absent ou identique au DCI, on ne note pas de substitution
+// Corps : { pharmacie_id, produit_servi?, quantite_dispensee? }
 //
-// Règles métier appliquées ici (en complément de la RLS) :
-//   1. Seul un pharmacien authentifié peut dispenser
-//   2. La prescription ne doit pas être déjà dispensée ni annulée
-//   3. La prescription ne doit pas être expirée
-//   4. La pharmacie doit être de type 'pharmacie'
+//   Deux modes selon que la prescription a une quantite définie :
+//
+//   MODE NOUVEAU (prescription.quantite IS NOT NULL) :
+//     • quantite_dispensee (requis) : quantité dispensée lors de cette opération
+//     • Insère dans prescription_dispensations
+//     • Les triggers DB mettent à jour prescriptions.statut automatiquement :
+//         → 'partiellement_dispense' si quantite restante > 0
+//         → 'dispense' si quantite prescrite atteinte
+//
+//   MODE LEGACY (prescription.quantite IS NULL) :
+//     • Comportement binaire inchangé : UPDATE prescriptions SET statut='dispense'
+//
+//   Règles communes :
+//     1. Seul un pharmacien authentifié peut dispenser
+//     2. La prescription ne doit pas être annulée ni expirée
+//     3. Le statut ne doit pas déjà être 'dispense'
+//     4. L'établissement doit être de type 'pharmacie'
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -56,9 +65,10 @@ export async function PATCH(
 
   // Corps de la requête
   const body = await req.json();
-  const { pharmacie_id, produit_servi } = body as {
+  const { pharmacie_id, produit_servi, quantite_dispensee } = body as {
     pharmacie_id: string;
     produit_servi?: string;
+    quantite_dispensee?: number;
   };
 
   if (!pharmacie_id) {
@@ -77,10 +87,10 @@ export async function PATCH(
     return NextResponse.json({ error: "L'établissement n'est pas une pharmacie" }, { status: 400 });
   }
 
-  // Vérifier l'état actuel de la prescription
+  // Vérifier l'état actuel de la prescription + quantités existantes
   const { data: prescription } = await supabase
     .from("prescriptions")
-    .select("id, medicament_dci, statut, date_expiration")
+    .select("id, medicament_dci, statut, date_expiration, quantite, unite")
     .eq("id", params.id)
     .is("deleted_at", null)
     .single();
@@ -89,7 +99,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Prescription introuvable" }, { status: 404 });
   }
   if (prescription.statut === "dispense") {
-    return NextResponse.json({ error: "Ce produit a déjà été dispensé" }, { status: 409 });
+    return NextResponse.json({ error: "Ce produit a déjà été entièrement dispensé" }, { status: 409 });
   }
   if (prescription.statut === "annule") {
     return NextResponse.json({ error: "Cette prescription est annulée" }, { status: 409 });
@@ -98,13 +108,89 @@ export async function PATCH(
     return NextResponse.json({ error: "Cette prescription est expirée" }, { status: 409 });
   }
 
-  // Substitution : on note uniquement si le produit servi diffère du DCI prescrit
+  // Substitution : noter uniquement si le produit servi diffère du DCI prescrit
   const substitution =
     produit_servi && produit_servi.trim().toLowerCase() !== prescription.medicament_dci.trim().toLowerCase()
       ? produit_servi.trim()
       : null;
 
-  // Dispensation
+  // ── MODE NOUVEAU : prescription avec quantite définie ──────────────
+  if (prescription.quantite !== null) {
+    // quantite_dispensee obligatoire
+    if (!quantite_dispensee || quantite_dispensee <= 0) {
+      return NextResponse.json(
+        { error: "quantite_dispensee requis et doit être > 0" },
+        { status: 400 }
+      );
+    }
+    if (!Number.isInteger(quantite_dispensee)) {
+      return NextResponse.json(
+        { error: "quantite_dispensee doit être un entier" },
+        { status: 400 }
+      );
+    }
+
+    // Calculer la quantité déjà dispensée
+    const { data: existing } = await supabase
+      .from("prescription_dispensations")
+      .select("quantite")
+      .eq("prescription_id", params.id);
+
+    const totalDeja = (existing ?? []).reduce((sum, d) => sum + d.quantite, 0);
+    const restant = prescription.quantite - totalDeja;
+
+    if (quantite_dispensee > restant) {
+      return NextResponse.json(
+        {
+          error: `Quantité demandée (${quantite_dispensee} ${prescription.unite ?? ""}) dépasse la quantité restante (${restant} ${prescription.unite ?? ""})`,
+          restant,
+          total_prescrit: prescription.quantite,
+          deja_dispense: totalDeja,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Insérer la dispensation — les triggers DB mettent à jour prescriptions.statut
+    const { error: insertError } = await supabase
+      .from("prescription_dispensations")
+      .insert({
+        prescription_id: params.id,
+        pharmacie_id,
+        dispense_par: user.id,
+        quantite: quantite_dispensee,
+        substitution_generique: substitution,
+        date_dispensation: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      // Le trigger peut lever une erreur 'quantite_depassee:...'
+      if (insertError.message.includes("quantite_depassee")) {
+        return NextResponse.json(
+          { error: "Quantité dépassée — une autre dispensation concurrente a eu lieu" },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    // Relire la prescription mise à jour par le trigger
+    const { data: updated } = await supabase
+      .from("prescriptions")
+      .select("id, statut, date_dispensation, pharmacie_id, substitution_generique, quantite, unite")
+      .eq("id", params.id)
+      .single();
+
+    const nouvelTotalDispense = totalDeja + quantite_dispensee;
+    return NextResponse.json({
+      ...updated,
+      quantite_dispensee_cette_fois: quantite_dispensee,
+      total_dispense: nouvelTotalDispense,
+      restant: prescription.quantite - nouvelTotalDispense,
+    });
+  }
+
+  // ── MODE LEGACY : prescription sans quantite (dispensation binaire) ─
   const { data: updated, error } = await supabase
     .from("prescriptions")
     .update({

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, type ReactNode } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import {
   Pill, Search, X, ChevronRight, User, CalendarDays,
   Clock, CheckCircle2, Ban, Stethoscope, ClipboardList,
   CalendarCheck, Repeat2, FlaskConical, Package, Store,
-  ArrowLeftRight,
+  ArrowLeftRight, History,
 } from "lucide-react";
 
 export interface PrescriptionRow {
@@ -29,8 +29,27 @@ export interface PrescriptionRow {
   date_dispensation: string | null;
   substitution_generique: string | null;
   pharmacie_id: string | null;
+  quantite: number | null;
+  unite: string | null;
   patients: { imu: string; nom: string; prenom: string } | null;
   pharmacie: { nom: string } | null;
+}
+
+interface DispensationRecord {
+  id: string;
+  quantite: number;
+  substitution_generique: string | null;
+  date_dispensation: string;
+  pharmacie: { id: string; nom: string } | null;
+  dispensateur: { id: string; nom: string; prenom: string } | null;
+}
+
+interface DispensationHistory {
+  quantite_prescrite: number | null;
+  unite: string | null;
+  total_dispense: number;
+  restant: number | null;
+  dispensations: DispensationRecord[];
 }
 
 interface Props {
@@ -52,11 +71,12 @@ const STATUT_STYLE: Record<string, {
   label: string; bg: string; text: string;
   border: string; icon: typeof Pill; iconClass: string;
 }> = {
-  prescrit: { label: "Prescrit",  bg: "bg-blue-100",   text: "text-blue-800",   border: "border-l-blue-400",   icon: Pill,         iconClass: "text-blue-500" },
-  en_cours: { label: "En cours",  bg: "bg-green-100",  text: "text-green-800",  border: "border-l-green-400",  icon: CheckCircle2, iconClass: "text-green-500" },
-  dispense: { label: "Dispensé",  bg: "bg-purple-100", text: "text-purple-800", border: "border-l-purple-400", icon: Package,      iconClass: "text-purple-500" },
-  termine:  { label: "Terminé",   bg: "bg-gray-100",   text: "text-gray-600",   border: "border-l-gray-300",   icon: CheckCircle2, iconClass: "text-gray-400" },
-  annule:   { label: "Annulé",    bg: "bg-red-100",    text: "text-red-800",    border: "border-l-red-400",    icon: Ban,          iconClass: "text-red-500" },
+  prescrit:               { label: "Prescrit",             bg: "bg-blue-100",   text: "text-blue-800",   border: "border-l-blue-400",   icon: Pill,         iconClass: "text-blue-500" },
+  partiellement_dispense: { label: "Partiel.",             bg: "bg-amber-100",  text: "text-amber-800",  border: "border-l-amber-400",  icon: Package,      iconClass: "text-amber-500" },
+  en_cours:               { label: "En cours",             bg: "bg-green-100",  text: "text-green-800",  border: "border-l-green-400",  icon: CheckCircle2, iconClass: "text-green-500" },
+  dispense:               { label: "Dispensé",             bg: "bg-purple-100", text: "text-purple-800", border: "border-l-purple-400", icon: Package,      iconClass: "text-purple-500" },
+  termine:                { label: "Terminé",              bg: "bg-gray-100",   text: "text-gray-600",   border: "border-l-gray-300",   icon: CheckCircle2, iconClass: "text-gray-400" },
+  annule:                 { label: "Annulé",               bg: "bg-red-100",    text: "text-red-800",    border: "border-l-red-400",    icon: Ban,          iconClass: "text-red-500" },
 };
 
 function getStyle(statut: string) {
@@ -74,25 +94,53 @@ function ExpiryChip({ date }: { date: string | null }) {
   if (days < 0)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-        <Clock className="h-3 w-3" />
-        Expirée
+        <Clock className="h-3 w-3" />Expirée
       </span>
     );
   if (days === 0)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-        <Clock className="h-3 w-3" />
-        Expire aujourd&apos;hui
+        <Clock className="h-3 w-3" />Expire aujourd&apos;hui
       </span>
     );
   if (days <= 7)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-        <Clock className="h-3 w-3" />
-        Expire dans {days} j
+        <Clock className="h-3 w-3" />Expire dans {days} j
       </span>
     );
   return null;
+}
+
+/* ── Barre de progression dispensation ─────────────────────────────── */
+function DispensationProgress({
+  quantite,
+  totalDispense,
+  unite,
+}: {
+  quantite: number;
+  totalDispense: number;
+  unite: string | null;
+}) {
+  const pct = Math.min(100, Math.round((totalDispense / quantite) * 100));
+  const restant = quantite - totalDispense;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>
+          <span className="font-semibold text-foreground">{totalDispense}</span>
+          {" / "}{quantite} {unite ?? ""}
+        </span>
+        <span>{restant > 0 ? `${restant} restant${restant > 1 ? "s" : ""}` : "Tout dispensé"}</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-purple-500" : "bg-amber-400"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 /* ── Dialog de dispensation ─────────────────────────────────────────── */
@@ -100,46 +148,65 @@ function DispensationDialog({
   p,
   pharmacieId,
   pharmacieNom,
+  restant,
   onClose,
   onSuccess,
 }: {
   p: PrescriptionRow;
   pharmacieId: string;
   pharmacieNom: string;
+  restant: number | null;       // null = legacy (pas de quantite)
   onClose: () => void;
-  onSuccess: (updated: Partial<PrescriptionRow>) => void;
+  onSuccess: (updated: Partial<PrescriptionRow>, totalDispense?: number) => void;
 }) {
   const [produitServi, setProduitServi] = useState(p.medicament_dci);
+  const [quantiteSaisie, setQuantiteSaisie] = useState<string>(
+    restant !== null ? String(restant) : ""
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isSimilaire =
     produitServi.trim().toLowerCase() !== p.medicament_dci.trim().toLowerCase();
 
+  const quantiteNumerique = parseInt(quantiteSaisie, 10);
+  const quantiteValide =
+    restant === null
+      ? true  // legacy : pas de saisie quantite
+      : !isNaN(quantiteNumerique) && quantiteNumerique > 0 && quantiteNumerique <= restant;
+
   async function handleDispenser() {
     setLoading(true);
     setError(null);
     try {
+      const bodyPayload: Record<string, unknown> = {
+        pharmacie_id: pharmacieId,
+        produit_servi: produitServi.trim(),
+      };
+      if (restant !== null) {
+        bodyPayload.quantite_dispensee = quantiteNumerique;
+      }
+
       const res = await fetch(`/api/prescriptions/${p.id}/dispenser`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pharmacie_id: pharmacieId,
-          produit_servi: produitServi.trim(),
-        }),
+        body: JSON.stringify(bodyPayload),
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Erreur inconnue");
         return;
       }
-      onSuccess({
-        statut: "dispense",
-        date_dispensation: json.date_dispensation,
-        pharmacie_id: pharmacieId,
-        pharmacie: { nom: pharmacieNom },
-        substitution_generique: json.substitution_generique,
-      });
+      onSuccess(
+        {
+          statut: json.statut,
+          date_dispensation: json.date_dispensation,
+          pharmacie_id: pharmacieId,
+          pharmacie: { nom: pharmacieNom },
+          substitution_generique: json.substitution_generique,
+        },
+        json.total_dispense
+      );
       onClose();
     } catch {
       setError("Impossible de contacter le serveur");
@@ -166,7 +233,18 @@ function DispensationDialog({
             {p.medicament_commercial && (
               <p className="text-xs text-blue-700">({p.medicament_commercial})</p>
             )}
-            <p className="text-xs text-blue-600">{p.dosage}{p.forme ? ` · ${p.forme}` : ""} · {p.posologie} · {p.duree}</p>
+            <p className="text-xs text-blue-600">
+              {p.dosage}{p.forme ? ` · ${p.forme}` : ""} · {p.posologie} · {p.duree}
+            </p>
+            {p.quantite !== null && restant !== null && (
+              <div className="pt-1">
+                <DispensationProgress
+                  quantite={p.quantite}
+                  totalDispense={p.quantite - restant}
+                  unite={p.unite}
+                />
+              </div>
+            )}
           </div>
 
           {/* Pharmacie */}
@@ -174,6 +252,32 @@ function DispensationDialog({
             <Store className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="font-medium">{pharmacieNom}</span>
           </div>
+
+          {/* Quantité à dispenser (seulement si quantite définie) */}
+          {restant !== null && (
+            <div className="space-y-1.5">
+              <Label htmlFor="qte-dispensee" className="text-sm">
+                Quantité à dispenser
+                <span className="text-muted-foreground ml-1">
+                  (max {restant} {p.unite ?? ""})
+                </span>
+              </Label>
+              <Input
+                id="qte-dispensee"
+                type="number"
+                min={1}
+                max={restant}
+                value={quantiteSaisie}
+                onChange={(e) => setQuantiteSaisie(e.target.value)}
+                className="h-9"
+              />
+              {!quantiteValide && quantiteSaisie !== "" && (
+                <p className="text-xs text-red-600">
+                  Valeur entre 1 et {restant} {p.unite ?? ""}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Produit réellement servi */}
           <div className="space-y-1.5">
@@ -188,13 +292,12 @@ function DispensationDialog({
               placeholder={p.medicament_dci}
               className="h-9"
             />
-            {isSimilaire && (
+            {isSimilaire ? (
               <p className="text-xs text-amber-600 flex items-center gap-1">
                 <ArrowLeftRight className="h-3 w-3" />
                 Substitution notée — similaire ou générique
               </p>
-            )}
-            {!isSimilaire && (
+            ) : (
               <p className="text-xs text-muted-foreground">
                 Modifiez si vous remettez un générique ou un similaire.
               </p>
@@ -213,7 +316,7 @@ function DispensationDialog({
               size="sm"
               className="flex-1 gap-2"
               onClick={handleDispenser}
-              disabled={loading || !produitServi.trim()}
+              disabled={loading || !produitServi.trim() || !quantiteValide}
             >
               <Package className="h-4 w-4" />
               {loading ? "Enregistrement…" : "Confirmer la dispensation"}
@@ -228,12 +331,93 @@ function DispensationDialog({
   );
 }
 
+/* ── Historique des dispensations ───────────────────────────────────── */
+function HistoriqueDispensations({ prescriptionId }: { prescriptionId: string }) {
+  const [data, setData] = useState<DispensationHistory | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/prescriptions/${prescriptionId}/dispensations`)
+      .then((r) => r.json())
+      .then((json) => setData(json))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [prescriptionId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 border text-xs text-muted-foreground">
+        <History className="h-4 w-4 animate-pulse shrink-0" />
+        Chargement de l&apos;historique…
+      </div>
+    );
+  }
+
+  if (!data || data.dispensations.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <History className="h-3.5 w-3.5 text-muted-foreground" />
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Historique des dispensations
+        </p>
+      </div>
+      {data.quantite_prescrite !== null && (
+        <DispensationProgress
+          quantite={data.quantite_prescrite}
+          totalDispense={data.total_dispense}
+          unite={data.unite}
+        />
+      )}
+      <div className="space-y-1.5">
+        {data.dispensations.map((d) => (
+          <div key={d.id} className="flex items-start gap-3 p-3 rounded-lg bg-purple-50 border border-purple-100">
+            <div className="p-1.5 rounded-md bg-white border border-purple-200 shrink-0">
+              <Package className="h-3.5 w-3.5 text-purple-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-purple-900">
+                  {d.quantite} {data.unite ?? ""}
+                </span>
+                {d.pharmacie && (
+                  <span className="text-xs text-purple-700 flex items-center gap-1">
+                    <Store className="h-3 w-3" />{d.pharmacie.nom}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                {d.dispensateur && (
+                  <span className="text-xs text-muted-foreground">
+                    {d.dispensateur.prenom} {d.dispensateur.nom}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(d.date_dispensation)}
+                </span>
+              </div>
+              {d.substitution_generique && (
+                <span className="text-xs text-amber-700 flex items-center gap-1 mt-0.5">
+                  <ArrowLeftRight className="h-3 w-3" />
+                  {d.substitution_generique}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Detail dialog ──────────────────────────────────────────────────── */
 function DetailDialog({
   p,
   userRole,
   pharmacieId,
   pharmacieNom,
+  totalDispense,
   onClose,
   onDispensed,
 }: {
@@ -241,8 +425,9 @@ function DetailDialog({
   userRole: string | null;
   pharmacieId: string | null;
   pharmacieNom: string | null;
+  totalDispense: number;
   onClose: () => void;
-  onDispensed: (updated: Partial<PrescriptionRow>) => void;
+  onDispensed: (updated: Partial<PrescriptionRow>, newTotalDispense?: number) => void;
 }) {
   const s = getStyle(p.statut);
   const StatusIcon = s.icon;
@@ -252,8 +437,15 @@ function DetailDialog({
   const canDispense =
     userRole === "pharmacien" &&
     pharmacieId !== null &&
-    p.statut === "prescrit" &&
+    !["dispense", "annule"].includes(p.statut) &&
     (p.date_expiration === null || daysUntilExpiry(p.date_expiration)! >= 0);
+
+  // Calcul du restant à dispenser
+  const restant: number | null =
+    p.quantite !== null ? p.quantite - totalDispense : null;
+
+  const showHistorique =
+    p.statut === "partiellement_dispense" || p.statut === "dispense";
 
   const fields: { icon: typeof User; label: string; value: ReactNode }[] = [
     {
@@ -279,6 +471,20 @@ function DetailDialog({
         </div>
       ),
     },
+    ...(p.quantite !== null ? [{
+      icon: Package,
+      label: "Quantité prescrite",
+      value: (
+        <div className="space-y-2">
+          <span className="text-sm font-medium">{p.quantite} {p.unite ?? ""}</span>
+          <DispensationProgress
+            quantite={p.quantite}
+            totalDispense={totalDispense}
+            unite={p.unite}
+          />
+        </div>
+      ),
+    }] : []),
     {
       icon: Repeat2,
       label: "Posologie",
@@ -312,12 +518,12 @@ function DetailDialog({
     }] : []),
     ...(p.date_dispensation ? [{
       icon: Package,
-      label: "Date de dispensation",
+      label: "Dernière dispensation",
       value: <span className="text-sm font-medium">{formatDate(p.date_dispensation)}</span>,
     }] : []),
     ...(p.pharmacie ? [{
       icon: Store,
-      label: "Pharmacie",
+      label: "Dernière pharmacie",
       value: <span className="text-sm font-medium">{p.pharmacie.nom}</span>,
     }] : []),
     ...(p.medicament_commercial ? [{
@@ -371,6 +577,11 @@ function DetailDialog({
               </div>
             ))}
 
+            {/* Historique dispensations partielles */}
+            {showHistorique && (
+              <HistoriqueDispensations prescriptionId={p.id} />
+            )}
+
             {p.statut === "annule" && (
               <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
                 <div className="p-1.5 rounded-md bg-white border border-red-200 shrink-0">
@@ -384,7 +595,7 @@ function DetailDialog({
             )}
 
             {/* Avertissement pharmacien sans pharmacie rattachée */}
-            {userRole === "pharmacien" && !pharmacieId && p.statut === "prescrit" && (
+            {userRole === "pharmacien" && !pharmacieId && !["dispense", "annule"].includes(p.statut) && (
               <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                 <Store className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700">
@@ -403,7 +614,7 @@ function DetailDialog({
                 onClick={() => setShowDispensation(true)}
               >
                 <Package className="h-4 w-4" />
-                Dispenser
+                {p.statut === "partiellement_dispense" ? "Dispenser le reste" : "Dispenser"}
               </Button>
             )}
             {p.patients && !canDispense && (
@@ -427,9 +638,10 @@ function DetailDialog({
           p={p}
           pharmacieId={pharmacieId}
           pharmacieNom={pharmacieNom}
+          restant={restant}
           onClose={() => setShowDispensation(false)}
-          onSuccess={(updated) => {
-            onDispensed(updated);
+          onSuccess={(updated, newTotal) => {
+            onDispensed(updated, newTotal);
             setShowDispensation(false);
           }}
         />
@@ -444,18 +656,26 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
   const [tab, setTab] = useState<TabKey>("actif");
   const [selected, setSelected] = useState<PrescriptionRow | null>(null);
   const [localRows, setLocalRows] = useState<PrescriptionRow[]>(rows);
+  // Suivi du total dispensé par prescription (pour l'affichage de la progress bar)
+  const [dispenseTotals, setDispenseTotals] = useState<Record<string, number>>({});
 
-  function handleDispensed(id: string, updated: Partial<PrescriptionRow>) {
+  function handleDispensed(id: string, updated: Partial<PrescriptionRow>, newTotal?: number) {
     setLocalRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, ...updated } : r))
     );
     setSelected((prev) => (prev?.id === id ? { ...prev, ...updated } : prev));
+    if (newTotal !== undefined) {
+      setDispenseTotals((prev) => ({ ...prev, [id]: newTotal }));
+    }
   }
 
+  const ACTIF_STATUTS = ["prescrit", "partiellement_dispense", "en_cours", "dispense"];
+
   const tabCounts = useMemo(() => ({
-    actif:   localRows.filter((p) => ["prescrit", "en_cours", "dispense"].includes(p.statut)).length,
+    actif:   localRows.filter((p) => ACTIF_STATUTS.includes(p.statut)).length,
     termine: localRows.filter((p) => ["termine", "annule"].includes(p.statut)).length,
     all:     localRows.length,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [localRows]);
 
   const filtered = useMemo(() => {
@@ -466,10 +686,11 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
         const med = `${p.medicament_dci} ${p.medicament_commercial ?? ""}`.toLowerCase();
         if (!med.includes(q) && !patient.includes(q)) return false;
       }
-      if (tab === "actif")   return ["prescrit", "en_cours", "dispense"].includes(p.statut);
+      if (tab === "actif")   return ACTIF_STATUTS.includes(p.statut);
       if (tab === "termine") return ["termine", "annule"].includes(p.statut);
       return true;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localRows, search, tab]);
 
   if (localRows.length === 0) {
@@ -574,8 +795,10 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
             const expiring = daysUntilExpiry(p.date_expiration);
             const isExpiringSoon = expiring !== null && expiring >= 0 && expiring <= 7;
             const dispensable =
-              userRole === "pharmacien" && pharmacieId && p.statut === "prescrit" &&
+              userRole === "pharmacien" && pharmacieId &&
+              !["dispense", "annule"].includes(p.statut) &&
               (p.date_expiration === null || daysUntilExpiry(p.date_expiration)! >= 0);
+            const totalDisp = dispenseTotals[p.id] ?? 0;
 
             return (
               <button
@@ -622,6 +845,14 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
                         <span className="text-xs text-muted-foreground">
                           {p.dosage}{p.forme ? ` · ${p.forme}` : ""} · {p.posologie}
                         </span>
+                        {p.quantite !== null && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            {totalDisp > 0
+                              ? `${totalDisp}/${p.quantite} ${p.unite ?? ""}`
+                              : `${p.quantite} ${p.unite ?? ""}`}
+                          </span>
+                        )}
                         {p.pharmacie && (
                           <span className="text-xs text-purple-600 flex items-center gap-1">
                             <Store className="h-3 w-3" />
@@ -652,8 +883,9 @@ export function PrescriptionsList({ rows, userRole, pharmacieId, pharmacieNom }:
           userRole={userRole}
           pharmacieId={pharmacieId}
           pharmacieNom={pharmacieNom}
+          totalDispense={dispenseTotals[selected.id] ?? 0}
           onClose={() => setSelected(null)}
-          onDispensed={(updated) => handleDispensed(selected.id, updated)}
+          onDispensed={(updated, newTotal) => handleDispensed(selected.id, updated, newTotal)}
         />
       )}
     </div>

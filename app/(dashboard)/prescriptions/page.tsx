@@ -27,7 +27,7 @@ export default async function PrescriptionsPage() {
         .from("prescriptions")
         .select(`id, medicament_dci, medicament_commercial, dosage, forme, posologie, duree,
                  instructions, statut, date_prescription, date_expiration, date_dispensation,
-                 substitution_generique, pharmacie_id,
+                 substitution_generique, pharmacie_id, quantite, unite,
                  patients(imu, nom, prenom),
                  pharmacie:etablissements!pharmacie_id(nom)`)
         .is("deleted_at", null)

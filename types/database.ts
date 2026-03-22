@@ -234,11 +234,13 @@ export interface Database {
           posologie: string;
           duree: string;
           instructions: string | null;
-          statut: "prescrit" | "dispense" | "en_cours" | "termine" | "annule";
+          statut: "prescrit" | "partiellement_dispense" | "dispense" | "en_cours" | "termine" | "annule";
           dispense_par: string | null;
           date_dispensation: string | null;
           substitution_generique: string | null;
           pharmacie_id: string | null;
+          quantite: number | null;
+          unite: string | null;
           date_prescription: string;
           date_expiration: string | null;
           created_at: string;
@@ -246,6 +248,20 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["prescriptions"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["prescriptions"]["Insert"]>;
+      };
+      prescription_dispensations: {
+        Row: {
+          id: string;
+          prescription_id: string;
+          pharmacie_id: string;
+          dispense_par: string;
+          quantite: number;
+          substitution_generique: string | null;
+          date_dispensation: string;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["prescription_dispensations"]["Row"], "id" | "created_at">;
+        Update: never;
       };
       analyses_prescrites: {
         Row: {

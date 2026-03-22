@@ -233,6 +233,7 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
   const [form, setForm] = useState({
     medicament_dci: "", medicament_commercial: "", dosage: "",
     forme: "", posologie: "", duree: "", instructions: "", date_expiration: "",
+    quantite: "", unite: "",
   });
 
   function handleDrugChange(value: string) {
@@ -271,6 +272,8 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         date_prescription: new Date().toISOString(),
         statut: "prescrit",
         date_expiration: form.date_expiration || null,
+        quantite: form.quantite ? parseInt(form.quantite, 10) : null,
+        unite: form.unite || null,
       }).select("id").single();
       if (error) { printWindow?.close(); throw error; }
 
@@ -403,6 +406,35 @@ function NewPrescriptionDialog({ patient, prescriptions, allergies, onSuccess, o
         <div className="space-y-1">
           <Label>Date d&apos;expiration</Label>
           <Input type="date" value={form.date_expiration} onChange={(e) => setForm({ ...form, date_expiration: e.target.value })} />
+        </div>
+        <div className="space-y-1">
+          <Label>Quantité totale prescrite</Label>
+          <Input
+            type="number"
+            min={1}
+            value={form.quantite}
+            onChange={(e) => setForm({ ...form, quantite: e.target.value })}
+            placeholder="Ex: 60"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Unité</Label>
+          <Select onValueChange={(v) => setForm({ ...form, unite: v })}>
+            <SelectTrigger><SelectValue placeholder="Unité…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="comprimé">Comprimé</SelectItem>
+              <SelectItem value="gélule">Gélule</SelectItem>
+              <SelectItem value="sachet">Sachet</SelectItem>
+              <SelectItem value="flacon">Flacon</SelectItem>
+              <SelectItem value="boîte">Boîte</SelectItem>
+              <SelectItem value="ampoule">Ampoule</SelectItem>
+              <SelectItem value="ml">ml</SelectItem>
+              <SelectItem value="g">g</SelectItem>
+              <SelectItem value="dose">Dose</SelectItem>
+              <SelectItem value="patch">Patch</SelectItem>
+              <SelectItem value="suppositoire">Suppositoire</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
