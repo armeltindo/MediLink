@@ -160,7 +160,18 @@ export async function POST(request: NextRequest) {
 
   // Insert junction table records for paramedical roles
   if (PARAMEDICAL_ROLES.includes(role) && Array.isArray(etablissement_ids) && etablissement_ids.length > 0) {
-    const junctionRows = etablissement_ids.map((eid: string) => ({
+    // Valider que les établissements existent et ne sont pas supprimés
+    const { data: validEtabs } = await serviceSupabase
+      .from("etablissements")
+      .select("id")
+      .in("id", etablissement_ids)
+      .is("deleted_at", null);
+    const validIds = (validEtabs || []).map((e) => e.id);
+    if (validIds.length === 0) {
+      await serviceSupabase.auth.admin.deleteUser(newUserId);
+      return NextResponse.json({ error: "Aucun établissement valide trouvé parmi les IDs fournis" }, { status: 400 });
+    }
+    const junctionRows = validIds.map((eid: string) => ({
       user_id: newProfile.id,
       etablissement_id: eid,
     }));
@@ -214,9 +225,18 @@ export async function PATCH(request: NextRequest) {
   if (Array.isArray(etablissement_ids)) {
     await supabase.from("user_etablissements").delete().eq("user_id", id);
     if (etablissement_ids.length > 0) {
-      await supabase.from("user_etablissements").insert(
-        etablissement_ids.map((eid: string) => ({ user_id: id, etablissement_id: eid }))
-      );
+      // Valider que les établissements existent et ne sont pas supprimés
+      const { data: validEtabs } = await supabase
+        .from("etablissements")
+        .select("id")
+        .in("id", etablissement_ids)
+        .is("deleted_at", null);
+      const validIds = (validEtabs || []).map((e) => e.id);
+      if (validIds.length > 0) {
+        await supabase.from("user_etablissements").insert(
+          validIds.map((eid: string) => ({ user_id: id, etablissement_id: eid }))
+        );
+      }
     }
   }
 

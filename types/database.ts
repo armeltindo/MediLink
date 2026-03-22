@@ -13,7 +13,7 @@ export interface Database {
         Row: {
           id: string;
           nom: string;
-          type: "CHU" | "CSP" | "clinique" | "hopital" | "cabinet";
+          type: "CHU" | "CSP" | "clinique" | "hopital" | "cabinet" | "pharmacie" | "polyclinique";
           ville: string;
           region: string;
           pays: string;
@@ -37,11 +37,24 @@ export interface Database {
           etablissement_id: string | null;
           telephone: string | null;
           signature_url: string | null;
+          numero_ordre: string | null;
+          titre: string | null;
           created_at: string;
           deleted_at: string | null;
         };
         Insert: Omit<Database["public"]["Tables"]["users_profiles"]["Row"], "created_at">;
         Update: Partial<Database["public"]["Tables"]["users_profiles"]["Insert"]>;
+      };
+      user_etablissements: {
+        Row: {
+          id: string;
+          user_id: string;
+          etablissement_id: string;
+          suspended_at: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["user_etablissements"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["user_etablissements"]["Insert"]>;
       };
       patients: {
         Row: {
@@ -134,7 +147,7 @@ export interface Database {
           tabac: "non_fumeur" | "fumeur" | "ex_fumeur" | null;
           tabac_quantite: string | null;
           tabac_duree: string | null;
-          alcool: "non" | "occasionnel" | "regulier" | "excessif" | null;
+          alcool: "aucun" | "non" | "occasionnel" | "regulier" | "excessif" | null;
           alcool_unites_semaine: number | null;
           drogues: string | null;
           activite_physique: "sedentaire" | "moderee" | "intense" | null;
@@ -179,6 +192,7 @@ export interface Database {
           plan_prise_en_charge: string | null;
           notes_confidentielles: string | null;
           type_consultation: "externe" | "urgence" | "hospitalisation" | "teleconsultation";
+          constantes_json: Json | null;
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -210,7 +224,7 @@ export interface Database {
       prescriptions: {
         Row: {
           id: string;
-          consultation_id: string;
+          consultation_id: string | null;
           patient_id: string;
           medecin_id: string;
           medicament_dci: string;
@@ -224,6 +238,7 @@ export interface Database {
           dispense_par: string | null;
           date_dispensation: string | null;
           substitution_generique: string | null;
+          pharmacie_id: string | null;
           date_prescription: string;
           date_expiration: string | null;
           created_at: string;
@@ -235,13 +250,16 @@ export interface Database {
       analyses_prescrites: {
         Row: {
           id: string;
-          consultation_id: string;
+          consultation_id: string | null;
           patient_id: string;
           medecin_id: string;
           type_analyse: string;
           urgence: boolean;
           statut: "prescrit" | "en_attente" | "en_cours" | "rendu" | "annule";
           instructions: string | null;
+          resultat_rapide: string | null;
+          date_rendu: string | null;
+          rendu_par: string | null;
           date_prescription: string;
           created_at: string;
           deleted_at: string | null;
@@ -298,6 +316,11 @@ export interface Database {
           date_sortie: string | null;
           service: string;
           motif: string;
+          chambre: string | null;
+          lit: string | null;
+          diagnostic_entree: string | null;
+          diagnostic_sortie: string | null;
+          diagnostic_sortie_cim10: string | null;
           resume_sejour: string | null;
           mode_sortie: "domicile" | "transfert" | "deces" | "fugue" | null;
           cr_operatoire_url: string | null;
@@ -341,19 +364,22 @@ export interface Database {
         Insert: Omit<Database["public"]["Tables"]["documents"]["Row"], "id" | "uploaded_at">;
         Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
       };
-      consentements: {
+      consentements_rgpd: {
         Row: {
           id: string;
           patient_id: string;
-          type: string;
+          type_consentement: "traitement_donnees" | "partage_inter_etablissement" | "recherche_medicale" | "telemedicine" | "contact_urgence" | "photo_identite";
+          statut: "accorde" | "refuse" | "retire";
           date_consentement: string;
-          fichier_url: string | null;
-          operateur_id: string;
-          notes: string | null;
+          date_expiration: string | null;
+          recueilli_par: string | null;
+          commentaire: string | null;
+          signature_numerique: string | null;
           created_at: string;
+          updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["consentements"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["consentements"]["Insert"]>;
+        Insert: Omit<Database["public"]["Tables"]["consentements_rgpd"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["consentements_rgpd"]["Insert"]>;
       };
       rendez_vous: {
         Row: {
