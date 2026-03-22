@@ -18,7 +18,7 @@ export type Hospitalisation = Database["public"]["Tables"]["hospitalisations"]["
 export type RendezVous = Database["public"]["Tables"]["rendez_vous"]["Row"];
 export type SoinInfirmier = Database["public"]["Tables"]["soins_infirmiers"]["Row"];
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
-export type Consentement = Database["public"]["Tables"]["consentements"]["Row"];
+export type Consentement = Database["public"]["Tables"]["consentements_rgpd"]["Row"];
 export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"];
 
 // Extended types with joins
