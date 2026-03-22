@@ -413,7 +413,6 @@ export async function GET(request: NextRequest) {
       if (storageError) {
         console.error("[ordonnance-pdf] storage upload failed:", storageError.message);
       } else {
-        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
         const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Ordonnance — ${prescription.medicament_dci} — ${datePrescription}`,

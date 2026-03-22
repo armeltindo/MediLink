@@ -174,7 +174,6 @@ export async function GET(request: NextRequest) {
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
       if (!storageError) {
-        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
         await supabase.from("documents").insert({
           patient_id: patientId,
           nom: `Dossier médical — ${new Date().toLocaleDateString("fr-FR")}`,

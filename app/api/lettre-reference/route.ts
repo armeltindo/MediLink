@@ -434,7 +434,6 @@ export async function GET(request: NextRequest) {
       if (storageError) {
         console.error("[lettre-reference] storage upload failed:", storageError.message);
       } else {
-        const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
         const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patientId,
           nom: `Lettre de référence — ${new Date().toLocaleDateString("fr-FR")}`,
