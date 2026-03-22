@@ -14,6 +14,8 @@ const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44"
 </svg>`;
 
 export async function POST(request: NextRequest) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const { patient, hospitalisation, medecin, etablissement } = await request.json();
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
@@ -376,19 +378,21 @@ export async function POST(request: NextRequest) {
 </html>`;
 
   // Sauvegarde dans l'espace documents du patient
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && patient?.id) {
+  if (!user || !patient?.id) {
+    console.error("[lettre-sortie] save skipped: user or patient.id missing");
+  } else {
+    try {
       const ts = Date.now();
       const storageKey = `${patient.id}/generated/${ts}_lettre-sortie.html`;
       const htmlBuffer = Buffer.from(html, "utf-8");
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
-      if (!storageError) {
+      if (storageError) {
+        console.error("[lettre-sortie] storage upload failed:", storageError.message);
+      } else {
         const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
-        await supabase.from("documents").insert({
+        const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Lettre de sortie — ${hospitalisation?.service || "Hospitalisation"} — ${sortie}`,
           url: publicUrl,
@@ -397,9 +401,12 @@ export async function POST(request: NextRequest) {
           uploaded_by: user.id,
           description: `Sortie : ${modeSortieLabels[hospitalisation?.mode_sortie] || hospitalisation?.mode_sortie || "—"}`,
         });
+        if (insertError) console.error("[lettre-sortie] documents insert failed:", insertError.message);
       }
+    } catch (err) {
+      console.error("[lettre-sortie] document save error:", err);
     }
-  } catch { /* ne pas bloquer la réponse */ }
+  }
 
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },

@@ -431,9 +431,11 @@ export async function GET(request: NextRequest) {
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
-      if (!storageError) {
+      if (storageError) {
+        console.error("[lettre-reference] storage upload failed:", storageError.message);
+      } else {
         const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
-        await supabase.from("documents").insert({
+        const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patientId,
           nom: `Lettre de référence — ${new Date().toLocaleDateString("fr-FR")}`,
           url: publicUrl,
@@ -442,8 +444,11 @@ export async function GET(request: NextRequest) {
           uploaded_by: user.id,
           description: `Lettre de référence médicale — ${medecinNom}`,
         });
+        if (insertError) console.error("[lettre-reference] documents insert failed:", insertError.message);
       }
-    } catch { /* ne pas bloquer la réponse si la sauvegarde échoue */ }
+    } catch (err) {
+      console.error("[lettre-reference] document save error:", err);
+    }
 
     return new NextResponse(html, {
       headers: {

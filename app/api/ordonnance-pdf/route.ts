@@ -410,9 +410,11 @@ export async function GET(request: NextRequest) {
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
-      if (!storageError) {
+      if (storageError) {
+        console.error("[ordonnance-pdf] storage upload failed:", storageError.message);
+      } else {
         const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
-        await supabase.from("documents").insert({
+        const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Ordonnance — ${prescription.medicament_dci} — ${datePrescription}`,
           url: publicUrl,
@@ -421,8 +423,11 @@ export async function GET(request: NextRequest) {
           uploaded_by: user.id,
           description: `${prescription.medicament_dci} ${prescription.dosage} — ${prescription.posologie}`,
         });
+        if (insertError) console.error("[ordonnance-pdf] documents insert failed:", insertError.message);
       }
-    } catch { /* ne pas bloquer la réponse */ }
+    } catch (err) {
+      console.error("[ordonnance-pdf] document save error:", err);
+    }
 
     return new NextResponse(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },

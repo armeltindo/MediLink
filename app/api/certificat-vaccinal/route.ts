@@ -24,6 +24,8 @@ const LOGO_LIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44"
 </svg>`;
 
 export async function POST(request: NextRequest) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const { patient, vaccinations, etablissement } = await request.json();
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
@@ -307,19 +309,21 @@ export async function POST(request: NextRequest) {
 </html>`;
 
   // Sauvegarde dans l'espace documents du patient
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && patient?.id) {
+  if (!user || !patient?.id) {
+    console.error("[certificat-vaccinal] save skipped: user or patient.id missing");
+  } else {
+    try {
       const ts = Date.now();
       const storageKey = `${patient.id}/generated/${ts}_certificat-vaccinal.html`;
       const htmlBuffer = Buffer.from(html, "utf-8");
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(storageKey, htmlBuffer, { contentType: "text/html; charset=utf-8" });
-      if (!storageError) {
+      if (storageError) {
+        console.error("[certificat-vaccinal] storage upload failed:", storageError.message);
+      } else {
         const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(storageKey);
-        await supabase.from("documents").insert({
+        const { error: insertError } = await supabase.from("documents").insert({
           patient_id: patient.id,
           nom: `Certificat vaccinal — ${new Date().toLocaleDateString("fr-FR")}`,
           url: publicUrl,
@@ -328,9 +332,12 @@ export async function POST(request: NextRequest) {
           uploaded_by: user.id,
           description: `Carnet vaccinal — ${(vaccinations as VaccinRow[]).length} vaccination(s)`,
         });
+        if (insertError) console.error("[certificat-vaccinal] documents insert failed:", insertError.message);
       }
+    } catch (err) {
+      console.error("[certificat-vaccinal] document save error:", err);
     }
-  } catch { /* ne pas bloquer la réponse */ }
+  }
 
   return new NextResponse(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
